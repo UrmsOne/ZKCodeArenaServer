@@ -1,0 +1,125 @@
+/*
+@Author: urmsone urmsone@163.com
+@Date: 2025/1/25 13:09
+@Name: server.go
+@Description: 服务器主文件
+*/
+
+package server
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
+	"net/http"
+	"time"
+	"zk-code-arena-server/pkg/app/api-server/service"
+	"zk-code-arena-server/pkg/utils"
+	"zk-code-arena-server/pkg/utils/middleware"
+)
+
+type Server struct {
+	lg     logrus.FieldLogger
+	app    *gin.Engine
+	svc    *service.Service
+	opts   *CmdOptions
+	stopCh <-chan struct{}
+}
+
+func NewServer(lg logrus.FieldLogger, svc *service.Service, opts *CmdOptions, stopCh <-chan struct{}) *Server {
+	app := gin.Default()
+	app.Use(middleware.CorsHandler())                          // 设置 CORS
+	app.Use(middleware.LoggerHandler(lg, []string{"/health"})) // 日志中间件
+	app.Use(gin.Recovery())                                    // panic 恢复
+
+	// 设置 Gin 模式
+	gin.SetMode(gin.DebugMode)
+
+	return &Server{
+		lg:     lg,
+		app:    app,
+		svc:    svc,
+		opts:   opts,
+		stopCh: stopCh,
+	}
+}
+
+func (s *Server) Init() {
+	s.RegisterRoutes()
+}
+
+// RegisterRoutes 注册路由
+func (s *Server) RegisterRoutes() {
+	// 健康检查
+	s.app.GET("/health", s.HealthCheck)
+
+	// API 路由组
+	v1 := s.app.Group("/api/v1")
+	{
+		// 用户相关路由
+		s.RegisterUser(v1)
+		// 题目相关路由
+		s.RegisterProblem(v1)
+		// 提交相关路由
+		s.RegisterSubmit(v1)
+	}
+}
+
+// HealthCheck 健康检查
+func (s *Server) HealthCheck(c *gin.Context) {
+	utils.SuccessResponse(c, gin.H{
+		"status":    "ok",
+		"timestamp": time.Now().Unix(),
+		"service":   "zk-code-arena-server",
+	})
+}
+
+func (s *Server) Run() error {
+	srv := &http.Server{
+		Addr:    fmt.Sprintf("%s:%s", s.opts.Host, s.opts.Port),
+		Handler: s.app,
+	}
+
+	go func() {
+		select {
+		case <-s.stopCh:
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+			defer cancel()
+			// 优雅关闭服务器
+			s.lg.Infoln("正在关闭服务器...")
+			if err := srv.Shutdown(ctx); err != nil {
+				s.lg.Errorf("服务器关闭错误: %v", err)
+			}
+			return
+		}
+	}()
+
+	if err := srv.ListenAndServe(); err != nil {
+		if errors.Is(err, http.ErrServerClosed) {
+			// 主动关闭服务器
+			s.lg.Println("HTTP 服务器已关闭")
+			return err
+		}
+		s.lg.Errorf("服务器启动失败: %s", err.Error())
+		return err
+	}
+	return nil
+}
+
+func (s *Server) Shutdown(ctx context.Context) {
+	s.svc.Close(ctx)
+}
+
+type CmdOptions struct {
+	Host string
+	Port string
+}
+
+func NewCmdOptions(host, port string) *CmdOptions {
+	return &CmdOptions{
+		Host: host,
+		Port: port,
+	}
+}

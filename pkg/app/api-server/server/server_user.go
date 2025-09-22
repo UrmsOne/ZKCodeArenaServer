@@ -1,0 +1,305 @@
+/*
+@Author: urmsone urmsone@163.com
+@Date: 2025/1/25 13:09
+@Name: server_user.go
+@Description: 用户相关路由处理
+*/
+
+package server
+
+import (
+	"github.com/gin-gonic/gin"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"strconv"
+	"zk-code-arena-server/pkg/models"
+	"zk-code-arena-server/pkg/utils"
+	"zk-code-arena-server/pkg/utils/middleware"
+)
+
+// RegisterUser 注册用户相关路由
+func (s *Server) RegisterUser(g *gin.RouterGroup) {
+	userGroup := g.Group("/user")
+	{
+		// 公开路由
+		userGroup.POST("/register", s.CreateUser) // 用户注册
+		userGroup.POST("/login", s.LoginUser)       // 用户登录
+	}
+
+	// 需要认证的路由
+	securedGroup := userGroup.Group("/").Use(middleware.JWTMiddleware())
+	{
+		securedGroup.GET("/profile", s.GetUserProfile)    // 获取用户资料
+		securedGroup.PUT("/profile", s.UpdateUserProfile) // 更新用户资料
+		securedGroup.GET("/", s.GetUsers)                 // 获取用户列表（管理员）
+		securedGroup.GET("/:id", s.GetUserByID)           // 获取指定用户
+		securedGroup.PUT("/:id", s.UpdateUser)            // 更新用户信息
+		securedGroup.DELETE("/:id", s.DeleteUser)         // 删除用户
+	}
+}
+
+// CreateUser 用户注册
+func (s *Server) CreateUser(c *gin.Context) {
+	var user models.User
+	if err := c.ShouldBindJSON(&user); err != nil {
+		utils.BadRequestResponse(c, "请求参数错误: "+err.Error())
+		return
+	}
+
+	ctx := c.Request.Context()
+	if err := s.svc.UserService.CreateUser(ctx, &user); err != nil {
+		utils.InternalServerErrorResponse(c, "注册失败: "+err.Error())
+		return
+	}
+
+	utils.SuccessResponse(c, gin.H{
+		"message": "注册成功",
+		"user":    user.ToProfile(),
+	})
+}
+
+// LoginUser 用户登录
+func (s *Server) LoginUser(c *gin.Context) {
+	var loginReq struct {
+		Username string `json:"username" binding:"required"`
+		Password string `json:"password" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&loginReq); err != nil {
+		utils.BadRequestResponse(c, "请求参数错误: "+err.Error())
+		return
+	}
+
+	ctx := c.Request.Context()
+	user, err := s.svc.UserService.ValidateUser(ctx, loginReq.Username, loginReq.Password)
+	if err != nil {
+		utils.UnauthorizedResponse(c, err.Error())
+		return
+	}
+
+	// 生成 JWT Token
+	token, err := middleware.GenerateToken(user.ID.Hex(), user.Username, string(user.Role))
+	if err != nil {
+		utils.InternalServerErrorResponse(c, "生成令牌失败")
+		return
+	}
+
+	utils.SuccessResponse(c, gin.H{
+		"message": "登录成功",
+		"token":   token,
+		"user":    user.ToProfile(),
+	})
+}
+
+// GetUserProfile 获取用户资料
+func (s *Server) GetUserProfile(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		utils.UnauthorizedResponse(c, "未认证用户")
+		return
+	}
+
+	id, err := primitive.ObjectIDFromHex(userID.(string))
+	if err != nil {
+		utils.BadRequestResponse(c, "无效的用户ID")
+		return
+	}
+
+	ctx := c.Request.Context()
+	user, err := s.svc.UserService.GetUserByID(ctx, id)
+	if err != nil {
+		utils.NotFoundResponse(c, "用户不存在")
+		return
+	}
+
+	utils.SuccessResponse(c, user.ToProfile())
+}
+
+// UpdateUserProfile 更新用户资料
+func (s *Server) UpdateUserProfile(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		utils.UnauthorizedResponse(c, "未认证用户")
+		return
+	}
+
+	id, err := primitive.ObjectIDFromHex(userID.(string))
+	if err != nil {
+		utils.BadRequestResponse(c, "无效的用户ID")
+		return
+	}
+
+	var updateReq struct {
+		RealName string `json:"real_name"`
+		Email    string `json:"email"`
+		Bio      string `json:"bio"`
+		School   string `json:"school"`
+		Major    string `json:"major"`
+		Grade    string `json:"grade"`
+		Class    string `json:"class"`
+		Phone    string `json:"phone"`
+	}
+
+	if err := c.ShouldBindJSON(&updateReq); err != nil {
+		utils.BadRequestResponse(c, "请求参数错误: "+err.Error())
+		return
+	}
+
+	ctx := c.Request.Context()
+	user, err := s.svc.UserService.GetUserByID(ctx, id)
+	if err != nil {
+		utils.NotFoundResponse(c, "用户不存在")
+		return
+	}
+
+	// 更新用户信息
+	user.RealName = updateReq.RealName
+	user.Email = updateReq.Email
+	user.Bio = updateReq.Bio
+	user.School = updateReq.School
+	user.Major = updateReq.Major
+	user.Grade = updateReq.Grade
+	user.Class = updateReq.Class
+	user.Phone = updateReq.Phone
+
+	if err := s.svc.UserService.UpdateUser(ctx, user); err != nil {
+		utils.InternalServerErrorResponse(c, "更新失败: "+err.Error())
+		return
+	}
+
+	utils.SuccessResponse(c, user.ToProfile())
+}
+
+// GetUsers 获取用户列表
+func (s *Server) GetUsers(c *gin.Context) {
+	// 检查管理员权限
+	role, exists := c.Get("role")
+	if !exists || role.(string) != string(models.RoleAdmin) {
+		utils.ForbiddenResponse(c, "权限不足")
+		return
+	}
+
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "10"))
+	roleStr := c.Query("role")
+
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 || pageSize > 100 {
+		pageSize = 10
+	}
+
+	ctx := c.Request.Context()
+	users, total, err := s.svc.UserService.GetUsers(ctx, page, pageSize, models.UserRole(roleStr))
+	if err != nil {
+		utils.InternalServerErrorResponse(c, "获取用户列表失败: "+err.Error())
+		return
+	}
+
+	// 转换为用户资料
+	profiles := make([]*models.UserProfile, len(users))
+	for i, user := range users {
+		profiles[i] = user.ToProfile()
+	}
+
+	utils.SuccessResponse(c, gin.H{
+		"users":      profiles,
+		"total":      total,
+		"page":       page,
+		"page_size":  pageSize,
+		"total_page": (total + int64(pageSize) - 1) / int64(pageSize),
+	})
+}
+
+// GetUserByID 获取指定用户
+func (s *Server) GetUserByID(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := primitive.ObjectIDFromHex(idStr)
+	if err != nil {
+		utils.BadRequestResponse(c, "无效的用户ID")
+		return
+	}
+
+	ctx := c.Request.Context()
+	user, err := s.svc.UserService.GetUserByID(ctx, id)
+	if err != nil {
+		utils.NotFoundResponse(c, "用户不存在")
+		return
+	}
+
+	utils.SuccessResponse(c, user.ToProfile())
+}
+
+// UpdateUser 更新用户信息
+func (s *Server) UpdateUser(c *gin.Context) {
+	// 检查管理员权限
+	role, exists := c.Get("role")
+	if !exists || role.(string) != string(models.RoleAdmin) {
+		utils.ForbiddenResponse(c, "权限不足")
+		return
+	}
+
+	idStr := c.Param("id")
+	id, err := primitive.ObjectIDFromHex(idStr)
+	if err != nil {
+		utils.BadRequestResponse(c, "无效的用户ID")
+		return
+	}
+
+	var updateReq struct {
+		Role     string `json:"role"`
+		IsActive *bool  `json:"is_active"`
+	}
+
+	if err := c.ShouldBindJSON(&updateReq); err != nil {
+		utils.BadRequestResponse(c, "请求参数错误: "+err.Error())
+		return
+	}
+
+	ctx := c.Request.Context()
+	user, err := s.svc.UserService.GetUserByID(ctx, id)
+	if err != nil {
+		utils.NotFoundResponse(c, "用户不存在")
+		return
+	}
+
+	// 更新用户信息
+	if updateReq.Role != "" {
+		user.Role = models.UserRole(updateReq.Role)
+	}
+	if updateReq.IsActive != nil {
+		user.IsActive = *updateReq.IsActive
+	}
+
+	if err := s.svc.UserService.UpdateUser(ctx, user); err != nil {
+		utils.InternalServerErrorResponse(c, "更新失败: "+err.Error())
+		return
+	}
+
+	utils.SuccessResponse(c, user.ToProfile())
+}
+
+// DeleteUser 删除用户
+func (s *Server) DeleteUser(c *gin.Context) {
+	// 检查管理员权限
+	role, exists := c.Get("role")
+	if !exists || role.(string) != string(models.RoleAdmin) {
+		utils.ForbiddenResponse(c, "权限不足")
+		return
+	}
+
+	idStr := c.Param("id")
+	id, err := primitive.ObjectIDFromHex(idStr)
+	if err != nil {
+		utils.BadRequestResponse(c, "无效的用户ID")
+		return
+	}
+
+	ctx := c.Request.Context()
+	if err := s.svc.UserService.DeleteUser(ctx, id); err != nil {
+		utils.InternalServerErrorResponse(c, "删除失败: "+err.Error())
+		return
+	}
+
+	utils.SuccessResponse(c, gin.H{"message": "删除成功"})
+}

@@ -1,0 +1,52 @@
+App:
+  Host: "0.0.0.0"
+  Port: "8080"
+  Mode: "debug"
+  Env: "development"
+  GracefulTime: 5s
+
+Mongo:
+  Uri: mongodb://localhost:27017
+  DbName: zk_code_arena
+
+Judge:
+  Type: LocalJudge
+  Java:
+    JDK11:
+      BaseArgs: "java"
+      Env: "PATH=/usr/lib/jvm/java-11-openjdk/bin"
+  Python:
+    Python3:
+      BaseArgs: "python3"
+      Env: "PATH=/usr/bin"
+  Cpp:
+    Gcc:
+      BaseArgs: "g++"
+      Env: "PATH=/usr/bin"
+
+Sandbox:
+  Url: "http://localhost:5050/run"
+  Method: "POST"
+  Timeout: 30s
+
+Log:
+  Level: "info"
+  Format: "json"
+  Output: "stdout"
+  File:
+    Path: "./logs/server.log"
+    MaxSize: 100
+    MaxBackups: 3
+    MaxAge: 28
+    Compress: true
+
+JWT:
+  Secret: "zk-code-arena-secret-key-2025"
+  ExpireTime: 24h
+
+Redis:
+  Host: "localhost"
+  Port: 6379
+  Password: ""
+  DB: 0
+  PoolSize: 10

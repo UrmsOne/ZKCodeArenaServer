@@ -1,0 +1,29 @@
+# 开发环境 Dockerfile (支持热更新)
+FROM golang:1.23-alpine
+
+# 设置工作目录
+WORKDIR /app
+
+# 安装必要的工具
+RUN apk add --no-cache git ca-certificates tzdata wget
+
+# 安装 Air 热更新工具
+RUN go install github.com/cosmtrek/air@latest
+
+# 复制 go mod 文件
+COPY go.mod go.sum ./
+
+# 下载依赖
+RUN go mod download
+
+# 复制源代码
+COPY . .
+
+# 创建必要的目录
+RUN mkdir -p logs tmp
+
+# 暴露端口
+EXPOSE 8080
+
+# 使用 Air 启动应用 (热更新)
+CMD ["air", "-c", ".air.toml"]
