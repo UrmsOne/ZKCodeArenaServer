@@ -65,10 +65,16 @@ type JudgeResult struct {
 type TestResult struct {
 	TestCaseID primitive.ObjectID `json:"test_case_id"`
 	Status     SubmitStatus       `json:"status"`
-	TimeUsed   int                `json:"time_used"`
-	MemoryUsed int                `json:"memory_used"`
-	Output     string             `json:"output"`
-	Error      string             `json:"error"`
+	TimeUsed   int                `json:"time_used"`   // ms
+	MemoryUsed int                `json:"memory_used"` // KB
+	
+	// 是否为示例用例（用于判断是否返回详细信息）
+	IsSample   bool               `json:"is_sample"`
+	
+	// 仅示例用例返回以下字段（隐藏用例不返回详细输出）
+	Output     string             `json:"output,omitempty"`   // 实际输出
+	Expected   string             `json:"expected,omitempty"` // 期望输出
+	Error      string             `json:"error,omitempty"`    // 错误信息
 }
 
 // SubmitList 提交列表项

@@ -6,23 +6,97 @@ App:
   GracefulTime: 5s
 
 Mongo:
-  Uri: mongodb://localhost:27017
+  Uri: mongodb://42.194.245.236:27017
   DbName: zk_code_arena
 
 Judge:
-  Type: LocalJudge
-  Java:
-    JDK11:
-      BaseArgs: "java"
-      Env: "PATH=/usr/lib/jvm/java-11-openjdk/bin"
-  Python:
-    Python3:
-      BaseArgs: "python3"
-      Env: "PATH=/usr/bin"
-  Cpp:
-    Gcc:
-      BaseArgs: "g++"
-      Env: "PATH=/usr/bin"
+  Workers: 4          # 消费者数量
+  QueueSize: 100      # 队列容量
+  
+  # 语言配置
+  Languages:
+    java:
+      name: "Java 17"
+      compile:
+        args: ["/usr/bin/javac", "-encoding", "UTF-8", "Main.java"]
+        env:
+          - "PATH=/usr/bin:/bin"
+          - "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64"
+        time_limit: 10000000000    # 10秒（纳秒）
+        memory_limit: 268435456    # 256MB（字节）
+        proc_limit: 50
+        source_file: "Main.java"
+        executable_file: "Main.class"
+      run:
+        args: ["/usr/bin/java", "-Xmx256m", "-Xss256m", "Main"]
+        env:
+          - "PATH=/usr/bin:/bin"
+          - "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64"
+        time_limit: 1000000000     # 1秒（纳秒）
+        memory_limit: 268435456    # 256MB（字节）
+        proc_limit: 100
+    
+    cpp:
+      name: "C++ 17"
+      compile:
+        args: ["/usr/bin/g++", "-std=c++17", "-O2", "-Wall", "main.cpp", "-o", "main"]
+        env: ["PATH=/usr/bin:/bin"]
+        time_limit: 10000000000
+        memory_limit: 268435456
+        proc_limit: 50
+        source_file: "main.cpp"
+        executable_file: "main"
+      run:
+        args: ["./main"]
+        env: ["PATH=/usr/bin:/bin"]
+        time_limit: 1000000000
+        memory_limit: 134217728    # 128MB
+        proc_limit: 1
+    
+    python:
+      name: "Python 3.9"
+      # Python 无需编译
+      run:
+        args: ["/usr/bin/python3", "-u", "main.py"]
+        env: ["PATH=/usr/bin:/bin", "PYTHONPATH=/w"]
+        time_limit: 2000000000     # 2秒（Python 需要更多时间）
+        memory_limit: 268435456
+        proc_limit: 1
+        source_file: "main.py"
+    
+    go:
+      name: "Go 1.21"
+      compile:
+        args: ["/usr/bin/go", "build", "-o", "main", "main.go"]
+        env: ["PATH=/usr/bin:/bin", "GOCACHE=/tmp"]
+        time_limit: 10000000000
+        memory_limit: 268435456
+        proc_limit: 50
+        source_file: "main.go"
+        executable_file: "main"
+      run:
+        args: ["./main"]
+        env: ["PATH=/usr/bin:/bin"]
+        time_limit: 1000000000
+        memory_limit: 134217728
+        proc_limit: 1
+    
+    c:
+      name: "C11"
+      compile:
+        args: ["/usr/bin/gcc", "-std=c11", "-O2", "-Wall", "main.c", "-o", "main", "-lm"]
+        env: ["PATH=/usr/bin:/bin"]
+        time_limit: 10000000000
+        memory_limit: 268435456
+        proc_limit: 50
+        source_file: "main.c"
+        executable_file: "main"
+      run:
+        args: ["./main"]
+        env: ["PATH=/usr/bin:/bin"]
+        time_limit: 1000000000
+        memory_limit: 134217728
+        proc_limit: 1
 
 Sandbox:
   Url: "http://localhost:5050/run"
@@ -45,8 +119,8 @@ JWT:
   ExpireTime: 24h
 
 Redis:
-  Host: "localhost"
-  Port: 6379
+  Host: "42.194.245.236"
+  Port: 16379
   Password: ""
   DB: 0
   PoolSize: 10

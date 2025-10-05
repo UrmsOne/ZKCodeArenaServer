@@ -57,12 +57,18 @@ type Problem struct {
 
 // TestCase 测试用例
 type TestCase struct {
-	ID        primitive.ObjectID `bson:"_id,omitempty" json:"id"`
-	ProblemID primitive.ObjectID `bson:"problem_id" json:"problem_id"`
-	Input     string             `bson:"input" json:"input"`
-	Output    string             `bson:"output" json:"output"`
-	IsSample  bool               `bson:"is_sample" json:"is_sample"`
-	CreatedAt time.Time          `bson:"created_at" json:"created_at"`
+	ID          primitive.ObjectID `bson:"_id,omitempty" json:"id"`
+	ProblemID   primitive.ObjectID `bson:"problem_id" json:"problem_id"`
+	Input       string             `bson:"input" json:"input"`
+	Output      string             `bson:"output" json:"output"`
+	IsSample    bool               `bson:"is_sample" json:"is_sample"`
+	
+	// 可选的超时配置（优先级高于题目默认配置）
+	TimeLimit   *int               `bson:"time_limit,omitempty" json:"time_limit,omitempty"`     // 时间限制(ms)，可选
+	MemoryLimit *int               `bson:"memory_limit,omitempty" json:"memory_limit,omitempty"` // 内存限制(MB)，可选
+	
+	Score       int                `bson:"score" json:"score"`           // 用例分数（可选，用于部分分）
+	CreatedAt   time.Time          `bson:"created_at" json:"created_at"`
 }
 
 // ProblemList 题目列表项

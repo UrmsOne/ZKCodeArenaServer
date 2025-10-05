@@ -35,27 +35,7 @@ type configYaml struct {
 		Uri    string `yaml:"Uri"`
 		DbName string `yaml:"DbName"`
 	} `yaml:"Mongo"`
-	Judge struct {
-		Type   string `yaml:"Type"`
-		Java   struct {
-			JDK11 struct {
-				BaseArgs string `yaml:"BaseArgs"`
-				Env      string `yaml:"Env"`
-			} `yaml:"JDK11"`
-		} `yaml:"Java"`
-		Python struct {
-			Python3 struct {
-				BaseArgs string `yaml:"BaseArgs"`
-				Env      string `yaml:"Env"`
-			} `yaml:"Python3"`
-		} `yaml:"Python"`
-		Cpp struct {
-			Gcc struct {
-				BaseArgs string `yaml:"BaseArgs"`
-				Env      string `yaml:"Env"`
-			} `yaml:"Gcc"`
-		} `yaml:"Cpp"`
-	} `yaml:"Judge"`
+	Judge JudgeConfig `yaml:"Judge"`
 	Sandbox struct {
 		Url     string        `yaml:"Url"`
 		Method  string        `yaml:"Method"`
@@ -84,6 +64,31 @@ type configYaml struct {
 		DB       int    `yaml:"DB"`
 		PoolSize int    `yaml:"PoolSize"`
 	} `yaml:"Redis"`
+}
+
+// JudgeConfig 判题配置
+type JudgeConfig struct {
+	Workers   int                           `yaml:"Workers"`   // 消费者数量
+	QueueSize int                           `yaml:"QueueSize"` // 队列容量
+	Languages map[string]*LanguageConfig    `yaml:"Languages"` // 语言配置
+}
+
+// LanguageConfig 语言配置
+type LanguageConfig struct {
+	Name    string       `yaml:"name"`              // 语言名称
+	Compile *StageConfig `yaml:"compile,omitempty"` // 编译配置（可选，解释型语言无需编译）
+	Run     *StageConfig `yaml:"run"`               // 运行配置
+}
+
+// StageConfig 阶段配置（编译或运行）
+type StageConfig struct {
+	Args           []string `yaml:"args"`                       // 执行命令参数
+	Env            []string `yaml:"env"`                        // 环境变量
+	TimeLimit      int64    `yaml:"time_limit"`                 // 时间限制（纳秒）
+	MemoryLimit    int64    `yaml:"memory_limit"`               // 内存限制（字节）
+	ProcLimit      int      `yaml:"proc_limit"`                 // 进程数限制
+	SourceFile     string   `yaml:"source_file,omitempty"`      // 源文件名
+	ExecutableFile string   `yaml:"executable_file,omitempty"`  // 可执行文件名
 }
 
 func Init() {
