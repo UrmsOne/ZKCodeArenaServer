@@ -94,18 +94,19 @@ func runServe(cmd *cobra.Command, args []string) error {
 	opts := server.NewCmdOptions(conf.Config.App.Host, conf.Config.App.Port)
 	s := server.NewServer(lg, svc, opts, stopCh)
 
+	// 启动判题服务（消费者）
+	lg.Info("启动判题服务...")
+	if err := svc.JudgeService.Start(ctx); err != nil {
+		lg.Errorf("判题服务启动失败: %v", err)
+		return err
+	}
+	lg.Info("判题服务启动成功")
+
 	// 启动主服务器
 	g.Go(func() error {
 		s.Init()
-		lg.Infof("服务器启动在 %s:%s", conf.Config.App.Host, conf.Config.App.Port)
+		lg.Infof("HTTP 服务器启动在 %s:%s", conf.Config.App.Host, conf.Config.App.Port)
 		return s.Run()
-	})
-
-	// 启动评测服务
-	j := server.NewJudge()
-	g.Go(func() error {
-		lg.Info("启动代码评测服务...")
-		return j.RunJudge()
 	})
 
 	// 监听系统信号

@@ -10,9 +10,10 @@ Mongo:
   DbName: zk_code_arena
 
 Judge:
-  Workers: 4          # 消费者数量
-  QueueSize: 100      # 队列容量
-  
+  SandboxURL: "http://localhost:5050"  # 沙箱服务地址
+  Workers: 4                            # 消费者数量
+  QueueSize: 100                        # 队列容量
+
   # 语言配置
   Languages:
     java:
@@ -28,10 +29,11 @@ Judge:
         source_file: "Main.java"
         executable_file: "Main.class"
       run:
-        args: ["/usr/bin/java", "-Xmx256m", "-Xss256m", "Main"]
+        args: ["/usr/bin/java", "-server", "-XX:+UseSerialGC", "-XX:MaxRAMPercentage=50", "-XX:InitialRAMPercentage=25", "Main"]
         env:
           - "PATH=/usr/bin:/bin"
           - "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64"
+          - "_JAVA_OPTIONS=-Djava.awt.headless=true"
         time_limit: 1000000000     # 1秒（纳秒）
         memory_limit: 268435456    # 256MB（字节）
         proc_limit: 100

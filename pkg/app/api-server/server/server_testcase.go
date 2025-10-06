@@ -1,0 +1,200 @@
+/*
+@Author: omenkk7
+@Date: 2025/10/05
+@Description: 测试用例相关路由处理
+*/
+
+package server
+
+import (
+	"zk-code-arena-server/pkg/models"
+	"zk-code-arena-server/pkg/utils"
+	"zk-code-arena-server/pkg/utils/middleware"
+
+	"github.com/gin-gonic/gin"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+)
+
+// RegisterTestCase 注册测试用例相关路由
+func (s *Server) RegisterTestCase(g *gin.RouterGroup) {
+	testCaseGroup := g.Group("/testcase")
+
+	// 需要认证的路由（测试用例管理通常需要管理员权限）
+	securedGroup := testCaseGroup.Group("/").Use(middleware.JWTMiddleware())
+	{
+		securedGroup.GET("/problem/:problem_id", s.GetTestCasesByProblemID) // 获取题目的测试用例列表
+		securedGroup.GET("/:id", s.GetTestCase)                             // 获取单个测试用例
+		securedGroup.POST("/", s.CreateTestCase)                            // 创建测试用例
+		securedGroup.PUT("/:id", s.UpdateTestCase)                          // 更新测试用例
+		securedGroup.DELETE("/:id", s.DeleteTestCase)                       // 删除测试用例
+	}
+}
+
+// GetTestCasesByProblemID 获取题目的测试用例列表
+func (s *Server) GetTestCasesByProblemID(c *gin.Context) {
+	problemIDStr := c.Param("problem_id")
+	problemID, err := primitive.ObjectIDFromHex(problemIDStr)
+	if err != nil {
+		utils.ErrorResponse(c, 400, "无效的题目 ID")
+		return
+	}
+
+	testCases, err := s.svc.TestCaseService.GetTestCasesByProblemID(c.Request.Context(), problemID)
+	if err != nil {
+		s.lg.Errorf("获取测试用例列表失败: %v", err)
+		utils.ErrorResponse(c, 500, "获取测试用例列表失败")
+		return
+	}
+
+	utils.SuccessResponse(c, gin.H{
+		"test_cases": testCases,
+		"total":      len(testCases),
+	})
+}
+
+// GetTestCase 获取单个测试用例
+func (s *Server) GetTestCase(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := primitive.ObjectIDFromHex(idStr)
+	if err != nil {
+		utils.ErrorResponse(c, 400, "无效的测试用例 ID")
+		return
+	}
+
+	testCase, err := s.svc.TestCaseService.GetTestCaseByID(c.Request.Context(), id)
+	if err != nil {
+		s.lg.Errorf("获取测试用例失败: %v", err)
+		utils.ErrorResponse(c, 500, "获取测试用例失败")
+		return
+	}
+
+	utils.SuccessResponse(c, testCase)
+}
+
+// CreateTestCase 创建测试用例
+func (s *Server) CreateTestCase(c *gin.Context) {
+	var req struct {
+		ProblemID   string `json:"problem_id" binding:"required"`
+		Input       string `json:"input" binding:"required"`
+		Output      string `json:"output" binding:"required"`
+		IsSample    bool   `json:"is_sample"`
+		TimeLimit   *int   `json:"time_limit,omitempty"`   // 可选的超时配置（ms）
+		MemoryLimit *int   `json:"memory_limit,omitempty"` // 可选的内存限制（MB）
+		Score       int    `json:"score,omitempty"`        // 用例分数
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.ErrorResponse(c, 400, "请求参数错误: "+err.Error())
+		return
+	}
+
+	problemID, err := primitive.ObjectIDFromHex(req.ProblemID)
+	if err != nil {
+		utils.ErrorResponse(c, 400, "无效的题目 ID")
+		return
+	}
+
+	// 验证题目是否存在
+	_, err = s.svc.ProblemService.GetProblemByID(c.Request.Context(), problemID)
+	if err != nil {
+		utils.ErrorResponse(c, 404, "题目不存在")
+		return
+	}
+
+	testCase := &models.TestCase{
+		ProblemID:   problemID,
+		Input:       req.Input,
+		Output:      req.Output,
+		IsSample:    req.IsSample,
+		TimeLimit:   req.TimeLimit,
+		MemoryLimit: req.MemoryLimit,
+		Score:       req.Score,
+	}
+
+	if err := s.svc.TestCaseService.CreateTestCase(c.Request.Context(), testCase); err != nil {
+		s.lg.Errorf("创建测试用例失败: %v", err)
+		utils.ErrorResponse(c, 500, "创建测试用例失败")
+		return
+	}
+
+	utils.SuccessResponse(c, testCase)
+}
+
+// UpdateTestCase 更新测试用例
+func (s *Server) UpdateTestCase(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := primitive.ObjectIDFromHex(idStr)
+	if err != nil {
+		utils.ErrorResponse(c, 400, "无效的测试用例 ID")
+		return
+	}
+
+	var req struct {
+		Input       string `json:"input"`
+		Output      string `json:"output"`
+		IsSample    *bool  `json:"is_sample,omitempty"`
+		TimeLimit   *int   `json:"time_limit,omitempty"`
+		MemoryLimit *int   `json:"memory_limit,omitempty"`
+		Score       *int   `json:"score,omitempty"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.ErrorResponse(c, 400, "请求参数错误: "+err.Error())
+		return
+	}
+
+	// 获取现有测试用例
+	testCase, err := s.svc.TestCaseService.GetTestCaseByID(c.Request.Context(), id)
+	if err != nil {
+		utils.ErrorResponse(c, 404, "测试用例不存在")
+		return
+	}
+
+	// 更新字段
+	if req.Input != "" {
+		testCase.Input = req.Input
+	}
+	if req.Output != "" {
+		testCase.Output = req.Output
+	}
+	if req.IsSample != nil {
+		testCase.IsSample = *req.IsSample
+	}
+	if req.TimeLimit != nil {
+		testCase.TimeLimit = req.TimeLimit
+	}
+	if req.MemoryLimit != nil {
+		testCase.MemoryLimit = req.MemoryLimit
+	}
+	if req.Score != nil {
+		testCase.Score = *req.Score
+	}
+
+	if err := s.svc.TestCaseService.UpdateTestCase(c.Request.Context(), testCase); err != nil {
+		s.lg.Errorf("更新测试用例失败: %v", err)
+		utils.ErrorResponse(c, 500, "更新测试用例失败")
+		return
+	}
+
+	utils.SuccessResponse(c, testCase)
+}
+
+// DeleteTestCase 删除测试用例
+func (s *Server) DeleteTestCase(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := primitive.ObjectIDFromHex(idStr)
+	if err != nil {
+		utils.ErrorResponse(c, 400, "无效的测试用例 ID")
+		return
+	}
+
+	if err := s.svc.TestCaseService.DeleteTestCase(c.Request.Context(), id); err != nil {
+		s.lg.Errorf("删除测试用例失败: %v", err)
+		utils.ErrorResponse(c, 500, "删除测试用例失败")
+		return
+	}
+
+	utils.SuccessResponse(c, gin.H{
+		"message": "测试用例删除成功",
+	})
+}

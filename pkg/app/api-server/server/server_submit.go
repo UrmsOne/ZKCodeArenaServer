@@ -8,12 +8,14 @@
 package server
 
 import (
-	"github.com/gin-gonic/gin"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"strconv"
 	"zk-code-arena-server/pkg/models"
+	"zk-code-arena-server/pkg/queue"
 	"zk-code-arena-server/pkg/utils"
 	"zk-code-arena-server/pkg/utils/middleware"
+
+	"github.com/gin-gonic/gin"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 // RegisterSubmit 注册提交相关路由
@@ -32,6 +34,7 @@ func (s *Server) RegisterSubmit(g *gin.RouterGroup) {
 
 // SubmitCode 提交代码
 func (s *Server) SubmitCode(c *gin.Context) {
+
 	var submitReq struct {
 		ProblemID primitive.ObjectID `json:"problem_id" binding:"required"`
 		Code      string             `json:"code" binding:"required"`
@@ -93,29 +96,27 @@ func (s *Server) SubmitCode(c *gin.Context) {
 		return
 	}
 
-	// 异步评测
-	go func() {
-		// 调用评测服务
-		result, err := s.svc.JudgeService.JudgeSubmit(ctx, submit, problem)
-		if err != nil {
-			// 评测失败，更新状态为系统错误
-			submit.Status = models.StatusSystemError
-			submit.Result = &models.JudgeResult{
-				Status:       models.StatusSystemError,
-				RuntimeError: err.Error(),
-			}
-		} else {
-			submit.Status = result.Status
-			submit.Result = result
+	// 构建判题任务
+	judgeTask := &queue.JudgeTask{
+		SubmitID:  submit.ID,
+		ProblemID: submit.ProblemID,
+		UserID:    submit.UserID,
+		Code:      submit.Code,
+		Language:  string(submit.Language),
+	}
+
+	// 推送判题任务到消息队列（异步评测）
+	if err := s.svc.JudgeService.SubmitTask(ctx, judgeTask); err != nil {
+		// 任务推送失败，更新状态为系统错误
+		submit.Status = models.StatusSystemError
+		submit.Result = &models.JudgeResult{
+			Status:       models.StatusSystemError,
+			RuntimeError: "任务推送失败: " + err.Error(),
 		}
-
-		// 更新提交记录
 		s.svc.SubmitService.UpdateSubmit(ctx, submit)
-
-		// 更新题目统计
-		isAC := result != nil && result.Status == models.StatusAccepted
-		s.svc.ProblemService.UpdateProblemStats(ctx, submitReq.ProblemID, isAC)
-	}()
+		utils.InternalServerErrorResponse(c, "判题任务推送失败: "+err.Error())
+		return
+	}
 
 	utils.SuccessResponse(c, gin.H{
 		"message":   "提交成功，正在评测中",

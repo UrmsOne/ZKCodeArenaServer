@@ -40,7 +40,7 @@ type CompileRequest struct {
 // CompileResponse 编译响应
 type CompileResponse struct {
 	Success       bool   // 是否成功
-	ExecutableID  string // 编译产物文件ID（用于后续运行）
+	ExecutableID  string // 编译文件ID（用于后续运行）
 	CompileOutput string // 编译输出（stdout）
 	CompileError  string // 编译错误（stderr）
 	Time          int64  // 编译时间（纳秒）
@@ -94,13 +94,13 @@ type LanguageConfig struct {
 
 // StageConfig 阶段配置（编译或运行）
 type StageConfig struct {
-	Args           []string `yaml:"args"`                       // 执行命令参数
-	Env            []string `yaml:"env"`                        // 环境变量
-	TimeLimit      int64    `yaml:"time_limit"`                 // 时间限制（纳秒）
-	MemoryLimit    int64    `yaml:"memory_limit"`               // 内存限制（字节）
-	ProcLimit      int      `yaml:"proc_limit"`                 // 进程数限制
-	SourceFile     string   `yaml:"source_file,omitempty"`      // 源文件名
-	ExecutableFile string   `yaml:"executable_file,omitempty"`  // 可执行文件名
+	Args           []string `yaml:"args"`                      // 执行命令参数
+	Env            []string `yaml:"env"`                       // 环境变量
+	TimeLimit      int64    `yaml:"time_limit"`                // 时间限制（纳秒）
+	MemoryLimit    int64    `yaml:"memory_limit"`              // 内存限制（字节）
+	ProcLimit      int      `yaml:"proc_limit"`                // 进程数限制
+	SourceFile     string   `yaml:"source_file,omitempty"`     // 源文件名
+	ExecutableFile string   `yaml:"executable_file,omitempty"` // 可执行文件名
 }
 
 // ============================================================================
@@ -127,22 +127,22 @@ type Command struct {
 
 // FileDescriptor 文件描述符
 type FileDescriptor struct {
-	Content string `json:"content,omitempty"` // 文件内容
-	Name    string `json:"name,omitempty"`    // 文件名
-	Max     int    `json:"max,omitempty"`     // 最大大小（字节）
+	Content *string `json:"content,omitempty"` // 文件内容（指针类型，nil 时省略）
+	Name    *string `json:"name,omitempty"`    // 文件名（指针类型，nil 时省略）
+	Max     *int    `json:"max,omitempty"`     // 最大大小（字节，指针类型，nil 时省略）
 }
 
 // GoJudgeResponse go-judge 响应结构
 type GoJudgeResponse struct {
-	Status       string                 `json:"status"`       // 状态：Accepted, Time Limit Exceeded, Memory Limit Exceeded, Runtime Error
-	ExitStatus   int                    `json:"exitStatus"`   // 退出状态码
-	Time         int64                  `json:"time"`         // 运行时间（纳秒）
-	Memory       int64                  `json:"memory"`       // 内存使用（字节）
-	RunTime      int64                  `json:"runTime"`      // 实际运行时间（纳秒）
-	Files        map[string]string      `json:"files"`        // 输出文件内容
-	FileIDs      map[string]string      `json:"fileIds"`      // 缓存文件ID
-	FileError    []FileError            `json:"fileError"`    // 文件错误
-	Error        string                 `json:"error"`        // 错误信息
+	Status     string            `json:"status"`     // 状态：Accepted, Time Limit Exceeded, Memory Limit Exceeded, Runtime Error
+	ExitStatus int               `json:"exitStatus"` // 退出状态码
+	Time       int64             `json:"time"`       // 运行时间（纳秒）
+	Memory     int64             `json:"memory"`     // 内存使用（字节）
+	RunTime    int64             `json:"runTime"`    // 实际运行时间（纳秒）
+	Files      map[string]string `json:"files"`      // 输出文件内容
+	FileIDs    map[string]string `json:"fileIds"`    // 缓存文件ID
+	FileError  []FileError       `json:"fileError"`  // 文件错误
+	Error      string            `json:"error"`      // 错误信息
 }
 
 // FileError 文件错误

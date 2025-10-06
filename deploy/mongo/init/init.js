@@ -24,6 +24,30 @@ db.submits.createIndex({ "user_id": 1, "problem_id": 1 });
 
 // 创建测试用例集合索引
 db.test_cases.createIndex({ "problem_id": 1 });
+db.test_cases.createIndex({ "is_sample": 1 });
+db.test_cases.createIndex({ "created_at": -1 });
+
+// 测试用例集合字段说明
+/*
+测试用例 (test_cases) 数据结构:
+{
+  "_id": ObjectId,                // 测试用例ID
+  "problem_id": ObjectId,         // 关联题目ID (必填)
+  "input": String,                // 输入数据 (必填)
+  "output": String,               // 期望输出 (必填)
+  "is_sample": Boolean,           // 是否为示例用例 (必填, 默认false)
+  "time_limit": Number,           // 可选: 时间限制(ms), 优先级高于题目默认配置
+  "memory_limit": Number,         // 可选: 内存限制(MB), 优先级高于题目默认配置
+  "score": Number,                // 可选: 用例分数, 用于部分分支持 (默认0)
+  "created_at": Date,             // 创建时间
+  "updated_at": Date              // 更新时间
+}
+
+索引说明:
+- problem_id: 用于快速查询某个题目的所有测试用例
+- is_sample: 用于区分示例用例和隐藏用例
+- created_at: 用于按时间排序
+*/
 
 // 插入默认管理员用户
 db.users.insertOne({

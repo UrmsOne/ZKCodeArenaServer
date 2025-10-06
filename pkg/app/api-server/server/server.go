@@ -64,6 +64,8 @@ func (s *Server) RegisterRoutes() {
 		s.RegisterProblem(v1)
 		// 提交相关路由
 		s.RegisterSubmit(v1)
+		// 测试用例相关路由
+		s.RegisterTestCase(v1)
 	}
 }
 
@@ -109,7 +111,16 @@ func (s *Server) Run() error {
 }
 
 func (s *Server) Shutdown(ctx context.Context) {
+	s.lg.Info("正在关闭判题服务...")
+	if err := s.svc.JudgeService.Stop(ctx); err != nil {
+		s.lg.Errorf("判题服务关闭失败: %v", err)
+	} else {
+		s.lg.Info("判题服务已关闭")
+	}
+	
+	s.lg.Info("正在关闭数据库连接...")
 	s.svc.Close(ctx)
+	s.lg.Info("服务器已完全关闭")
 }
 
 type CmdOptions struct {

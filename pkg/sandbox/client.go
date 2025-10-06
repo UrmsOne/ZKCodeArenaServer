@@ -53,12 +53,12 @@ func (c *GoJudgeClient) CompileCode(ctx context.Context, req *CompileRequest) (*
 
 	// 构建编译请求
 	files := map[string]interface{}{
-		langConfig.Compile.SourceFile: map[string]string{
+		langConfig.Compile.SourceFile: map[string]interface{}{
 			"content": req.SourceCode,
 		},
 	}
 
-	goJudgeReq := c.buildGoJudgeRequest(langConfig.Compile, files, "")
+	goJudgeReq := c.buildGoJudgeRequestWithLimits(langConfig.Compile, files, "", langConfig.Compile.TimeLimit, langConfig.Compile.MemoryLimit)
 
 	// 调用 go-judge API
 	goJudgeResp, err := c.callGoJudge(ctx, goJudgeReq)
@@ -113,25 +113,18 @@ func (c *GoJudgeClient) RunCode(ctx context.Context, req *RunRequest) (*RunRespo
 
 	// 如果是编译型语言，使用编译产物
 	if langConfig.Compile != nil && req.ExecutableID != "" {
-		files[langConfig.Compile.ExecutableFile] = map[string]string{
+		files[langConfig.Compile.ExecutableFile] = map[string]interface{}{
 			"fileId": req.ExecutableID,
 		}
 	} else if langConfig.Compile == nil {
 		// 解释型语言，直接使用源代码
-		files[langConfig.Run.SourceFile] = map[string]string{
+		files[langConfig.Run.SourceFile] = map[string]interface{}{
 			"content": req.ExecutableID, // 对于解释型语言，ExecutableID 存储的是源代码
 		}
 	}
 
-	// 添加标准输入
-	if req.Input != "" {
-		files["stdin"] = map[string]string{
-			"content": req.Input,
-		}
-	}
-
 	// 构建 go-judge 请求（使用自定义的时间和内存限制）
-	goJudgeReq := c.buildGoJudgeRequestWithLimits(langConfig.Run, files, req.TimeLimit, req.MemoryLimit)
+	goJudgeReq := c.buildGoJudgeRequestWithLimits(langConfig.Run, files, req.Input, req.TimeLimit, req.MemoryLimit)
 
 	// 调用 go-judge API
 	goJudgeResp, err := c.callGoJudge(ctx, goJudgeReq)
@@ -177,13 +170,14 @@ func (c *GoJudgeClient) buildGoJudgeRequest(
 	files map[string]interface{},
 	input string,
 ) *GoJudgeRequest {
-	return c.buildGoJudgeRequestWithLimits(stage, files, stage.TimeLimit, stage.MemoryLimit)
+	return c.buildGoJudgeRequestWithLimits(stage, files, input, stage.TimeLimit, stage.MemoryLimit)
 }
 
 // buildGoJudgeRequestWithLimits 构建 go-judge 请求（使用自定义限制）
 func (c *GoJudgeClient) buildGoJudgeRequestWithLimits(
 	stage *StageConfig,
 	files map[string]interface{},
+	input string,
 	timeLimit int64,
 	memoryLimit int64,
 ) *GoJudgeRequest {
@@ -198,10 +192,17 @@ func (c *GoJudgeClient) buildGoJudgeRequestWithLimits(
 	}
 
 	// 构建文件描述符
+	// stdin: 标准输入（必须有 content 字段，即使为空字符串）
+	// stdout: 最大 10KB
+	// stderr: 最大 10KB
+	stdoutName := "stdout"
+	stderrName := "stderr"
+	maxSize := 10240
+	
 	cmd.Files = []FileDescriptor{
-		{Content: ""}, // stdin
-		{Name: "stdout", Max: 10240}, // stdout，最大 10KB
-		{Name: "stderr", Max: 10240}, // stderr，最大 10KB
+		{Content: &input}, // stdin（空字符串也要传 content 字段）
+		{Name: &stdoutName, Max: &maxSize}, // stdout
+		{Name: &stderrName, Max: &maxSize}, // stderr
 	}
 
 	// 如果是编译阶段，需要缓存编译产物

@@ -8,11 +8,12 @@
 
 ## 📋 变更概述
 
-本次判题系统重构主要涉及**数据模型增强**和**判题流程优化**，对前端 API 的影响主要体现在：
+本次判题系统重构主要涉及**数据模型增强**、**判题流程优化**和**测试用例管理 API 新增**，对前端 API 的影响主要体现在：
 
 1. **测试用例模型增强**：支持测试用例级别的超时配置
 2. **判题结果模型增强**：区分示例用例和隐藏用例的返回详细度
 3. **判题流程异步化**：提交后立即返回，通过轮询或 WebSocket 获取结果
+4. **测试用例管理 API 新增**：提供完整的测试用例 CRUD 接口
 
 ---
 
@@ -237,6 +238,176 @@
 
 ---
 
+## 🆕 新增 API 接口
+
+### 测试用例管理 API
+
+#### 1. 获取题目的测试用例列表
+
+**请求**：
+```
+GET /api/v1/testcase/problem/:problem_id
+Authorization: Bearer <JWT_TOKEN>
+```
+
+**响应**：
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "test_cases": [
+      {
+        "id": "507f1f77bcf86cd799439011",
+        "problem_id": "507f1f77bcf86cd799439012",
+        "input": "1 2\n",
+        "output": "3\n",
+        "is_sample": true,
+        "time_limit": 2000,
+        "memory_limit": 512,
+        "score": 10,
+        "created_at": "2025-10-05T10:00:00Z"
+      }
+    ],
+    "total": 10
+  }
+}
+```
+
+#### 2. 获取单个测试用例
+
+**请求**：
+```
+GET /api/v1/testcase/:id
+Authorization: Bearer <JWT_TOKEN>
+```
+
+**响应**：
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "id": "507f1f77bcf86cd799439011",
+    "problem_id": "507f1f77bcf86cd799439012",
+    "input": "1 2\n",
+    "output": "3\n",
+    "is_sample": true,
+    "time_limit": 2000,
+    "memory_limit": 512,
+    "score": 10,
+    "created_at": "2025-10-05T10:00:00Z"
+  }
+}
+```
+
+#### 3. 创建测试用例
+
+**请求**：
+```
+POST /api/v1/testcase/
+Authorization: Bearer <JWT_TOKEN>
+Content-Type: application/json
+
+{
+  "problem_id": "507f1f77bcf86cd799439012",
+  "input": "1 2\n",
+  "output": "3\n",
+  "is_sample": true,
+  "time_limit": 2000,      // 可选
+  "memory_limit": 512,     // 可选
+  "score": 10              // 可选
+}
+```
+
+**响应**：
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "id": "507f1f77bcf86cd799439011",
+    "problem_id": "507f1f77bcf86cd799439012",
+    "input": "1 2\n",
+    "output": "3\n",
+    "is_sample": true,
+    "time_limit": 2000,
+    "memory_limit": 512,
+    "score": 10,
+    "created_at": "2025-10-05T10:00:00Z"
+  }
+}
+```
+
+#### 4. 更新测试用例
+
+**请求**：
+```
+PUT /api/v1/testcase/:id
+Authorization: Bearer <JWT_TOKEN>
+Content-Type: application/json
+
+{
+  "input": "2 3\n",        // 可选
+  "output": "5\n",         // 可选
+  "is_sample": false,      // 可选
+  "time_limit": 3000,      // 可选
+  "memory_limit": 1024,    // 可选
+  "score": 20              // 可选
+}
+```
+
+**响应**：
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "id": "507f1f77bcf86cd799439011",
+    "problem_id": "507f1f77bcf86cd799439012",
+    "input": "2 3\n",
+    "output": "5\n",
+    "is_sample": false,
+    "time_limit": 3000,
+    "memory_limit": 1024,
+    "score": 20,
+    "created_at": "2025-10-05T10:00:00Z"
+  }
+}
+```
+
+#### 5. 删除测试用例
+
+**请求**：
+```
+DELETE /api/v1/testcase/:id
+Authorization: Bearer <JWT_TOKEN>
+```
+
+**响应**：
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "message": "测试用例删除成功"
+  }
+}
+```
+
+#### 权限说明
+- 所有测试用例管理接口均需要 **JWT 认证**
+- 建议仅对**管理员或教师角色**开放这些接口
+- 前端需要在请求头中携带 `Authorization: Bearer <JWT_TOKEN>`
+
+#### 前端影响
+- **题目管理页面**：需要集成测试用例的 CRUD 功能
+- **测试用例列表**：显示所有测试用例，支持编辑和删除
+- **测试用例表单**：支持创建和编辑测试用例
+- **权限控制**：根据用户角色显示/隐藏测试用例管理功能
+
+---
+
 ## 🎨 前端 UI 建议
 
 ### 1. 题目管理 - 测试用例配置
@@ -297,6 +468,14 @@
 - [ ] 添加"使用题目默认值"复选框
 - [ ] 添加 `score` 字段（可选）
 - [ ] 表单验证：time_limit > 0, memory_limit > 0
+
+### 测试用例管理模块（新增）
+- [ ] 实现测试用例列表页面（调用 `GET /api/v1/testcase/problem/:problem_id`）
+- [ ] 实现测试用例创建表单（调用 `POST /api/v1/testcase/`）
+- [ ] 实现测试用例编辑表单（调用 `PUT /api/v1/testcase/:id`）
+- [ ] 实现测试用例删除功能（调用 `DELETE /api/v1/testcase/:id`）
+- [ ] 添加权限控制（仅管理员/教师可见）
+- [ ] 添加 JWT Token 认证逻辑
 
 ### 判题结果展示模块
 - [ ] 根据 `is_sample` 区分示例用例和隐藏用例
