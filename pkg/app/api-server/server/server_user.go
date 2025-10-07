@@ -8,12 +8,13 @@
 package server
 
 import (
-	"github.com/gin-gonic/gin"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"strconv"
 	"zk-code-arena-server/pkg/models"
 	"zk-code-arena-server/pkg/utils"
 	"zk-code-arena-server/pkg/utils/middleware"
+
+	"github.com/gin-gonic/gin"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 // RegisterUser 注册用户相关路由
@@ -22,7 +23,7 @@ func (s *Server) RegisterUser(g *gin.RouterGroup) {
 	{
 		// 公开路由
 		userGroup.POST("/register", s.CreateUser) // 用户注册
-		userGroup.POST("/login", s.LoginUser)       // 用户登录
+		userGroup.POST("/login", s.LoginUser)     // 用户登录
 	}
 
 	// 需要认证的路由
@@ -60,8 +61,8 @@ func (s *Server) CreateUser(c *gin.Context) {
 // LoginUser 用户登录
 func (s *Server) LoginUser(c *gin.Context) {
 	var loginReq struct {
-		Username string `json:"username" binding:"required"`
-		Password string `json:"password" binding:"required"`
+		StudentID string `json:"student_id" binding:"required"`
+		Password  string `json:"password" binding:"required"`
 	}
 
 	if err := c.ShouldBindJSON(&loginReq); err != nil {
@@ -70,7 +71,7 @@ func (s *Server) LoginUser(c *gin.Context) {
 	}
 
 	ctx := c.Request.Context()
-	user, err := s.svc.UserService.ValidateUser(ctx, loginReq.Username, loginReq.Password)
+	user, err := s.svc.UserService.ValidateUser(ctx, loginReq.StudentID, loginReq.Password)
 	if err != nil {
 		utils.UnauthorizedResponse(c, err.Error())
 		return

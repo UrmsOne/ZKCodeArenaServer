@@ -11,13 +11,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/gin-gonic/gin"
-	"github.com/sirupsen/logrus"
 	"net/http"
 	"time"
 	"zk-code-arena-server/pkg/app/api-server/service"
 	"zk-code-arena-server/pkg/utils"
 	"zk-code-arena-server/pkg/utils/middleware"
+
+	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
 )
 
 type Server struct {
@@ -66,6 +67,10 @@ func (s *Server) RegisterRoutes() {
 		s.RegisterSubmit(v1)
 		// 测试用例相关路由
 		s.RegisterTestCase(v1)
+		//课程相关路由
+		s.RegisterCourse(v1)
+		// 统计相关路由
+		s.RegisterStatistics(v1)
 	}
 }
 
@@ -117,7 +122,7 @@ func (s *Server) Shutdown(ctx context.Context) {
 	} else {
 		s.lg.Info("判题服务已关闭")
 	}
-	
+
 	s.lg.Info("正在关闭数据库连接...")
 	s.svc.Close(ctx)
 	s.lg.Info("服务器已完全关闭")

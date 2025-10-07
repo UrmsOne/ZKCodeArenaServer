@@ -19,20 +19,22 @@ import (
 
 // Service 服务层结构
 type Service struct {
-	UserService     *UserService
-	ProblemService  *ProblemService
-	SubmitService   *SubmitService
-	JudgeService    *JudgeService
-	TestCaseService *TestCaseService
+	UserService       *UserService
+	ProblemService    *ProblemService
+	SubmitService     *SubmitService
+	JudgeService      *JudgeService
+	TestCaseService   *TestCaseService
+	CourseService     *CourseService
+	StatisticsService *StatisticsService
 }
 
 // NewService 创建服务实例
 func NewService() *Service {
-	// 1. 创建基础服务
+	// 1. 创建基础服务（无依赖）
 	userService := NewUserService()
-	problemService := NewProblemService()
 	submitService := NewSubmitService()
 	testCaseService := NewTestCaseService()
+	courseService := NewCourseService()
 
 	// 2. 创建沙箱客户端
 	// 将 conf.LanguageConfig 转换为 sandbox.LanguageConfig
@@ -82,7 +84,11 @@ func NewService() *Service {
 	}
 	messageQueue := queue.NewChannelQueue(queueSize, submitService)
 
-	// 4. 创建判题服务 获取其他基础服务引用
+	// 4. 创建需要依赖注入的服务
+	// ProblemService 需要 sandboxClient 和 testCaseService
+	problemService := NewProblemService(sandboxClient, testCaseService)
+	
+	// JudgeService 需要所有基础服务的引用
 	judgeService := NewJudgeService(
 		sandboxClient,
 		submitService,
@@ -90,13 +96,18 @@ func NewService() *Service {
 		problemService,
 		messageQueue,
 	)
+	
+	// StatisticsService 需要其他服务的引用
+	statisticsService := NewStatisticsService(submitService, problemService, userService)
 
 	return &Service{
-		UserService:     userService,
-		ProblemService:  problemService,
-		SubmitService:   submitService,
-		JudgeService:    judgeService,
-		TestCaseService: testCaseService,
+		UserService:       userService,
+		ProblemService:    problemService,
+		SubmitService:     submitService,
+		JudgeService:      judgeService,
+		TestCaseService:   testCaseService,
+		CourseService:     courseService,
+		StatisticsService: statisticsService,
 	}
 }
 

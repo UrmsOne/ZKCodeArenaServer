@@ -8,6 +8,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -140,4 +141,84 @@ func (s *TestCaseService) GetTestCaseByID(ctx context.Context, id primitive.Obje
 func (s *TestCaseService) CountTestCasesByProblemID(ctx context.Context, problemID primitive.ObjectID) (int64, error) {
 	filter := bson.M{"problem_id": problemID}
 	return s.collection.CountDocuments(ctx, filter)
+}
+
+// GetSampleTestCases 获取示例测试用例（仅用于代码运行测试）
+func (s *TestCaseService) GetSampleTestCases(ctx context.Context, problemID primitive.ObjectID) ([]*models.TestCase, error) {
+	// 构建查询条件：只获取示例测试用例
+	filter := bson.M{
+		"problem_id": problemID,
+		"is_sample":  true,
+	}
+	
+	// 按创建时间排序
+	opts := options.Find().SetSort(bson.D{{Key: "created_at", Value: 1}})
+	
+	// 执行查询
+	cursor, err := s.collection.Find(ctx, filter, opts)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+	
+	// 解析结果
+	var testCases []*models.TestCase
+	if err = cursor.All(ctx, &testCases); err != nil {
+		return nil, err
+	}
+	
+	return testCases, nil
+}
+
+// BatchImportResult 批量导入结果
+type BatchImportResult struct {
+	TotalCount   int      `json:"total_count"`
+	SuccessCount int      `json:"success_count"`
+	FailedCount  int      `json:"failed_count"`
+	FailedItems  []string `json:"failed_items,omitempty"`
+}
+
+// BatchCreateTestCases 批量创建测试用例
+func (s *TestCaseService) BatchCreateTestCases(ctx context.Context, testCases []*models.TestCase) (*BatchImportResult, error) {
+	result := &BatchImportResult{
+		TotalCount: len(testCases),
+		FailedItems: []string{},
+	}
+	
+	// 准备批量插入的文档
+	docs := make([]interface{}, 0, len(testCases))
+	for i, tc := range testCases {
+		// 设置创建时间
+		tc.CreatedAt = time.Now()
+		
+		// 验证必填字段
+		if tc.ProblemID.IsZero() {
+			result.FailedCount++
+			result.FailedItems = append(result.FailedItems, fmt.Sprintf("索引 %d: 缺少题目ID", i))
+			continue
+		}
+		
+		if tc.Input == "" && tc.Output == "" {
+			result.FailedCount++
+			result.FailedItems = append(result.FailedItems, fmt.Sprintf("索引 %d: 输入和输出不能同时为空", i))
+			continue
+		}
+		
+		docs = append(docs, tc)
+	}
+	
+	// 如果没有有效的测试用例，直接返回
+	if len(docs) == 0 {
+		return result, nil
+	}
+	
+	// 批量插入
+	insertResult, err := s.collection.InsertMany(ctx, docs)
+	if err != nil {
+		return nil, fmt.Errorf("批量插入失败: %w", err)
+	}
+	
+	result.SuccessCount = len(insertResult.InsertedIDs)
+	
+	return result, nil
 }

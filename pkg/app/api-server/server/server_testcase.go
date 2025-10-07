@@ -25,6 +25,7 @@ func (s *Server) RegisterTestCase(g *gin.RouterGroup) {
 		securedGroup.GET("/problem/:problem_id", s.GetTestCasesByProblemID) // 获取题目的测试用例列表
 		securedGroup.GET("/:id", s.GetTestCase)                             // 获取单个测试用例
 		securedGroup.POST("/", s.CreateTestCase)                            // 创建测试用例
+		securedGroup.POST("/batch", s.BatchCreateTestCases)                 // 批量导入测试用例
 		securedGroup.PUT("/:id", s.UpdateTestCase)                          // 更新测试用例
 		securedGroup.DELETE("/:id", s.DeleteTestCase)                       // 删除测试用例
 	}
@@ -197,4 +198,60 @@ func (s *Server) DeleteTestCase(c *gin.Context) {
 	utils.SuccessResponse(c, gin.H{
 		"message": "测试用例删除成功",
 	})
+}
+
+// BatchCreateTestCases 批量创建测试用例
+func (s *Server) BatchCreateTestCases(c *gin.Context) {
+	// 检查权限：只有管理员和老师可以批量导入
+	role, exists := c.Get("role")
+	if !exists {
+		utils.UnauthorizedResponse(c, "需要登录")
+		return
+	}
+
+	userRole := role.(string)
+	if userRole != string(models.RoleAdmin) && userRole != string(models.RoleTeacher) {
+		utils.ForbiddenResponse(c, "权限不足")
+		return
+	}
+
+	var req struct {
+		ProblemID string               `json:"problem_id" binding:"required"`
+		TestCases []models.TestCase    `json:"test_cases" binding:"required,min=1"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.BadRequestResponse(c, "请求参数错误: "+err.Error())
+		return
+	}
+
+	problemID, err := primitive.ObjectIDFromHex(req.ProblemID)
+	if err != nil {
+		utils.BadRequestResponse(c, "无效的题目ID")
+		return
+	}
+
+	// 验证题目是否存在
+	_, err = s.svc.ProblemService.GetProblemByID(c.Request.Context(), problemID)
+	if err != nil {
+		utils.NotFoundResponse(c, "题目不存在")
+		return
+	}
+
+	// 设置所有测试用例的 ProblemID
+	testCases := make([]*models.TestCase, len(req.TestCases))
+	for i := range req.TestCases {
+		testCases[i] = &req.TestCases[i]
+		testCases[i].ProblemID = problemID
+	}
+
+	// 批量创建
+	result, err := s.svc.TestCaseService.BatchCreateTestCases(c.Request.Context(), testCases)
+	if err != nil {
+		s.lg.Errorf("批量创建测试用例失败: %v", err)
+		utils.InternalServerErrorResponse(c, "批量创建测试用例失败: "+err.Error())
+		return
+	}
+
+	utils.SuccessResponse(c, result)
 }

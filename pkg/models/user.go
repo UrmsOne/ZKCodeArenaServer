@@ -8,8 +8,9 @@
 package models
 
 import (
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"time"
+
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 // UserRole 用户角色
@@ -26,7 +27,7 @@ const (
 type User struct {
 	ID          primitive.ObjectID `bson:"_id,omitempty" json:"id"`
 	Username    string             `bson:"username" json:"username" binding:"required"`
-	Password    string             `bson:"password" json:"-"`
+	Password    string             `bson:"password" json:"password" binding:"required"`
 	Email       string             `bson:"email" json:"email" binding:"required,email"`
 	RealName    string             `bson:"real_name" json:"real_name"`
 	StudentID   string             `bson:"student_id" json:"student_id"`

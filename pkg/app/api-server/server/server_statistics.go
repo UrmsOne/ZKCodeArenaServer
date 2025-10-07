@@ -1,0 +1,98 @@
+/*
+@Author: omenkk7
+@Date: 2025/10/7
+@Description: 统计相关路由处理
+*/
+
+package server
+
+import (
+	"github.com/gin-gonic/gin"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"zk-code-arena-server/pkg/models"
+	"zk-code-arena-server/pkg/utils"
+	"zk-code-arena-server/pkg/utils/middleware"
+)
+
+// RegisterStatistics 注册统计相关路由
+func (s *Server) RegisterStatistics(g *gin.RouterGroup) {
+	statsGroup := g.Group("/statistics")
+	
+	// 需要认证的路由
+	securedGroup := statsGroup.Group("/").Use(middleware.JWTMiddleware())
+	{
+		securedGroup.GET("/user", s.GetUserStatistics)         // 获取当前用户统计
+		securedGroup.GET("/user/:id", s.GetUserStatisticsByID) // 获取指定用户统计（管理员）
+		securedGroup.GET("/system", s.GetSystemStatistics)     // 获取系统统计（管理员）
+	}
+}
+
+// GetUserStatistics 获取当前用户统计
+func (s *Server) GetUserStatistics(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		utils.UnauthorizedResponse(c, "需要登录")
+		return
+	}
+	
+	userObjID, err := primitive.ObjectIDFromHex(userID.(string))
+	if err != nil {
+		utils.BadRequestResponse(c, "无效的用户ID")
+		return
+	}
+	
+	ctx := c.Request.Context()
+	stats, err := s.svc.StatisticsService.GetUserStatistics(ctx, userObjID)
+	if err != nil {
+		utils.InternalServerErrorResponse(c, "获取用户统计失败: "+err.Error())
+		return
+	}
+	
+	utils.SuccessResponse(c, stats)
+}
+
+// GetUserStatisticsByID 获取指定用户统计（管理员）
+func (s *Server) GetUserStatisticsByID(c *gin.Context) {
+	// 检查权限：只有管理员可以查看其他用户的统计
+	role, exists := c.Get("role")
+	if !exists || role.(string) != string(models.RoleAdmin) {
+		utils.ForbiddenResponse(c, "权限不足")
+		return
+	}
+	
+	idStr := c.Param("id")
+	userObjID, err := primitive.ObjectIDFromHex(idStr)
+	if err != nil {
+		utils.BadRequestResponse(c, "无效的用户ID")
+		return
+	}
+	
+	ctx := c.Request.Context()
+	stats, err := s.svc.StatisticsService.GetUserStatistics(ctx, userObjID)
+	if err != nil {
+		utils.InternalServerErrorResponse(c, "获取用户统计失败: "+err.Error())
+		return
+	}
+	
+	utils.SuccessResponse(c, stats)
+}
+
+// GetSystemStatistics 获取系统统计（管理员）
+func (s *Server) GetSystemStatistics(c *gin.Context) {
+	// 检查权限：只有管理员可以查看系统统计
+	role, exists := c.Get("role")
+	if !exists || role.(string) != string(models.RoleAdmin) {
+		utils.ForbiddenResponse(c, "权限不足")
+		return
+	}
+	
+	ctx := c.Request.Context()
+	stats, err := s.svc.StatisticsService.GetSystemStatistics(ctx)
+	if err != nil {
+		utils.InternalServerErrorResponse(c, "获取系统统计失败: "+err.Error())
+		return
+	}
+	
+	utils.SuccessResponse(c, stats)
+}
+

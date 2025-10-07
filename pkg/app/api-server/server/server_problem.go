@@ -8,9 +8,11 @@
 package server
 
 import (
+	"strconv"
+	
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"strconv"
+	"zk-code-arena-server/pkg/app/api-server/service"
 	"zk-code-arena-server/pkg/models"
 	"zk-code-arena-server/pkg/utils"
 	"zk-code-arena-server/pkg/utils/middleware"
@@ -21,8 +23,9 @@ func (s *Server) RegisterProblem(g *gin.RouterGroup) {
 	problemGroup := g.Group("/problem")
 	{
 		// 公开路由
-		problemGroup.GET("/", s.GetProblems)   // 获取题目列表
-		problemGroup.GET("/:id", s.GetProblem) // 获取题目详情
+		problemGroup.GET("/", s.GetProblems)       // 获取题目列表
+		problemGroup.GET("/search", s.SearchProblems) // 搜索题目
+		problemGroup.GET("/:id", s.GetProblem)     // 获取题目详情
 	}
 
 	// 需要认证的路由
@@ -31,6 +34,9 @@ func (s *Server) RegisterProblem(g *gin.RouterGroup) {
 		securedGroup.POST("/", s.CreateProblem)      // 创建题目
 		securedGroup.PUT("/:id", s.UpdateProblem)    // 更新题目
 		securedGroup.DELETE("/:id", s.DeleteProblem) // 删除题目
+	
+	
+		securedGroup.POST("/:id/run", middleware.CodeRunRateLimitMiddleware(), s.RunCode) // 运行代码测试
 	}
 }
 
@@ -218,4 +224,67 @@ func (s *Server) DeleteProblem(c *gin.Context) {
 	}
 
 	utils.SuccessResponse(c, gin.H{"message": "删除成功"})
+}
+
+// RunCode 运行代码测试（非提交）
+func (s *Server) RunCode(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := primitive.ObjectIDFromHex(idStr)
+	if err != nil {
+		utils.BadRequestResponse(c, "无效的题目ID")
+		return
+	}
+
+	var req service.RunCodeRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.BadRequestResponse(c, "请求参数错误: "+err.Error())
+		return
+	}
+
+	ctx := c.Request.Context()
+	resp, err := s.svc.ProblemService.RunCode(ctx, id, &req)
+	if err != nil {
+		utils.InternalServerErrorResponse(c, "运行代码失败: "+err.Error())
+		return
+	}
+
+	utils.SuccessResponse(c, resp)
+}
+
+// SearchProblems 搜索题目
+func (s *Server) SearchProblems(c *gin.Context) {
+	keyword := c.Query("keyword")
+	difficulty := c.Query("difficulty")
+	tags := c.QueryArray("tags")
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "10"))
+
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 || pageSize > 100 {
+		pageSize = 10
+	}
+
+	ctx := c.Request.Context()
+	problems, total, err := s.svc.ProblemService.SearchProblems(
+		ctx,
+		keyword,
+		models.ProblemDifficulty(difficulty),
+		tags,
+		page,
+		pageSize,
+	)
+	if err != nil {
+		utils.InternalServerErrorResponse(c, "搜索题目失败: "+err.Error())
+		return
+	}
+
+	utils.SuccessResponse(c, gin.H{
+		"problems":   problems,
+		"total":      total,
+		"page":       page,
+		"page_size":  pageSize,
+		"total_page": (total + int64(pageSize) - 1) / int64(pageSize),
+	})
 }

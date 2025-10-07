@@ -126,3 +126,15 @@ Redis:
   Password: ""
   DB: 0
   PoolSize: 10
+
+RateLimit:
+  Enabled: false       # 限流开关，默认关闭
+  Type: "memory"       # 限流类型: memory（内存）或 redis（Redis）
+  # 代码运行测试限流规则
+  CodeRun:
+    Limit: 3           # 每个时间窗口允许的最大请求数
+    Window: 60         # 时间窗口（秒）
+  # 代码提交限流规则  
+  Submit:
+    Limit: 10
+    Window: 60

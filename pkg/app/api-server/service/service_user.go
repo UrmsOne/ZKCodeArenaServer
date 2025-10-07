@@ -10,13 +10,14 @@ package service
 import (
 	"context"
 	"errors"
+	"time"
+	"zk-code-arena-server/pkg/models"
+	"zk-code-arena-server/pkg/utils"
+
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"golang.org/x/crypto/bcrypt"
-	"time"
-	"zk-code-arena-server/pkg/models"
-	"zk-code-arena-server/pkg/utils"
 )
 
 type UserService struct{}
@@ -83,6 +84,16 @@ func (s *UserService) GetUserByUsername(ctx context.Context, username string) (*
 	return &user, nil
 }
 
+func (s *UserService) GetUserByStudentID(ctx context.Context, stdId string) (*models.User, error) {
+	collection := utils.GetCollection("users")
+	var user models.User
+	err := collection.FindOne(ctx, bson.M{"student_id": stdId}).Decode(&user)
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
 // GetUserByEmail 根据邮箱获取用户
 func (s *UserService) GetUserByEmail(ctx context.Context, email string) (*models.User, error) {
 	collection := utils.GetCollection("users")
@@ -95,25 +106,30 @@ func (s *UserService) GetUserByEmail(ctx context.Context, email string) (*models
 }
 
 // ValidateUser 验证用户登录
-func (s *UserService) ValidateUser(ctx context.Context, username, password string) (*models.User, error) {
-	user, err := s.GetUserByUsername(ctx, username)
+func (s *UserService) ValidateUser(ctx context.Context, stdId, password string) (*models.User, error) {
+	user, err := s.GetUserByStudentID(ctx, stdId)
 	if err != nil {
-		return nil, errors.New("用户名或密码错误")
+		return nil, errors.New("账号或密码错误")
 	}
 
 	if !user.IsActive {
 		return nil, errors.New("账户已被禁用")
 	}
-
-	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
-	if err != nil {
-		return nil, errors.New("用户名或密码错误")
+	//TODO 加密存储
+	//err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
+	//if err != nil {
+	//	return nil, errors.New("账号或密码错误")
+	//}
+	if user.Password != password {
+		return nil, errors.New("账号或密码错误")
 	}
 
 	// 更新最后登录时间
 	now := time.Now()
 	user.LastLoginAt = &now
-	s.UpdateUser(ctx, user)
+	if err = s.UpdateUser(ctx, user); err != nil {
+		return nil, err
+	}
 
 	return user, nil
 }

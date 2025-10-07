@@ -64,6 +64,18 @@ type configYaml struct {
 		DB       int    `yaml:"DB"`
 		PoolSize int    `yaml:"PoolSize"`
 	} `yaml:"Redis"`
+	RateLimit struct {
+		Enabled bool   `yaml:"Enabled"` // 限流开关
+		Type    string `yaml:"Type"`    // 限流类型: memory 或 redis
+		CodeRun struct {
+			Limit  int `yaml:"Limit"`  // 时间窗口内最大请求数
+			Window int `yaml:"Window"` // 时间窗口（秒）
+		} `yaml:"CodeRun"`
+		Submit struct {
+			Limit  int `yaml:"Limit"`
+			Window int `yaml:"Window"`
+		} `yaml:"Submit"`
+	} `yaml:"RateLimit"`
 }
 
 // JudgeConfig 判题配置

@@ -21,6 +21,7 @@ import (
 	"zk-code-arena-server/pkg/app/api-server/server"
 	"zk-code-arena-server/pkg/app/api-server/service"
 	"zk-code-arena-server/pkg/utils"
+	"zk-code-arena-server/pkg/utils/middleware"
 )
 
 var runServerCfg = struct {
@@ -88,6 +89,13 @@ func runServe(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	lg.Info("数据库连接成功")
+
+	// 初始化限流器
+	if err := middleware.InitRateLimiter(); err != nil {
+		lg.Errorf("限流器初始化失败: %v", err)
+		return err
+	}
+	defer middleware.CloseRateLimiter()
 
 	// 初始化服务
 	svc := service.NewService()
