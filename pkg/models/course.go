@@ -1,10 +1,3 @@
-/*
-@Author: urmsone urmsone@163.com
-@Date: 2025/1/24 18:00
-@Name: course.go
-@Description: 课程数据模型（支持多班级嵌入式架构）
-*/
-
 package models
 
 import (
@@ -48,22 +41,6 @@ const (
 	TaskTypeVideo   TaskType = 2 // 视频
 )
 
-// Task 任务嵌入文档TODO 后续不再要type，直接嵌入到relation结构体 id type
-type Task struct {
-	ID          primitive.ObjectID   `bson:"_id,omitempty" json:"id"`
-	Title       string               `bson:"title" json:"title" binding:"required"`
-	Description string               `bson:"description,omitempty" json:"description,omitempty"`
-	Type        TaskType             `bson:"type" json:"type" binding:"required"`
-	StartTime   time.Time            `bson:"start_time" json:"start_time" binding:"required"`
-	EndTime     *time.Time           `bson:"end_time" json:"end_time"`
-	RelationIDs []primitive.ObjectID `bson:"relation_ids,omitempty" json:"relation_ids,omitempty"`
-	Status      TaskStatus           `bson:"status" json:"status"`
-	FinishNums  int                  `bson:"finish_nums" json:"finish_nums"`
-	CTime       time.Time            `bson:"ctime" json:"ctime"`
-	CID         primitive.ObjectID   `bson:"c_id" json:"c_id"`
-	MTime       time.Time            `bson:"mtime" json:"mtime"`
-}
-
 // Clazz 班级嵌入文档,TODO 根据业务需求判断是否一个班级要有对应的教师，且教师必须是被邀请加入了课程，是否有多个教师
 type Clazz struct {
 	ID            primitive.ObjectID   `bson:"_id,omitempty" json:"id"`
@@ -76,7 +53,6 @@ type Clazz struct {
 	MaxMembers    int                  `bson:"max_members,omitempty" json:"max_members,omitempty"`
 	AddNums       int                  `bson:"add_nums" json:"add_nums"`
 	Status        ClassStatus          `bson:"status" json:"status"`
-	Tasks         []Task               `bson:"tasks,omitempty" json:"tasks,omitempty"`
 	CTime         time.Time            `bson:"ctime" json:"ctime"`
 	CID           primitive.ObjectID   `bson:"c_id" json:"c_id"`
 	MTime         time.Time            `bson:"mtime" json:"mtime"`
@@ -95,7 +71,38 @@ type Course struct {
 	MTime       time.Time            `bson:"mtime" json:"mtime"`
 }
 
+// Task 课程任务模型
+type Task struct {
+	ID          primitive.ObjectID   `bson:"_id,omitempty" json:"id"`
+	Title       string               `bson:"title" json:"title" binding:"required"`
+	Description string               `bson:"description,omitempty" json:"description,omitempty"`
+	Type        TaskType             `bson:"type" json:"type" binding:"required"`
+	StartTime   time.Time            `bson:"start_time" json:"start_time" binding:"required"`
+	EndTime     *time.Time           `bson:"end_time" json:"end_time"`
+	RelationIDs []primitive.ObjectID `bson:"relation_ids,omitempty" json:"relation_ids,omitempty"`
+	Status      TaskStatus           `bson:"status" json:"status"`
+	FinishIds   []primitive.ObjectID `bson:"finish_ids" json:"finish_ids"` // 完成任务的成员ID集合
+	CourseId    primitive.ObjectID   `bson:"course_id" json:"course_id"`
+	ClazzId     primitive.ObjectID   `bson:"clazz_id" json:"clazz_id"`
+	CTime       time.Time            `bson:"ctime" json:"ctime"`
+	CID         primitive.ObjectID   `bson:"c_id" json:"c_id"`
+	MTime       time.Time            `bson:"mtime" json:"mtime"`
+}
+type RelationsUsers struct {
+	ID         primitive.ObjectID `bson:"_id,omitempty" json:"id"`
+	TaskID     primitive.ObjectID `bson:"task_id" json:"task_id"`
+	RelationID primitive.ObjectID `bson:"relation_id,omitempty" json:"relation_id,omitempty"`
+	UserID     primitive.ObjectID `bson:"user_id" json:"user_id"`
+	CTime      time.Time          `bson:"ctime" json:"ctime"`
+}
+
 // 请求和响应结构体
+
+type FinishTaskRequest struct {
+	RelationID string `bson:"relation_id" json:"relation_id" binding:"required"`
+	TaskID     string `bson:"task_id" json:"task_id" binding:"required"`
+	ClazzID    string `bson:"clazz_id" json:"clazz_id" binding:"required"`
+}
 
 // CreateCourseRequest 创建课程请求
 type CreateCourseRequest struct {
@@ -154,6 +161,13 @@ type UpdateClazzRequest struct {
 	MaxMembers    *int                 `json:"max_members,omitempty"`
 	MemberIDs     []primitive.ObjectID `json:"member_ids,omitempty"`
 }
+
+// RemoveClazzMembersRequest 批量移除班级成员请求
+type RemoveClazzMembersRequest struct {
+	ClazzID   string   `json:"clazz_id" binding:"required"`
+	MemberIDs []string `json:"member_ids" binding:"required"`
+}
+
 type UpdateCourseRequest struct {
 	ID          string        `bson:"_id,omitempty" json:"id" binding:"required"`
 	Name        *string       `json:"name,omitempty"`
@@ -166,7 +180,19 @@ type JoinClazzRequest struct {
 	ClazzID    string  `json:"clazz_id" form:"clazz_id" binding:"required"`
 	InviteCode *string `json:"invite_code,omitempty" form:"invite_code,omitempty"`
 }
-
+type GetClazzResponse struct {
+	ID            primitive.ObjectID   `bson:"_id,omitempty" json:"id"`
+	Name          string               `bson:"name" json:"name" binding:"required"`
+	Description   string               `bson:"description,omitempty" json:"description,omitempty"`
+	CourseId      primitive.ObjectID   `bson:"course_id" json:"course_id" binding:"required"`
+	Schedule      string               `bson:"schedule,omitempty" json:"schedule,omitempty"`
+	MemberIDs     []primitive.ObjectID `bson:"member_ids,omitempty" json:"member_ids,omitempty"`
+	RequireInvite bool                 `bson:"require_invite" json:"require_invite"`
+	MaxMembers    int                  `bson:"max_members,omitempty" json:"max_members,omitempty"`
+	AddNums       int                  `bson:"add_nums" json:"add_nums"`
+	Status        ClassStatus          `bson:"status" json:"status"`
+	CTime         time.Time            `bson:"ctime" json:"ctime"`
+}
 type PageQueryCourseRequest struct {
 	PageNum  *int64  `json:"page_num,omitempty"`
 	PageSize *int64  `json:"page_size,omitempty"`
@@ -205,16 +231,6 @@ type ClazzResponse struct {
 }
 
 // 成员方法
-// GetTaskByID 根据ID获取任务
-func (cl *Clazz) GetTaskByID(taskID primitive.ObjectID) *Task {
-	for i := range cl.Tasks {
-		if cl.Tasks[i].ID == taskID {
-			return &cl.Tasks[i]
-		}
-	}
-	return nil
-}
-
 // AddMember 添加成员到班级
 func (cl *Clazz) AddMember(userID primitive.ObjectID) {
 	// 检查是否已存在

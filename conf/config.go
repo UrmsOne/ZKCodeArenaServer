@@ -35,6 +35,9 @@ type configYaml struct {
 		Uri    string `yaml:"Uri"`
 		DbName string `yaml:"DbName"`
 	} `yaml:"Mongo"`
+	Server struct {
+		Domain string `yaml:"Domain"`
+	} `yaml:"Server"`
 	Judge JudgeConfig `yaml:"Judge"`
 	Sandbox struct {
 		Url     string        `yaml:"Url"`

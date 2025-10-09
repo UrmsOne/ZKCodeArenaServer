@@ -8,12 +8,11 @@ package queue
 
 import (
 	"context"
-
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 // MessageQueue 消息队列接口
-// 定义统一的消息队列规范，支持多种实现（Channel、RabbitMQ、Kafka 等）
+// 定义统一的消息队列规范，支持多种实现（Channel、RabbitMQ、Kafka 等）v1.0采用channel实现 保留后续扩展性
 type MessageQueue interface {
 	// Push 推送任务到队列（生产者接口）
 	// ctx: 上下文

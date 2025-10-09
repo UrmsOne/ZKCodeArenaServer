@@ -138,3 +138,8 @@ RateLimit:
   Submit:
     Limit: 10
     Window: 60
+
+
+
+Server:
+  Domain: "localhost"

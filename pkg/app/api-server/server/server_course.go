@@ -1,8 +1,6 @@
 package server
 
 import (
-	"context"
-	"net/http"
 	"zk-code-arena-server/pkg/models"
 	"zk-code-arena-server/pkg/utils"
 	"zk-code-arena-server/pkg/utils/middleware"
@@ -16,22 +14,31 @@ func (s *Server) RegisterCourse(g *gin.RouterGroup) {
 		// 需要认证的路由
 		jwtGroup := courseGroup.Use(middleware.JWTMiddleware())
 		{
-			jwtGroup.GET("/clazzes/join", s.JoinClass)
-			jwtGroup.POST("/:relationId/:taskId", s.FinishTask)
-			jwtGroup.POST("/clazzes", s.CreateClassForCourse)
+			jwtGroup.DELETE("/:courseId", s.RemoveCourse)
 			jwtGroup.PUT("/:courseId/:clazzId", s.RefreshQrcode) //这里如果直传班级也行但是会多一次数据库查询故我认为有必要冗余
 			jwtGroup.GET("/:courseId", s.GetCourseById)
 			jwtGroup.POST("/query", s.PageQueryCourse)
 			jwtGroup.PUT("", s.UpdateCourse)
 			jwtGroup.PUT("/:courseId/avatar", s.UpdateCourseAvatar)
+
+			//课程任务相关
 			jwtGroup.POST("/task", s.AddTask)
 			jwtGroup.PUT("/task", s.UpdateTask)
-			jwtGroup.DELETE("/task/:clazzId/:taskId", s.DeleteTask)
-			jwtGroup.DELETE("/:courseId", s.RemoveCourse)
+			jwtGroup.DELETE("/task/:taskId", s.DeleteTask)
+			jwtGroup.GET("/task/:clazzId", s.GetTasksByClazzId)
+			jwtGroup.POST("/finishtask", s.FinishTask)
+
+			//班级相关
+			jwtGroup.POST("/clazzes", s.CreateClassForCourse)
+			jwtGroup.GET("/clazzes/join", s.JoinClass)
+			jwtGroup.GET("/clazzes/:clazzId", s.GetClazzById)
+			jwtGroup.DELETE("/clazzes/:clazzId", s.DeleteClazz)
+			jwtGroup.POST("/clazzes/:clazzId/members", s.AddClazzMember)
+			jwtGroup.POST("/clazzes/:clazzId/members/remove", s.RemoveClazzMembers)
 		}
 
 		// 需要老师权限的路由
-		teacherGroup := jwtGroup.Use(middleware.RequireRole(string(models.RoleTeacher)))
+		teacherGroup := jwtGroup.Use(middleware.RequireRole(models.RoleTeacher))
 		{
 			teacherGroup.POST("", s.CreateCourse) // 创建课程需要老师权限
 		}
@@ -50,7 +57,7 @@ func (s *Server) JoinClass(c *gin.Context) {
 		return
 	}
 	userID, _ := c.Get("user_id")
-	if err := s.svc.CourseService.JoinClazz(context.TODO(), &req, userID.(string)); err != nil {
+	if err := s.svc.CourseService.JoinClazz(c.Request.Context(), &req, userID.(string)); err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
 	}
@@ -64,7 +71,7 @@ func (s *Server) CreateCourse(c *gin.Context) {
 		return
 	}
 	userID, _ := c.Get("user_id")
-	courseID, err := s.svc.CourseService.CreateCourse(context.Background(), &req, userID.(string))
+	courseID, err := s.svc.CourseService.CreateCourse(c.Request.Context(), &req, userID.(string))
 	if err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
@@ -79,7 +86,7 @@ func (s *Server) CreateClassForCourse(c *gin.Context) {
 		return
 	}
 	userID, _ := c.Get("user_id")
-	response, err := s.svc.CourseService.CreateClass(context.Background(), &req, userID.(string))
+	response, err := s.svc.CourseService.CreateClass(c.Request.Context(), &req, userID.(string))
 	if err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
@@ -96,7 +103,7 @@ func (s *Server) RefreshQrcode(c *gin.Context) {
 	}
 	userID, _ := c.Get("user_id")
 
-	response, err := s.svc.CourseService.RefreshInviteCode(context.Background(), courseId, clazzId, userID.(string))
+	response, err := s.svc.CourseService.RefreshInviteCode(c.Request.Context(), courseId, clazzId, userID.(string))
 	if err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
@@ -111,7 +118,7 @@ func (s *Server) GetCourseById(c *gin.Context) {
 		return
 	}
 	userID, _ := c.Get("user_id")
-	response, err := s.svc.CourseService.GetCourseByID(context.Background(), courseId, userID.(string))
+	response, err := s.svc.CourseService.GetCourseByID(c.Request.Context(), courseId, userID.(string))
 	if err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
@@ -127,7 +134,7 @@ func (s *Server) PageQueryCourse(c *gin.Context) {
 		return
 	}
 	userID, _ := c.Get("user_id")
-	res, err := s.svc.CourseService.PageQueryCourse(context.Background(), &PageQueryCourseRequest, userID.(string))
+	res, err := s.svc.CourseService.PageQueryCourse(c.Request.Context(), &PageQueryCourseRequest, userID.(string))
 	if err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
@@ -143,7 +150,7 @@ func (s *Server) UpdateCourse(c *gin.Context) {
 	}
 	userID, _ := c.Get("user_id")
 
-	if err := s.svc.CourseService.UpdateCourseInfo(context.Background(), userID.(string), &req); err != nil {
+	if err := s.svc.CourseService.UpdateCourseInfo(c.Request.Context(), userID.(string), &req); err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
 	}
@@ -169,7 +176,7 @@ func (s *Server) UpdateCourseAvatar(c *gin.Context) {
 		return
 	}
 	id, _ := c.Get("user_id")
-	if err = s.svc.CourseService.UpdateCourseAvatar(file, header, id.(string), courseId); err != nil {
+	if err = s.svc.CourseService.UpdateCourseAvatar(c.Request.Context(), file, header, id.(string), courseId); err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
 	}
@@ -184,7 +191,7 @@ func (s *Server) AddTask(c *gin.Context) {
 	}
 
 	userID, _ := c.Get("user_id")
-	if err := s.svc.CourseService.AddCourseTask(&req, userID.(string)); err != nil {
+	if err := s.svc.CourseService.AddCourseTask(c.Request.Context(), &req, userID.(string)); err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
 	}
@@ -194,13 +201,12 @@ func (s *Server) AddTask(c *gin.Context) {
 
 func (s *Server) DeleteTask(c *gin.Context) {
 	taskId := c.Param("taskId")
-	clazzId := c.Param("clazzId")
-	if taskId == "" || clazzId == "" {
+	if taskId == "" {
 		utils.BadRequestResponse(c, "参数为空")
 		return
 	}
 	userID, _ := c.Get("user_id")
-	if err := s.svc.CourseService.DeleteTask(userID.(string), taskId, clazzId); err != nil {
+	if err := s.svc.CourseService.DeleteTask(c.Request.Context(), userID.(string), taskId); err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
 	}
@@ -208,10 +214,16 @@ func (s *Server) DeleteTask(c *gin.Context) {
 }
 
 func (s *Server) FinishTask(c *gin.Context) {
-	//TODO
-	c.JSON(http.StatusBadGateway, gin.H{
-		"message": "功能未完善",
-	})
+	var req models.FinishTaskRequest
+	if err := c.ShouldBind(&req); err != nil {
+		utils.BadRequestResponse(c, "请求参数错误")
+	}
+	userID, _ := c.Get("user_id")
+	if err := s.svc.CourseService.FinishTask(c.Request.Context(), req, userID.(string)); err != nil {
+		utils.BadRequestResponse(c, err.Error())
+		return
+	}
+	utils.SuccessResponse(c, nil)
 }
 
 func (s *Server) RemoveCourse(c *gin.Context) {
@@ -221,7 +233,7 @@ func (s *Server) RemoveCourse(c *gin.Context) {
 		return
 	}
 	userID, _ := c.Get("user_id")
-	if err := s.svc.CourseService.RemoveCourse(userID.(string), courseId); err != nil {
+	if err := s.svc.CourseService.RemoveCourse(c.Request.Context(), userID.(string), courseId); err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
 	}
@@ -235,7 +247,82 @@ func (s *Server) UpdateTask(c *gin.Context) {
 		return
 	}
 	userID, _ := c.Get("user_id")
-	if err := s.svc.CourseService.UpdateTask(userID.(string), req); err != nil {
+	if err := s.svc.CourseService.UpdateTask(c.Request.Context(), userID.(string), req); err != nil {
+		utils.BadRequestResponse(c, err.Error())
+		return
+	}
+	utils.SuccessResponse(c, nil)
+}
+
+func (s *Server) GetTasksByClazzId(c *gin.Context) {
+	clazzId := c.Param("clazzId")
+	if clazzId == "" {
+		utils.BadRequestResponse(c, "班级id为空")
+		return
+	}
+
+	userID, _ := c.Get("user_id")
+	tasks, err := s.svc.CourseService.GetTasksByClazzID(c.Request.Context(), clazzId, userID.(string))
+	if err != nil {
+		utils.BadRequestResponse(c, err.Error())
+		return
+	}
+	utils.SuccessResponse(c, tasks)
+}
+
+func (s *Server) GetClazzById(c *gin.Context) {
+	clazzId := c.Param("clazzId")
+	if clazzId == "" {
+		utils.BadRequestResponse(c, "班级id为空")
+		return
+	}
+	userID, _ := c.Get("user_id")
+	clazz, err := s.svc.CourseService.GetClazzByID(c.Request.Context(), clazzId, userID.(string))
+	if err != nil {
+		utils.BadRequestResponse(c, err.Error())
+		return
+	}
+	utils.SuccessResponse(c, clazz)
+}
+
+func (s *Server) DeleteClazz(c *gin.Context) {
+	clazzId := c.Param("clazzId")
+	if clazzId == "" {
+		utils.BadRequestResponse(c, "班级id为空")
+		return
+	}
+	userID, _ := c.Get("user_id")
+	if err := s.svc.CourseService.DeleteClazz(c.Request.Context(), clazzId, userID.(string)); err != nil {
+		utils.BadRequestResponse(c, err.Error())
+		return
+	}
+	utils.SuccessResponse(c, nil)
+}
+
+func (s *Server) AddClazzMember(c *gin.Context) {
+	clazzId := c.Param("clazzId")
+	memberId := c.Param("memberId")
+	if clazzId == "" || memberId == "" {
+		utils.BadRequestResponse(c, "班级id或成员id为空")
+		return
+	}
+	userID, _ := c.Get("user_id")
+	if err := s.svc.CourseService.AddClazzMember(c.Request.Context(), clazzId, memberId, userID.(string)); err != nil {
+		utils.BadRequestResponse(c, err.Error())
+		return
+	}
+	utils.SuccessResponse(c, nil)
+}
+
+func (s *Server) RemoveClazzMembers(c *gin.Context) {
+	var req models.RemoveClazzMembersRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.BadRequestResponse(c, err.Error())
+		return
+	}
+
+	userID, _ := c.Get("user_id")
+	if err := s.svc.CourseService.RemoveClazzMembers(c.Request.Context(), req, userID.(string)); err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
 	}

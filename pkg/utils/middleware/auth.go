@@ -8,12 +8,14 @@
 package middleware
 
 import (
-	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt"
 	"strings"
 	"time"
 	"zk-code-arena-server/conf"
+	"zk-code-arena-server/pkg/models"
 	"zk-code-arena-server/pkg/utils"
+
+	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt"
 )
 
 // Claims JWT 声明
@@ -94,7 +96,7 @@ func JWTMiddleware() gin.HandlerFunc {
 }
 
 // RequireRole 角色权限中间件
-func RequireRole(roles ...string) gin.HandlerFunc {
+func RequireRole(roles ...models.UserRole) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		role, exists := c.Get("role")
 		if !exists {
@@ -103,7 +105,7 @@ func RequireRole(roles ...string) gin.HandlerFunc {
 			return
 		}
 
-		userRole := role.(string)
+		userRole := models.UserRole(role.(string))
 		for _, requiredRole := range roles {
 			if userRole == requiredRole {
 				c.Next()
