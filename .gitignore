@@ -67,3 +67,9 @@ config.production.yaml
 # Temporary files
 *.tmp
 *.temp
+
+# Documentation generated files
+docs/
+
+# Cursor IDE files
+.cursor/
