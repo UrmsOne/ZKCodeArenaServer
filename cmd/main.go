@@ -5,6 +5,27 @@
 @Description: ZK Code Arena Server - 仲恺农业工程学院在线刷题平台
 */
 
+// @title           ZK Code Arena API
+// @version         1.0
+// @description     ZK Code Arena 在线编程平台 REST API 文档
+// @description     提供用户管理、题库管理、班级课程管理、代码评测等功能
+// @termsOfService  http://localhost/terms/
+
+// @contact.name   API Support
+// @contact.url    http://localhost/support
+// @contact.email  support@zkcodearena.com
+
+// @license.name  MIT
+// @license.url   https://opensource.org/licenses/MIT
+
+// @host      localhost:8080
+// @BasePath  /api/v1
+
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description Type "Bearer" followed by a space and JWT token.
+
 package main
 
 import (

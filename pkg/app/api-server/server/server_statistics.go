@@ -27,7 +27,18 @@ func (s *Server) RegisterStatistics(g *gin.RouterGroup) {
 	}
 }
 
-// GetUserStatistics 获取当前用户统计
+// GetUserStatistics godoc
+// @Summary      获取当前用户统计
+// @Description  获取当前登录用户的提交统计信息
+// @Tags         统计
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} map[string]interface{} "用户统计信息"
+// @Failure      401 {object} map[string]interface{} "需要登录"
+// @Failure      400 {object} map[string]interface{} "无效的用户ID"
+// @Failure      500 {object} map[string]interface{} "获取失败"
+// @Security     BearerAuth
+// @Router       /statistics/user [get]
 func (s *Server) GetUserStatistics(c *gin.Context) {
 	userID, exists := c.Get("user_id")
 	if !exists {
@@ -51,7 +62,19 @@ func (s *Server) GetUserStatistics(c *gin.Context) {
 	utils.SuccessResponse(c, stats)
 }
 
-// GetUserStatisticsByID 获取指定用户统计（管理员）
+// GetUserStatisticsByID godoc
+// @Summary      获取指定用户统计（管理员）
+// @Description  管理员查看指定用户的提交统计信息
+// @Tags         统计
+// @Accept       json
+// @Produce      json
+// @Param        id path string true "用户ID"
+// @Success      200 {object} map[string]interface{} "用户统计信息"
+// @Failure      400 {object} map[string]interface{} "无效的用户ID"
+// @Failure      403 {object} map[string]interface{} "权限不足"
+// @Failure      500 {object} map[string]interface{} "获取失败"
+// @Security     BearerAuth
+// @Router       /statistics/user/{id} [get]
 func (s *Server) GetUserStatisticsByID(c *gin.Context) {
 	// 检查权限：只有管理员可以查看其他用户的统计
 	role, exists := c.Get("role")
@@ -77,7 +100,17 @@ func (s *Server) GetUserStatisticsByID(c *gin.Context) {
 	utils.SuccessResponse(c, stats)
 }
 
-// GetSystemStatistics 获取系统统计（管理员）
+// GetSystemStatistics godoc
+// @Summary      获取系统统计（管理员）
+// @Description  管理员查看系统整体统计信息
+// @Tags         统计
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} map[string]interface{} "系统统计信息"
+// @Failure      403 {object} map[string]interface{} "权限不足"
+// @Failure      500 {object} map[string]interface{} "获取失败"
+// @Security     BearerAuth
+// @Router       /statistics/system [get]
 func (s *Server) GetSystemStatistics(c *gin.Context) {
 	// 检查权限：只有管理员可以查看系统统计
 	role, exists := c.Get("role")

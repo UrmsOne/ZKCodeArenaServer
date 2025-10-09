@@ -1,0 +1,2294 @@
+basePath: /api/v1
+definitions:
+  models.AddClazzMemberRequest:
+    properties:
+      member_id:
+        type: string
+    required:
+    - member_id
+    type: object
+  models.AddTaskRequest:
+    properties:
+      clazz_id:
+        type: string
+      course_id:
+        type: string
+      description:
+        type: string
+      end_time:
+        description: 如果不设置则没有结束时间
+        type: string
+      relation_ids:
+        items:
+          type: string
+        type: array
+      start_time:
+        description: 必须设置开始时间
+        type: string
+      title:
+        type: string
+      type:
+        $ref: '#/definitions/models.TaskType'
+    required:
+    - clazz_id
+    - course_id
+    - start_time
+    - title
+    - type
+    type: object
+  models.BatchCreateTestCasesRequest:
+    properties:
+      problem_id:
+        type: string
+      test_cases:
+        items:
+          $ref: '#/definitions/models.TestCase'
+        minItems: 1
+        type: array
+    required:
+    - problem_id
+    - test_cases
+    type: object
+  models.CourseStatus:
+    enum:
+    - 0
+    - 1
+    - 2
+    format: int32
+    type: integer
+    x-enum-comments:
+      CourseStatusActive: 活跃
+      CourseStatusArchived: 已归档
+      CourseStatusDraft: 草稿
+    x-enum-descriptions:
+    - 草稿
+    - 活跃
+    - 已归档
+    x-enum-varnames:
+    - CourseStatusDraft
+    - CourseStatusActive
+    - CourseStatusArchived
+  models.CreateClazzRequest:
+    properties:
+      course_id:
+        type: string
+      description:
+        type: string
+      max_members:
+        type: integer
+      name:
+        type: string
+      require_invite:
+        type: boolean
+      schedule:
+        type: string
+    required:
+    - course_id
+    - name
+    - require_invite
+    type: object
+  models.CreateCourseRequest:
+    properties:
+      description:
+        type: string
+      name:
+        type: string
+    required:
+    - name
+    type: object
+  models.CreateTestCaseRequest:
+    properties:
+      input:
+        type: string
+      is_sample:
+        type: boolean
+      memory_limit:
+        description: 可选的内存限制（MB）
+        type: integer
+      output:
+        type: string
+      problem_id:
+        type: string
+      score:
+        description: 用例分数
+        type: integer
+      time_limit:
+        description: 可选的超时配置（ms）
+        type: integer
+    required:
+    - input
+    - output
+    - problem_id
+    type: object
+  models.FinishTaskRequest:
+    properties:
+      clazz_id:
+        type: string
+      relation_id:
+        type: string
+      task_id:
+        type: string
+    required:
+    - clazz_id
+    - relation_id
+    - task_id
+    type: object
+  models.JudgeResult:
+    properties:
+      compile_error:
+        description: 编译错误信息
+        type: string
+      memory_used:
+        description: 内存使用(KB)
+        type: integer
+      runtime_error:
+        description: 运行时错误信息
+        type: string
+      status:
+        $ref: '#/definitions/models.SubmitStatus'
+      test_results:
+        description: 测试用例结果
+        items:
+          $ref: '#/definitions/models.TestResult'
+        type: array
+      time_used:
+        description: 时间使用(ms)
+        type: integer
+    type: object
+  models.Language:
+    enum:
+    - c
+    - cpp
+    - java
+    - python
+    - go
+    type: string
+    x-enum-varnames:
+    - LangC
+    - LangCpp
+    - LangJava
+    - LangPython
+    - LangGo
+  models.LoginRequest:
+    properties:
+      password:
+        type: string
+      student_id:
+        type: string
+    required:
+    - password
+    - student_id
+    type: object
+  models.PageQueryCourseRequest:
+    properties:
+      name:
+        type: string
+      page_num:
+        type: integer
+      page_size:
+        type: integer
+      status:
+        type: integer
+    type: object
+  models.Problem:
+    properties:
+      ac_count:
+        description: AC 次数
+        type: integer
+      author:
+        type: string
+      created_at:
+        type: string
+      created_by:
+        type: string
+      description:
+        type: string
+      difficulty:
+        $ref: '#/definitions/models.ProblemDifficulty'
+      hint:
+        type: string
+      id:
+        type: string
+      input:
+        type: string
+      is_public:
+        type: boolean
+      memory_limit:
+        description: 内存限制(MB)
+        type: integer
+      output:
+        type: string
+      sample_input:
+        type: string
+      sample_output:
+        type: string
+      source:
+        type: string
+      status:
+        $ref: '#/definitions/models.ProblemStatus'
+      submit_count:
+        description: 提交次数
+        type: integer
+      tags:
+        items:
+          type: string
+        type: array
+      time_limit:
+        description: 时间限制(ms)
+        type: integer
+      title:
+        type: string
+      updated_at:
+        type: string
+    required:
+    - description
+    - title
+    type: object
+  models.ProblemDifficulty:
+    enum:
+    - easy
+    - medium
+    - hard
+    type: string
+    x-enum-comments:
+      DifficultyEasy: 简单
+      DifficultyHard: 困难
+      DifficultyMedium: 中等
+    x-enum-descriptions:
+    - 简单
+    - 中等
+    - 困难
+    x-enum-varnames:
+    - DifficultyEasy
+    - DifficultyMedium
+    - DifficultyHard
+  models.ProblemStatus:
+    enum:
+    - draft
+    - published
+    - archived
+    type: string
+    x-enum-comments:
+      StatusArchived: 已归档
+      StatusDraft: 草稿
+      StatusPublished: 已发布
+    x-enum-descriptions:
+    - 草稿
+    - 已发布
+    - 已归档
+    x-enum-varnames:
+    - StatusDraft
+    - StatusPublished
+    - StatusArchived
+  models.RemoveClazzMembersRequest:
+    properties:
+      member_ids:
+        items:
+          type: string
+        type: array
+    required:
+    - member_ids
+    type: object
+  models.Submit:
+    properties:
+      code:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      language:
+        $ref: '#/definitions/models.Language'
+      problem_id:
+        type: string
+      result:
+        $ref: '#/definitions/models.JudgeResult'
+      status:
+        $ref: '#/definitions/models.SubmitStatus'
+      updated_at:
+        type: string
+      user_id:
+        type: string
+    required:
+    - code
+    - language
+    - problem_id
+    - user_id
+    type: object
+  models.SubmitCodeRequest:
+    properties:
+      code:
+        type: string
+      language:
+        type: string
+      problem_id:
+        type: string
+    required:
+    - code
+    - language
+    - problem_id
+    type: object
+  models.SubmitStatus:
+    enum:
+    - pending
+    - running
+    - accepted
+    - wrong_answer
+    - time_limit
+    - memory_limit
+    - runtime_error
+    - compile_error
+    - system_error
+    type: string
+    x-enum-comments:
+      StatusAccepted: 通过
+      StatusCompileError: 编译错误
+      StatusMemoryLimit: 内存超限
+      StatusPending: 等待中
+      StatusRunning: 运行中
+      StatusRuntimeError: 运行时错误
+      StatusSystemError: 系统错误
+      StatusTimeLimit: 超时
+      StatusWrongAnswer: 答案错误
+    x-enum-descriptions:
+    - 等待中
+    - 运行中
+    - 通过
+    - 答案错误
+    - 超时
+    - 内存超限
+    - 运行时错误
+    - 编译错误
+    - 系统错误
+    x-enum-varnames:
+    - StatusPending
+    - StatusRunning
+    - StatusAccepted
+    - StatusWrongAnswer
+    - StatusTimeLimit
+    - StatusMemoryLimit
+    - StatusRuntimeError
+    - StatusCompileError
+    - StatusSystemError
+  models.TaskType:
+    enum:
+    - 1
+    - 2
+    format: int32
+    type: integer
+    x-enum-comments:
+      TaskTypeProblem: 题单
+      TaskTypeVideo: 视频
+    x-enum-descriptions:
+    - 题单
+    - 视频
+    x-enum-varnames:
+    - TaskTypeProblem
+    - TaskTypeVideo
+  models.TestCase:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      input:
+        type: string
+      is_sample:
+        type: boolean
+      memory_limit:
+        description: 内存限制(MB)，可选
+        type: integer
+      output:
+        type: string
+      problem_id:
+        type: string
+      score:
+        description: 用例分数（可选，用于部分分）
+        type: integer
+      time_limit:
+        description: 可选的超时配置（优先级高于题目默认配置）
+        type: integer
+    type: object
+  models.TestResult:
+    properties:
+      error:
+        description: 错误信息
+        type: string
+      expected:
+        description: 期望输出
+        type: string
+      is_sample:
+        description: 是否为示例用例（用于判断是否返回详细信息）
+        type: boolean
+      memory_used:
+        description: KB
+        type: integer
+      output:
+        description: 仅示例用例返回以下字段（隐藏用例不返回详细输出）
+        type: string
+      status:
+        $ref: '#/definitions/models.SubmitStatus'
+      test_case_id:
+        type: string
+      time_used:
+        description: ms
+        type: integer
+    type: object
+  models.UpdateCourseRequest:
+    properties:
+      description:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      status:
+        $ref: '#/definitions/models.CourseStatus'
+    required:
+    - id
+    type: object
+  models.UpdateTaskRequest:
+    properties:
+      clazz_id:
+        type: string
+      course_id:
+        type: string
+      description:
+        type: string
+      end_time:
+        type: string
+      relation_ids:
+        items:
+          type: string
+        type: array
+      start_time:
+        type: string
+      task_id:
+        type: string
+      title:
+        type: string
+      type:
+        $ref: '#/definitions/models.TaskType'
+    required:
+    - clazz_id
+    - course_id
+    - task_id
+    type: object
+  models.UpdateTestCaseRequest:
+    properties:
+      input:
+        type: string
+      is_sample:
+        type: boolean
+      memory_limit:
+        type: integer
+      output:
+        type: string
+      score:
+        type: integer
+      time_limit:
+        type: integer
+    type: object
+  models.UpdateUserRequest:
+    properties:
+      is_active:
+        type: boolean
+      role:
+        type: string
+    type: object
+  models.User:
+    properties:
+      avatar:
+        type: string
+      bio:
+        type: string
+      class:
+        type: string
+      created_at:
+        type: string
+      email:
+        type: string
+      grade:
+        type: string
+      id:
+        type: string
+      is_active:
+        type: boolean
+      last_login_at:
+        type: string
+      major:
+        type: string
+      password:
+        type: string
+      phone:
+        type: string
+      real_name:
+        type: string
+      role:
+        $ref: '#/definitions/models.UserRole'
+      school:
+        type: string
+      student_id:
+        type: string
+      updated_at:
+        type: string
+      username:
+        type: string
+    required:
+    - email
+    - password
+    - username
+    type: object
+  models.UserProfile:
+    properties:
+      avatar:
+        type: string
+      bio:
+        type: string
+      class:
+        type: string
+      created_at:
+        type: string
+      email:
+        type: string
+      grade:
+        type: string
+      id:
+        type: string
+      is_active:
+        type: boolean
+      major:
+        type: string
+      real_name:
+        type: string
+      role:
+        $ref: '#/definitions/models.UserRole'
+      school:
+        type: string
+      student_id:
+        type: string
+      username:
+        type: string
+    type: object
+  models.UserRole:
+    enum:
+    - admin
+    - teacher
+    - student
+    - contest
+    type: string
+    x-enum-comments:
+      RoleAdmin: 系统管理员
+      RoleContest: 竞赛发起者
+      RoleStudent: 学生
+      RoleTeacher: 老师
+    x-enum-descriptions:
+    - 系统管理员
+    - 老师
+    - 学生
+    - 竞赛发起者
+    x-enum-varnames:
+    - RoleAdmin
+    - RoleTeacher
+    - RoleStudent
+    - RoleContest
+  service.RunCodeRequest:
+    properties:
+      code:
+        type: string
+      input:
+        description: 自定义输入（可选）
+        type: string
+      language:
+        type: string
+    required:
+    - code
+    - language
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@zkcodearena.com
+    name: API Support
+    url: http://localhost/support
+  description: |-
+    ZK Code Arena 在线编程平台 REST API 文档
+    提供用户管理、题库管理、班级课程管理、代码评测等功能
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  termsOfService: http://localhost/terms/
+  title: ZK Code Arena API
+  version: "1.0"
+paths:
+  /courses:
+    post:
+      consumes:
+      - application/json
+      description: 教师创建新课程
+      parameters:
+      - description: 课程信息
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateCourseRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 创建成功，返回课程ID
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 创建课程（教师）
+      tags:
+      - 课程
+    put:
+      consumes:
+      - application/json
+      description: 更新课程的基本信息
+      parameters:
+      - description: 更新的课程信息
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.UpdateCourseRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 更新成功
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 更新课程信息
+      tags:
+      - 课程
+  /courses/{courseId}:
+    delete:
+      consumes:
+      - application/json
+      description: 删除指定课程
+      parameters:
+      - description: 课程ID
+        in: path
+        name: courseId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 删除成功
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 删除课程
+      tags:
+      - 课程
+    get:
+      consumes:
+      - application/json
+      description: 根据课程ID获取课程详细信息
+      parameters:
+      - description: 课程ID
+        in: path
+        name: courseId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 课程详情
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 获取课程详情
+      tags:
+      - 课程
+  /courses/{courseId}/{clazzId}:
+    put:
+      consumes:
+      - application/json
+      description: 刷新班级的邀请二维码
+      parameters:
+      - description: 课程ID
+        in: path
+        name: courseId
+        required: true
+        type: string
+      - description: 班级ID
+        in: path
+        name: clazzId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 刷新成功
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 刷新班级二维码
+      tags:
+      - 课程
+  /courses/{courseId}/avatar:
+    put:
+      consumes:
+      - multipart/form-data
+      description: 上传并更新课程头像图片
+      parameters:
+      - description: 课程ID
+        in: path
+        name: courseId
+        required: true
+        type: string
+      - description: 头像文件
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 更新成功
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 更新课程头像
+      tags:
+      - 课程
+  /courses/clazzes:
+    post:
+      consumes:
+      - application/json
+      description: 为指定课程创建新班级
+      parameters:
+      - description: 班级信息
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateClazzRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 创建成功
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 为课程创建班级
+      tags:
+      - 课程
+  /courses/clazzes/{clazzId}:
+    delete:
+      consumes:
+      - application/json
+      description: 删除指定班级
+      parameters:
+      - description: 班级ID
+        in: path
+        name: clazzId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 删除成功
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 删除班级
+      tags:
+      - 课程
+    get:
+      consumes:
+      - application/json
+      description: 根据班级ID获取班级详细信息
+      parameters:
+      - description: 班级ID
+        in: path
+        name: clazzId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 班级详情
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 获取班级详情
+      tags:
+      - 课程
+  /courses/clazzes/{clazzId}/members:
+    post:
+      consumes:
+      - application/json
+      description: 手动添加成员到班级
+      parameters:
+      - description: 班级ID
+        in: path
+        name: clazzId
+        required: true
+        type: string
+      - description: 成员ID
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.AddClazzMemberRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 添加成功
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 添加班级成员
+      tags:
+      - 课程
+  /courses/clazzes/{clazzId}/members/remove:
+    post:
+      consumes:
+      - application/json
+      description: 批量移除班级成员
+      parameters:
+      - description: 班级ID
+        in: path
+        name: clazzId
+        required: true
+        type: string
+      - description: 成员ID列表
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.RemoveClazzMembersRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 移除成功
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 移除班级成员
+      tags:
+      - 课程
+  /courses/clazzes/join:
+    get:
+      consumes:
+      - application/json
+      description: 学生通过邀请码加入班级
+      parameters:
+      - description: 班级ID
+        in: query
+        name: clazzId
+        required: true
+        type: string
+      - description: 邀请码
+        in: query
+        name: invite_code
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 加入成功
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 加入班级
+      tags:
+      - 课程
+  /courses/finishtask:
+    post:
+      consumes:
+      - application/json
+      description: 标记任务为已完成
+      parameters:
+      - description: 完成任务信息
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.FinishTaskRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 完成成功
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 完成任务
+      tags:
+      - 课程
+  /courses/query:
+    post:
+      consumes:
+      - application/json
+      description: 分页查询用户相关的课程列表
+      parameters:
+      - description: 分页查询参数
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.PageQueryCourseRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 课程列表
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 分页查询课程
+      tags:
+      - 课程
+  /courses/task:
+    post:
+      consumes:
+      - application/json
+      description: 为班级添加新任务
+      parameters:
+      - description: 任务信息
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.AddTaskRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 添加成功
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 添加任务
+      tags:
+      - 课程
+    put:
+      consumes:
+      - application/json
+      description: 更新任务信息
+      parameters:
+      - description: 更新的任务信息
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.UpdateTaskRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 更新成功
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 更新任务
+      tags:
+      - 课程
+  /courses/task/{clazzId}:
+    get:
+      consumes:
+      - application/json
+      description: 根据班级ID获取任务列表
+      parameters:
+      - description: 班级ID
+        in: path
+        name: clazzId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 任务列表
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 获取班级任务列表
+      tags:
+      - 课程
+  /courses/task/{taskId}:
+    delete:
+      consumes:
+      - application/json
+      description: 删除指定任务
+      parameters:
+      - description: 任务ID
+        in: path
+        name: taskId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 删除成功
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 删除任务
+      tags:
+      - 课程
+  /problem:
+    get:
+      consumes:
+      - application/json
+      description: 分页获取题目列表，支持按难度、标签筛选
+      parameters:
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: 每页数量
+        in: query
+        name: page_size
+        type: integer
+      - description: 难度
+        enum:
+        - easy
+        - medium
+        - hard
+        in: query
+        name: difficulty
+        type: string
+      - collectionFormat: csv
+        description: 标签列表
+        in: query
+        items:
+          type: string
+        name: tags
+        type: array
+      - default: false
+        description: 包含私有题目（需教师或管理员权限）
+        in: query
+        name: include_private
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 题目列表
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 获取失败
+          schema:
+            additionalProperties: true
+            type: object
+      summary: 获取题目列表
+      tags:
+      - 题目
+    post:
+      consumes:
+      - application/json
+      description: 创建新题目（仅管理员和教师）
+      parameters:
+      - description: 题目信息
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.Problem'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 创建成功
+          schema:
+            $ref: '#/definitions/models.Problem'
+        "400":
+          description: 请求参数错误
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 需要登录
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: 权限不足
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 创建失败
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 创建题目（教师/管理员）
+      tags:
+      - 题目
+  /problem/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: 删除指定题目（仅管理员）
+      parameters:
+      - description: 题目ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 删除成功
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 无效的题目ID
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: 权限不足
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 删除失败
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 删除题目（管理员）
+      tags:
+      - 题目
+    get:
+      consumes:
+      - application/json
+      description: 根据题目ID获取完整题目信息
+      parameters:
+      - description: 题目ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 题目详情
+          schema:
+            $ref: '#/definitions/models.Problem'
+        "400":
+          description: 无效的题目ID
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 需要登录
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: 题目不存在
+          schema:
+            additionalProperties: true
+            type: object
+      summary: 获取题目详情
+      tags:
+      - 题目
+    put:
+      consumes:
+      - application/json
+      description: 更新题目信息（管理员或题目创建者）
+      parameters:
+      - description: 题目ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 更新的题目信息
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.Problem'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 更新成功
+          schema:
+            $ref: '#/definitions/models.Problem'
+        "400":
+          description: 请求参数错误
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 需要登录
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: 权限不足
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: 题目不存在
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 更新失败
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 更新题目（教师/管理员）
+      tags:
+      - 题目
+  /problem/{id}/run:
+    post:
+      consumes:
+      - application/json
+      description: 在线运行代码进行测试（非提交），有频率限制
+      parameters:
+      - description: 题目ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 代码和语言
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/service.RunCodeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 运行结果
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: 题目不存在
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 运行失败
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 运行代码测试
+      tags:
+      - 题目
+  /problem/search:
+    get:
+      consumes:
+      - application/json
+      description: 根据关键词、难度、标签搜索题目
+      parameters:
+      - description: 关键词
+        in: query
+        name: keyword
+        type: string
+      - description: 难度
+        enum:
+        - easy
+        - medium
+        - hard
+        in: query
+        name: difficulty
+        type: string
+      - collectionFormat: csv
+        description: 标签列表
+        in: query
+        items:
+          type: string
+        name: tags
+        type: array
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: 每页数量
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 搜索结果
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 搜索失败
+          schema:
+            additionalProperties: true
+            type: object
+      summary: 搜索题目
+      tags:
+      - 题目
+  /statistics/system:
+    get:
+      consumes:
+      - application/json
+      description: 管理员查看系统整体统计信息
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 系统统计信息
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: 权限不足
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 获取失败
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 获取系统统计（管理员）
+      tags:
+      - 统计
+  /statistics/user:
+    get:
+      consumes:
+      - application/json
+      description: 获取当前登录用户的提交统计信息
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 用户统计信息
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 无效的用户ID
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 需要登录
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 获取失败
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 获取当前用户统计
+      tags:
+      - 统计
+  /statistics/user/{id}:
+    get:
+      consumes:
+      - application/json
+      description: 管理员查看指定用户的提交统计信息
+      parameters:
+      - description: 用户ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 用户统计信息
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 无效的用户ID
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: 权限不足
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 获取失败
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 获取指定用户统计（管理员）
+      tags:
+      - 统计
+  /submit:
+    get:
+      consumes:
+      - application/json
+      description: 分页获取提交记录（非管理员仅可查看自己的提交）
+      parameters:
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: 每页数量
+        in: query
+        name: page_size
+        type: integer
+      - description: 题目ID筛选
+        in: query
+        name: problem_id
+        type: string
+      - description: 用户ID筛选（管理员可用）
+        in: query
+        name: user_id
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 提交列表
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 需要登录
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 获取失败
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 获取提交列表
+      tags:
+      - 提交
+    post:
+      consumes:
+      - application/json
+      description: 提交代码进行判题
+      parameters:
+      - description: 提交信息
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.SubmitCodeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 提交记录
+          schema:
+            $ref: '#/definitions/models.Submit'
+        "400":
+          description: 请求参数错误
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 未认证用户
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: 题目不存在
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 提交失败
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 提交代码
+      tags:
+      - 提交
+  /submit/{id}:
+    get:
+      consumes:
+      - application/json
+      description: 根据提交ID获取详细信息（管理员或提交者本人）
+      parameters:
+      - description: 提交ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 提交详情
+          schema:
+            $ref: '#/definitions/models.Submit'
+        "400":
+          description: 无效的提交ID
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 需要登录
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: 权限不足
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: 提交不存在
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 获取提交详情
+      tags:
+      - 提交
+  /testcase:
+    post:
+      consumes:
+      - application/json
+      description: 为指定题目创建新的测试用例
+      parameters:
+      - description: 测试用例信息
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateTestCaseRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 创建成功
+          schema:
+            $ref: '#/definitions/models.TestCase'
+        "400":
+          description: 请求参数错误
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 创建失败
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 创建测试用例
+      tags:
+      - 测试用例
+  /testcase/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: 删除指定测试用例
+      parameters:
+      - description: 测试用例ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 删除成功
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 无效的测试用例ID
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 删除失败
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 删除测试用例
+      tags:
+      - 测试用例
+    get:
+      consumes:
+      - application/json
+      description: 根据测试用例ID获取详细信息
+      parameters:
+      - description: 测试用例ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 测试用例详情
+          schema:
+            $ref: '#/definitions/models.TestCase'
+        "400":
+          description: 无效的测试用例ID
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 获取失败
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 获取测试用例详情
+      tags:
+      - 测试用例
+    put:
+      consumes:
+      - application/json
+      description: 更新指定测试用例的信息
+      parameters:
+      - description: 测试用例ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 更新信息
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.UpdateTestCaseRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 更新成功
+          schema:
+            $ref: '#/definitions/models.TestCase'
+        "400":
+          description: 请求参数错误
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: 测试用例不存在
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 更新失败
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 更新测试用例
+      tags:
+      - 测试用例
+  /testcase/batch:
+    post:
+      consumes:
+      - application/json
+      description: 批量导入题目测试用例（教师/管理员）
+      parameters:
+      - description: 批量测试用例
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.BatchCreateTestCasesRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 创建成功
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 需要登录
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: 权限不足
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: 题目不存在
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 创建失败
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 批量创建测试用例
+      tags:
+      - 测试用例
+  /testcase/problem/{problem_id}:
+    get:
+      consumes:
+      - application/json
+      description: 根据题目ID获取所有测试用例
+      parameters:
+      - description: 题目ID
+        in: path
+        name: problem_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 测试用例列表
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 无效的题目ID
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 获取失败
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 获取题目测试用例列表
+      tags:
+      - 测试用例
+  /user:
+    get:
+      consumes:
+      - application/json
+      description: 分页获取用户列表，可按角色筛选（仅管理员）
+      parameters:
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: 每页数量
+        in: query
+        name: page_size
+        type: integer
+      - description: 用户角色筛选
+        enum:
+        - admin
+        - teacher
+        - student
+        in: query
+        name: role
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 用户列表
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: 权限不足
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 获取失败
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 获取用户列表（管理员）
+      tags:
+      - 用户
+  /user/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: 管理员删除指定用户
+      parameters:
+      - description: 用户ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 删除成功
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 无效的用户ID
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: 权限不足
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 删除失败
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 删除用户（管理员）
+      tags:
+      - 用户
+    get:
+      consumes:
+      - application/json
+      description: 根据用户ID获取用户信息（管理员或本人）
+      parameters:
+      - description: 用户ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 用户信息
+          schema:
+            $ref: '#/definitions/models.UserProfile'
+        "400":
+          description: 无效的用户ID
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 未认证用户
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: 权限不足
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: 用户不存在
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 获取指定用户信息
+      tags:
+      - 用户
+    put:
+      consumes:
+      - application/json
+      description: 管理员更新用户角色和激活状态
+      parameters:
+      - description: 用户ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 更新信息
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.UpdateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 更新后的用户信息
+          schema:
+            $ref: '#/definitions/models.UserProfile'
+        "400":
+          description: 请求参数错误
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: 权限不足
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: 用户不存在
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 更新失败
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 更新用户信息（管理员）
+      tags:
+      - 用户
+  /user/login:
+    post:
+      consumes:
+      - application/json
+      description: 使用学号/工号和密码登录系统
+      parameters:
+      - description: 登录信息
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 登录成功，返回token和用户信息
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 账号或密码错误
+          schema:
+            additionalProperties: true
+            type: object
+      summary: 用户登录
+      tags:
+      - 用户
+  /user/profile:
+    get:
+      consumes:
+      - application/json
+      description: 获取当前登录用户的个人资料信息
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 用户资料
+          schema:
+            $ref: '#/definitions/models.UserProfile'
+        "401":
+          description: 未认证用户
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: 用户不存在
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 获取当前用户资料
+      tags:
+      - 用户
+    put:
+      consumes:
+      - application/json
+      description: 更新当前登录用户的个人资料（姓名、邮箱、学校等）
+      parameters:
+      - description: 更新信息
+        in: body
+        name: request
+        required: true
+        schema:
+          properties:
+            bio:
+              type: string
+            class:
+              type: string
+            email:
+              type: string
+            grade:
+              type: string
+            major:
+              type: string
+            phone:
+              type: string
+            real_name:
+              type: string
+            school:
+              type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 更新后的用户资料
+          schema:
+            $ref: '#/definitions/models.UserProfile'
+        "400":
+          description: 请求参数错误
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 未认证用户
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: 用户不存在
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 更新失败
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 更新当前用户资料
+      tags:
+      - 用户
+  /user/register:
+    post:
+      consumes:
+      - application/json
+      description: 注册新用户账号（学生/教师/学习者）
+      parameters:
+      - description: 用户信息
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.User'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 注册成功
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 注册失败
+          schema:
+            additionalProperties: true
+            type: object
+      summary: 用户注册
+      tags:
+      - 用户
+securityDefinitions:
+  BearerAuth:
+    description: Type "Bearer" followed by a space and JWT token.
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

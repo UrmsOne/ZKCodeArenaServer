@@ -45,6 +45,18 @@ func (s *Server) RegisterCourse(g *gin.RouterGroup) {
 	}
 }
 
+// JoinClass godoc
+// @Summary      加入班级
+// @Description  学生通过邀请码加入班级
+// @Tags         课程
+// @Accept       json
+// @Produce      json
+// @Param        clazzId query string true "班级ID"
+// @Param        invite_code query string true "邀请码"
+// @Success      200 {object} map[string]interface{} "加入成功"
+// @Failure      400 {object} map[string]interface{} "请求参数错误"
+// @Security     BearerAuth
+// @Router       /courses/clazzes/join [get]
 func (s *Server) JoinClass(c *gin.Context) {
 	var req models.JoinClazzRequest
 	if err := c.ShouldBindQuery(&req); err != nil {
@@ -64,6 +76,17 @@ func (s *Server) JoinClass(c *gin.Context) {
 	utils.SuccessResponse(c, nil)
 }
 
+// CreateCourse godoc
+// @Summary      创建课程（教师）
+// @Description  教师创建新课程
+// @Tags         课程
+// @Accept       json
+// @Produce      json
+// @Param        request body models.CreateCourseRequest true "课程信息"
+// @Success      200 {object} map[string]interface{} "创建成功，返回课程ID"
+// @Failure      400 {object} map[string]interface{} "请求参数错误"
+// @Security     BearerAuth
+// @Router       /courses [post]
 func (s *Server) CreateCourse(c *gin.Context) {
 	var req models.CreateCourseRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -79,6 +102,17 @@ func (s *Server) CreateCourse(c *gin.Context) {
 	utils.SuccessResponse(c, courseID)
 }
 
+// CreateClassForCourse godoc
+// @Summary      为课程创建班级
+// @Description  为指定课程创建新班级
+// @Tags         课程
+// @Accept       json
+// @Produce      json
+// @Param        request body models.CreateClazzRequest true "班级信息"
+// @Success      200 {object} map[string]interface{} "创建成功"
+// @Failure      400 {object} map[string]interface{} "请求参数错误"
+// @Security     BearerAuth
+// @Router       /courses/clazzes [post]
 func (s *Server) CreateClassForCourse(c *gin.Context) {
 	var req models.CreateClazzRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -94,6 +128,18 @@ func (s *Server) CreateClassForCourse(c *gin.Context) {
 	utils.SuccessResponse(c, response)
 }
 
+// RefreshQrcode godoc
+// @Summary      刷新班级二维码
+// @Description  刷新班级的邀请二维码
+// @Tags         课程
+// @Accept       json
+// @Produce      json
+// @Param        courseId path string true "课程ID"
+// @Param        clazzId path string true "班级ID"
+// @Success      200 {object} map[string]interface{} "刷新成功"
+// @Failure      400 {object} map[string]interface{} "请求参数错误"
+// @Security     BearerAuth
+// @Router       /courses/{courseId}/{clazzId} [put]
 func (s *Server) RefreshQrcode(c *gin.Context) {
 	courseId := c.Param("courseId")
 	clazzId := c.Param("clazzId")
@@ -111,6 +157,17 @@ func (s *Server) RefreshQrcode(c *gin.Context) {
 	utils.SuccessResponse(c, response)
 }
 
+// GetCourseById godoc
+// @Summary      获取课程详情
+// @Description  根据课程ID获取课程详细信息
+// @Tags         课程
+// @Accept       json
+// @Produce      json
+// @Param        courseId path string true "课程ID"
+// @Success      200 {object} map[string]interface{} "课程详情"
+// @Failure      400 {object} map[string]interface{} "请求参数错误"
+// @Security     BearerAuth
+// @Router       /courses/{courseId} [get]
 func (s *Server) GetCourseById(c *gin.Context) {
 	courseId := c.Param("courseId")
 	if courseId == "" {
@@ -126,7 +183,17 @@ func (s *Server) GetCourseById(c *gin.Context) {
 	utils.SuccessResponse(c, response)
 }
 
-// 分页查询课程
+// PageQueryCourse godoc
+// @Summary      分页查询课程
+// @Description  分页查询用户相关的课程列表
+// @Tags         课程
+// @Accept       json
+// @Produce      json
+// @Param        request body models.PageQueryCourseRequest true "分页查询参数"
+// @Success      200 {object} map[string]interface{} "课程列表"
+// @Failure      400 {object} map[string]interface{} "请求参数错误"
+// @Security     BearerAuth
+// @Router       /courses/query [post]
 func (s *Server) PageQueryCourse(c *gin.Context) {
 	var PageQueryCourseRequest models.PageQueryCourseRequest
 	if err := c.ShouldBindJSON(&PageQueryCourseRequest); err != nil {
@@ -142,6 +209,17 @@ func (s *Server) PageQueryCourse(c *gin.Context) {
 	utils.SuccessResponse(c, res)
 }
 
+// UpdateCourse godoc
+// @Summary      更新课程信息
+// @Description  更新课程的基本信息
+// @Tags         课程
+// @Accept       json
+// @Produce      json
+// @Param        request body models.UpdateCourseRequest true "更新的课程信息"
+// @Success      200 {object} map[string]interface{} "更新成功"
+// @Failure      400 {object} map[string]interface{} "请求参数错误"
+// @Security     BearerAuth
+// @Router       /courses [put]
 func (s *Server) UpdateCourse(c *gin.Context) {
 	var req models.UpdateCourseRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -158,6 +236,18 @@ func (s *Server) UpdateCourse(c *gin.Context) {
 	utils.SuccessResponse(c, nil)
 }
 
+// UpdateCourseAvatar godoc
+// @Summary      更新课程头像
+// @Description  上传并更新课程头像图片
+// @Tags         课程
+// @Accept       multipart/form-data
+// @Produce      json
+// @Param        courseId path string true "课程ID"
+// @Param        file formData file true "头像文件"
+// @Success      200 {object} map[string]interface{} "更新成功"
+// @Failure      400 {object} map[string]interface{} "请求参数错误"
+// @Security     BearerAuth
+// @Router       /courses/{courseId}/avatar [put]
 func (s *Server) UpdateCourseAvatar(c *gin.Context) {
 	// 解析 multipart 请求
 	if err := c.Request.ParseMultipartForm(10 << 20); err != nil { // 限制10MB
@@ -183,9 +273,20 @@ func (s *Server) UpdateCourseAvatar(c *gin.Context) {
 	utils.SuccessResponse(c, nil)
 }
 
+// AddTask godoc
+// @Summary      添加任务
+// @Description  为班级添加新任务
+// @Tags         课程
+// @Accept       json
+// @Produce      json
+// @Param        request body models.AddTaskRequest true "任务信息"
+// @Success      200 {object} map[string]interface{} "添加成功"
+// @Failure      400 {object} map[string]interface{} "请求参数错误"
+// @Security     BearerAuth
+// @Router       /courses/task [post]
 func (s *Server) AddTask(c *gin.Context) {
 	var req models.AddTaskRequest
-	if err := c.ShouldBind(&req); err != nil {
+	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
 	}
@@ -199,6 +300,17 @@ func (s *Server) AddTask(c *gin.Context) {
 	utils.SuccessResponse(c, nil)
 }
 
+// DeleteTask godoc
+// @Summary      删除任务
+// @Description  删除指定任务
+// @Tags         课程
+// @Accept       json
+// @Produce      json
+// @Param        taskId path string true "任务ID"
+// @Success      200 {object} map[string]interface{} "删除成功"
+// @Failure      400 {object} map[string]interface{} "请求参数错误"
+// @Security     BearerAuth
+// @Router       /courses/task/{taskId} [delete]
 func (s *Server) DeleteTask(c *gin.Context) {
 	taskId := c.Param("taskId")
 	if taskId == "" {
@@ -213,10 +325,22 @@ func (s *Server) DeleteTask(c *gin.Context) {
 	utils.SuccessResponse(c, nil)
 }
 
+// FinishTask godoc
+// @Summary      完成任务
+// @Description  标记任务为已完成
+// @Tags         课程
+// @Accept       json
+// @Produce      json
+// @Param        request body models.FinishTaskRequest true "完成任务信息"
+// @Success      200 {object} map[string]interface{} "完成成功"
+// @Failure      400 {object} map[string]interface{} "请求参数错误"
+// @Security     BearerAuth
+// @Router       /courses/finishtask [post]
 func (s *Server) FinishTask(c *gin.Context) {
 	var req models.FinishTaskRequest
-	if err := c.ShouldBind(&req); err != nil {
-		utils.BadRequestResponse(c, "请求参数错误")
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.BadRequestResponse(c, "请求参数错误: "+err.Error())
+		return
 	}
 	userID, _ := c.Get("user_id")
 	if err := s.svc.CourseService.FinishTask(c.Request.Context(), req, userID.(string)); err != nil {
@@ -226,6 +350,17 @@ func (s *Server) FinishTask(c *gin.Context) {
 	utils.SuccessResponse(c, nil)
 }
 
+// RemoveCourse godoc
+// @Summary      删除课程
+// @Description  删除指定课程
+// @Tags         课程
+// @Accept       json
+// @Produce      json
+// @Param        courseId path string true "课程ID"
+// @Success      200 {object} map[string]interface{} "删除成功"
+// @Failure      400 {object} map[string]interface{} "请求参数错误"
+// @Security     BearerAuth
+// @Router       /courses/{courseId} [delete]
 func (s *Server) RemoveCourse(c *gin.Context) {
 	courseId := c.Param("courseId")
 	if courseId == "" {
@@ -240,6 +375,17 @@ func (s *Server) RemoveCourse(c *gin.Context) {
 	utils.SuccessResponse(c, nil)
 }
 
+// UpdateTask godoc
+// @Summary      更新任务
+// @Description  更新任务信息
+// @Tags         课程
+// @Accept       json
+// @Produce      json
+// @Param        request body models.UpdateTaskRequest true "更新的任务信息"
+// @Success      200 {object} map[string]interface{} "更新成功"
+// @Failure      400 {object} map[string]interface{} "请求参数错误"
+// @Security     BearerAuth
+// @Router       /courses/task [put]
 func (s *Server) UpdateTask(c *gin.Context) {
 	var req models.UpdateTaskRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -254,6 +400,17 @@ func (s *Server) UpdateTask(c *gin.Context) {
 	utils.SuccessResponse(c, nil)
 }
 
+// GetTasksByClazzId godoc
+// @Summary      获取班级任务列表
+// @Description  根据班级ID获取任务列表
+// @Tags         课程
+// @Accept       json
+// @Produce      json
+// @Param        clazzId path string true "班级ID"
+// @Success      200 {object} map[string]interface{} "任务列表"
+// @Failure      400 {object} map[string]interface{} "请求参数错误"
+// @Security     BearerAuth
+// @Router       /courses/task/{clazzId} [get]
 func (s *Server) GetTasksByClazzId(c *gin.Context) {
 	clazzId := c.Param("clazzId")
 	if clazzId == "" {
@@ -270,6 +427,17 @@ func (s *Server) GetTasksByClazzId(c *gin.Context) {
 	utils.SuccessResponse(c, tasks)
 }
 
+// GetClazzById godoc
+// @Summary      获取班级详情
+// @Description  根据班级ID获取班级详细信息
+// @Tags         课程
+// @Accept       json
+// @Produce      json
+// @Param        clazzId path string true "班级ID"
+// @Success      200 {object} map[string]interface{} "班级详情"
+// @Failure      400 {object} map[string]interface{} "请求参数错误"
+// @Security     BearerAuth
+// @Router       /courses/clazzes/{clazzId} [get]
 func (s *Server) GetClazzById(c *gin.Context) {
 	clazzId := c.Param("clazzId")
 	if clazzId == "" {
@@ -285,6 +453,17 @@ func (s *Server) GetClazzById(c *gin.Context) {
 	utils.SuccessResponse(c, clazz)
 }
 
+// DeleteClazz godoc
+// @Summary      删除班级
+// @Description  删除指定班级
+// @Tags         课程
+// @Accept       json
+// @Produce      json
+// @Param        clazzId path string true "班级ID"
+// @Success      200 {object} map[string]interface{} "删除成功"
+// @Failure      400 {object} map[string]interface{} "请求参数错误"
+// @Security     BearerAuth
+// @Router       /courses/clazzes/{clazzId} [delete]
 func (s *Server) DeleteClazz(c *gin.Context) {
 	clazzId := c.Param("clazzId")
 	if clazzId == "" {
@@ -299,30 +478,76 @@ func (s *Server) DeleteClazz(c *gin.Context) {
 	utils.SuccessResponse(c, nil)
 }
 
+// AddClazzMember godoc
+// @Summary      添加班级成员
+// @Description  手动添加成员到班级
+// @Tags         课程
+// @Accept       json
+// @Produce      json
+// @Param        clazzId path string true "班级ID"
+// @Param        request body models.AddClazzMemberRequest true "成员ID"
+// @Success      200 {object} map[string]interface{} "添加成功"
+// @Failure      400 {object} map[string]interface{} "请求参数错误"
+// @Security     BearerAuth
+// @Router       /courses/clazzes/{clazzId}/members [post]
 func (s *Server) AddClazzMember(c *gin.Context) {
 	clazzId := c.Param("clazzId")
-	memberId := c.Param("memberId")
-	if clazzId == "" || memberId == "" {
-		utils.BadRequestResponse(c, "班级id或成员id为空")
+	if clazzId == "" {
+		utils.BadRequestResponse(c, "班级id为空")
+		return
+	}
+
+	var req models.AddClazzMemberRequest
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.BadRequestResponse(c, "请求参数错误: "+err.Error())
+		return
+	}
+
+	if req.MemberID == "" {
+		utils.BadRequestResponse(c, "成员id为空")
 		return
 	}
 	userID, _ := c.Get("user_id")
-	if err := s.svc.CourseService.AddClazzMember(c.Request.Context(), clazzId, memberId, userID.(string)); err != nil {
+	if err := s.svc.CourseService.AddClazzMember(c.Request.Context(), clazzId, req.MemberID, userID.(string)); err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
 	}
 	utils.SuccessResponse(c, nil)
 }
 
+// RemoveClazzMembers godoc
+// @Summary      移除班级成员
+// @Description  批量移除班级成员
+// @Tags         课程
+// @Accept       json
+// @Produce      json
+// @Param        clazzId path string true "班级ID"
+// @Param        request body models.RemoveClazzMembersRequest true "成员ID列表"
+// @Success      200 {object} map[string]interface{} "移除成功"
+// @Failure      400 {object} map[string]interface{} "请求参数错误"
+// @Security     BearerAuth
+// @Router       /courses/clazzes/{clazzId}/members/remove [post]
 func (s *Server) RemoveClazzMembers(c *gin.Context) {
-	var req models.RemoveClazzMembersRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
+	clazzId := c.Param("clazzId")
+	if clazzId == "" {
+		utils.BadRequestResponse(c, "班级id为空")
+		return
+	}
+
+	var body models.RemoveClazzMembersRequest
+	if err := c.ShouldBindJSON(&body); err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
 	}
 
+	request := models.RemoveClazzMembersRequest{
+		ClazzID:   clazzId,
+		MemberIDs: body.MemberIDs,
+	}
+
 	userID, _ := c.Get("user_id")
-	if err := s.svc.CourseService.RemoveClazzMembers(c.Request.Context(), req, userID.(string)); err != nil {
+	if err := s.svc.CourseService.RemoveClazzMembers(c.Request.Context(), request, userID.(string)); err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
 	}

@@ -9,7 +9,7 @@ package server
 
 import (
 	"strconv"
-	
+
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"zk-code-arena-server/pkg/app/api-server/service"
@@ -23,9 +23,9 @@ func (s *Server) RegisterProblem(g *gin.RouterGroup) {
 	problemGroup := g.Group("/problem")
 	{
 		// 公开路由
-		problemGroup.GET("/", s.GetProblems)       // 获取题目列表
+		problemGroup.GET("/", s.GetProblems)          // 获取题目列表
 		problemGroup.GET("/search", s.SearchProblems) // 搜索题目
-		problemGroup.GET("/:id", s.GetProblem)     // 获取题目详情
+		problemGroup.GET("/:id", s.GetProblem)        // 获取题目详情
 	}
 
 	// 需要认证的路由
@@ -34,19 +34,31 @@ func (s *Server) RegisterProblem(g *gin.RouterGroup) {
 		securedGroup.POST("/", s.CreateProblem)      // 创建题目
 		securedGroup.PUT("/:id", s.UpdateProblem)    // 更新题目
 		securedGroup.DELETE("/:id", s.DeleteProblem) // 删除题目
-	
-	
+
 		securedGroup.POST("/:id/run", middleware.CodeRunRateLimitMiddleware(), s.RunCode) // 运行代码测试
 	}
 }
 
-// GetProblems 获取题目列表
+// GetProblems godoc
+// @Summary      获取题目列表
+// @Description  分页获取题目列表，支持按难度、标签筛选
+// @Tags         题目
+// @Accept       json
+// @Produce      json
+// @Param        page query int false "页码" default(1)
+// @Param        page_size query int false "每页数量" default(10)
+// @Param        difficulty query string false "难度" Enums(easy, medium, hard)
+// @Param        tags query []string false "标签列表"
+// @Param        include_private query boolean false "包含私有题目（需教师或管理员权限）" default(false)
+// @Success      200 {object} map[string]interface{} "题目列表"
+// @Failure      500 {object} map[string]interface{} "获取失败"
+// @Router       /problem [get]
 func (s *Server) GetProblems(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "10"))
 	difficulty := c.Query("difficulty")
 	tags := c.QueryArray("tags")
-	isPublic := c.DefaultQuery("is_public", "true") == "true"
+	includePrivate := c.DefaultQuery("include_private", "false") == "true"
 
 	if page < 1 {
 		page = 1
@@ -55,8 +67,36 @@ func (s *Server) GetProblems(c *gin.Context) {
 		pageSize = 10
 	}
 
+	roleVal, _ := c.Get("role")
+	role := models.UserRole("")
+	if roleVal != nil {
+		role = models.UserRole(roleVal.(string))
+	}
+
+	if includePrivate && role != models.RoleAdmin && role != models.RoleTeacher {
+		includePrivate = false
+	}
+
+	var userObjectID *primitive.ObjectID
+	if includePrivate {
+		if userIDVal, exists := c.Get("user_id"); exists {
+			if objID, err := primitive.ObjectIDFromHex(userIDVal.(string)); err == nil {
+				userObjectID = &objID
+			}
+		}
+	}
+
 	ctx := c.Request.Context()
-	problems, total, err := s.svc.ProblemService.GetProblems(ctx, page, pageSize, models.ProblemDifficulty(difficulty), tags, isPublic)
+	problems, total, err := s.svc.ProblemService.GetProblems(
+		ctx,
+		page,
+		pageSize,
+		models.ProblemDifficulty(difficulty),
+		tags,
+		includePrivate,
+		role,
+		userObjectID,
+	)
 	if err != nil {
 		utils.InternalServerErrorResponse(c, "获取题目列表失败: "+err.Error())
 		return
@@ -71,7 +111,18 @@ func (s *Server) GetProblems(c *gin.Context) {
 	})
 }
 
-// GetProblem 获取题目详情
+// GetProblem godoc
+// @Summary      获取题目详情
+// @Description  根据题目ID获取完整题目信息
+// @Tags         题目
+// @Accept       json
+// @Produce      json
+// @Param        id path string true "题目ID"
+// @Success      200 {object} models.Problem "题目详情"
+// @Failure      400 {object} map[string]interface{} "无效的题目ID"
+// @Failure      401 {object} map[string]interface{} "需要登录"
+// @Failure      404 {object} map[string]interface{} "题目不存在"
+// @Router       /problem/{id} [get]
 func (s *Server) GetProblem(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := primitive.ObjectIDFromHex(idStr)
@@ -99,7 +150,20 @@ func (s *Server) GetProblem(c *gin.Context) {
 	utils.SuccessResponse(c, problem)
 }
 
-// CreateProblem 创建题目
+// CreateProblem godoc
+// @Summary      创建题目（教师/管理员）
+// @Description  创建新题目（仅管理员和教师）
+// @Tags         题目
+// @Accept       json
+// @Produce      json
+// @Param        request body models.Problem true "题目信息"
+// @Success      200 {object} models.Problem "创建成功"
+// @Failure      400 {object} map[string]interface{} "请求参数错误"
+// @Failure      401 {object} map[string]interface{} "需要登录"
+// @Failure      403 {object} map[string]interface{} "权限不足"
+// @Failure      500 {object} map[string]interface{} "创建失败"
+// @Security     BearerAuth
+// @Router       /problem [post]
 func (s *Server) CreateProblem(c *gin.Context) {
 	// 检查权限：只有管理员和老师可以创建题目
 	role, exists := c.Get("role")
@@ -133,7 +197,22 @@ func (s *Server) CreateProblem(c *gin.Context) {
 	utils.SuccessResponse(c, problem)
 }
 
-// UpdateProblem 更新题目
+// UpdateProblem godoc
+// @Summary      更新题目（教师/管理员）
+// @Description  更新题目信息（管理员或题目创建者）
+// @Tags         题目
+// @Accept       json
+// @Produce      json
+// @Param        id path string true "题目ID"
+// @Param        request body models.Problem true "更新的题目信息"
+// @Success      200 {object} models.Problem "更新成功"
+// @Failure      400 {object} map[string]interface{} "请求参数错误"
+// @Failure      401 {object} map[string]interface{} "需要登录"
+// @Failure      403 {object} map[string]interface{} "权限不足"
+// @Failure      404 {object} map[string]interface{} "题目不存在"
+// @Failure      500 {object} map[string]interface{} "更新失败"
+// @Security     BearerAuth
+// @Router       /problem/{id} [put]
 func (s *Server) UpdateProblem(c *gin.Context) {
 	// 检查权限：只有管理员和老师可以更新题目
 	role, exists := c.Get("role")
@@ -201,7 +280,19 @@ func (s *Server) UpdateProblem(c *gin.Context) {
 	utils.SuccessResponse(c, problem)
 }
 
-// DeleteProblem 删除题目
+// DeleteProblem godoc
+// @Summary      删除题目（管理员）
+// @Description  删除指定题目（仅管理员）
+// @Tags         题目
+// @Accept       json
+// @Produce      json
+// @Param        id path string true "题目ID"
+// @Success      200 {object} map[string]interface{} "删除成功"
+// @Failure      400 {object} map[string]interface{} "无效的题目ID"
+// @Failure      403 {object} map[string]interface{} "权限不足"
+// @Failure      500 {object} map[string]interface{} "删除失败"
+// @Security     BearerAuth
+// @Router       /problem/{id} [delete]
 func (s *Server) DeleteProblem(c *gin.Context) {
 	// 检查权限：只有管理员可以删除题目
 	role, exists := c.Get("role")
@@ -226,7 +317,20 @@ func (s *Server) DeleteProblem(c *gin.Context) {
 	utils.SuccessResponse(c, gin.H{"message": "删除成功"})
 }
 
-// RunCode 运行代码测试（非提交）
+// RunCode godoc
+// @Summary      运行代码测试
+// @Description  在线运行代码进行测试（非提交），有频率限制
+// @Tags         题目
+// @Accept       json
+// @Produce      json
+// @Param        id path string true "题目ID"
+// @Param        request body service.RunCodeRequest true "代码和语言"
+// @Success      200 {object} map[string]interface{} "运行结果"
+// @Failure      400 {object} map[string]interface{} "请求参数错误"
+// @Failure      404 {object} map[string]interface{} "题目不存在"
+// @Failure      500 {object} map[string]interface{} "运行失败"
+// @Security     BearerAuth
+// @Router       /problem/{id}/run [post]
 func (s *Server) RunCode(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := primitive.ObjectIDFromHex(idStr)
@@ -251,7 +355,20 @@ func (s *Server) RunCode(c *gin.Context) {
 	utils.SuccessResponse(c, resp)
 }
 
-// SearchProblems 搜索题目
+// SearchProblems godoc
+// @Summary      搜索题目
+// @Description  根据关键词、难度、标签搜索题目
+// @Tags         题目
+// @Accept       json
+// @Produce      json
+// @Param        keyword query string false "关键词"
+// @Param        difficulty query string false "难度" Enums(easy, medium, hard)
+// @Param        tags query []string false "标签列表"
+// @Param        page query int false "页码" default(1)
+// @Param        page_size query int false "每页数量" default(10)
+// @Success      200 {object} map[string]interface{} "搜索结果"
+// @Failure      500 {object} map[string]interface{} "搜索失败"
+// @Router       /problem/search [get]
 func (s *Server) SearchProblems(c *gin.Context) {
 	keyword := c.Query("keyword")
 	difficulty := c.Query("difficulty")

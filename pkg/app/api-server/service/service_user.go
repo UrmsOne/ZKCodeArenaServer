@@ -115,12 +115,10 @@ func (s *UserService) ValidateUser(ctx context.Context, stdId, password string) 
 	if !user.IsActive {
 		return nil, errors.New("账户已被禁用")
 	}
-	//TODO 加密存储
-	//err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
-	//if err != nil {
-	//	return nil, errors.New("账号或密码错误")
-	//}
-	if user.Password != password {
+
+	// 验证密码（使用 bcrypt）
+	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
+	if err != nil {
 		return nil, errors.New("账号或密码错误")
 	}
 

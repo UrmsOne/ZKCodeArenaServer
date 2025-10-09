@@ -32,16 +32,25 @@ func (s *Server) RegisterSubmit(g *gin.RouterGroup) {
 	}
 }
 
-// SubmitCode 提交代码
+// SubmitCode godoc
+// @Summary      提交代码
+// @Description  提交代码进行判题
+// @Tags         提交
+// @Accept       json
+// @Produce      json
+// @Param        request body models.SubmitCodeRequest true "提交信息"
+// @Success      200 {object} models.Submit "提交记录"
+// @Failure      400 {object} map[string]interface{} "请求参数错误"
+// @Failure      401 {object} map[string]interface{} "未认证用户"
+// @Failure      404 {object} map[string]interface{} "题目不存在"
+// @Failure      500 {object} map[string]interface{} "提交失败"
+// @Security     BearerAuth
+// @Router       /submit [post]
 func (s *Server) SubmitCode(c *gin.Context) {
 
-	var submitReq struct {
-		ProblemID primitive.ObjectID `json:"problem_id" binding:"required"`
-		Code      string             `json:"code" binding:"required"`
-		Language  string             `json:"language" binding:"required"`
-	}
+	var submitReq models.SubmitCodeRequest
 
-	if err := c.ShouldBindJSON(&submitReq); err != nil {
+	if err := c.ShouldBindJSON(&submitReq); err != nil{
 		utils.BadRequestResponse(c, "请求参数错误: "+err.Error())
 		return
 	}
@@ -124,7 +133,22 @@ func (s *Server) SubmitCode(c *gin.Context) {
 	})
 }
 
-// GetSubmits 获取提交列表
+// GetSubmits godoc
+// @Summary      获取提交列表
+// @Description  分页获取提交记录（非管理员仅可查看自己的提交）
+// @Tags         提交
+// @Accept       json
+// @Produce      json
+// @Param        page query int false "页码" default(1)
+// @Param        page_size query int false "每页数量" default(10)
+// @Param        problem_id query string false "题目ID筛选"
+// @Param        user_id query string false "用户ID筛选（管理员可用）"
+// @Success      200 {object} map[string]interface{} "提交列表"
+// @Failure      400 {object} map[string]interface{} "请求参数错误"
+// @Failure      401 {object} map[string]interface{} "需要登录"
+// @Failure      500 {object} map[string]interface{} "获取失败"
+// @Security     BearerAuth
+// @Router       /submit [get]
 func (s *Server) GetSubmits(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "10"))
@@ -187,7 +211,20 @@ func (s *Server) GetSubmits(c *gin.Context) {
 	})
 }
 
-// GetSubmit 获取提交详情
+// GetSubmit godoc
+// @Summary      获取提交详情
+// @Description  根据提交ID获取详细信息（管理员或提交者本人）
+// @Tags         提交
+// @Accept       json
+// @Produce      json
+// @Param        id path string true "提交ID"
+// @Success      200 {object} models.Submit "提交详情"
+// @Failure      400 {object} map[string]interface{} "无效的提交ID"
+// @Failure      401 {object} map[string]interface{} "需要登录"
+// @Failure      403 {object} map[string]interface{} "权限不足"
+// @Failure      404 {object} map[string]interface{} "提交不存在"
+// @Security     BearerAuth
+// @Router       /submit/{id} [get]
 func (s *Server) GetSubmit(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := primitive.ObjectIDFromHex(idStr)
