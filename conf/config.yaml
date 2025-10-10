@@ -6,7 +6,7 @@ App:
   GracefulTime: 5s
 
 Mongo:
-  Uri: mongodb://42.194.245.236:27017
+  Uri: mongodb://localhost:27017
   DbName: zk_code_arena
 
 Judge:
@@ -121,7 +121,7 @@ JWT:
   ExpireTime: 24h
 
 Redis:
-  Host: "42.194.245.236"
+  Host: "localhost"
   Port: 16379
   Password: ""
   DB: 0
