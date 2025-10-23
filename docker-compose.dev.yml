@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  # 开发环境应用服务 (使用 Air 热更新)
+  # 开发环境应用服务
   app:
     build:
       context: .
@@ -10,9 +10,7 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - .:/app
-      - /app/tmp
-      - /app/logs
+      - app_logs:/app/logs
     environment:
       - MONGO_URI=mongodb://mongo:27017
       - REDIS_HOST=redis
@@ -27,7 +25,7 @@ services:
 
   # MongoDB 数据库
   mongo:
-    image: mongo:7.0
+    image: mongo:latest
     container_name: zk-arena-mongo-dev
     ports:
       - "27017:27017"
@@ -41,7 +39,7 @@ services:
 
   # Redis 缓存
   redis:
-    image: redis:7.2-alpine
+    image: redis:latest
     container_name: zk-arena-redis-dev
     ports:
       - "6379:6379"
@@ -52,7 +50,6 @@ services:
     networks:
       - zk-arena-dev-network
 
-  # 代码评测服务
   judge:
     image: criyle/go-judge:latest
     container_name: zk-arena-judge-dev
@@ -73,6 +70,8 @@ volumes:
   redis_dev_data:
     driver: local
   judge_dev_data:
+    driver: local
+  app_logs:
     driver: local
 
 networks:

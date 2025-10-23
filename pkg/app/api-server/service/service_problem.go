@@ -35,17 +35,62 @@ func NewProblemService(sandboxClient sandbox.Client, testCaseService *TestCaseSe
 
 // CreateProblem 创建题目
 func (s *ProblemService) CreateProblem(ctx context.Context, problem *models.Problem) error {
-	problem.ID = primitive.NewObjectID()
-	problem.CreatedAt = time.Now()
-	problem.UpdatedAt = time.Now()
-	problem.ACCount = 0
-	problem.SubmitCount = 0
+// 1. 设置系统字段
+problem.ID = primitive.NewObjectID()
+problem.CreatedAt = time.Now()
+problem.UpdatedAt = time.Now()
 
-	collection := utils.GetCollection("problems")
-	_, err := collection.InsertOne(ctx, problem)
-	return err
+// 2. 设置默认Status（如果未传）
+if problem.Status == "" {
+problem.Status = models.StatusDraft
+utils.Logger.Infof("CreateProblem: 未指定状态，设置默认状态为草稿")
 }
 
+// 3. 应用Status与IsPublic关联规则
+if problem.Status == models.StatusDraft {
+// 草稿状态强制私有
+if problem.IsPublic {
+utils.Logger.Warnf("CreateProblem: 草稿状态不能公开，强制设为私有")
+}
+problem.IsPublic = false
+}
+// Published/Archived状态，保持用户设置或默认私有
+// （IsPublic由Handler层传入，这里不修改）
+
+// 4. 设置默认计数器
+problem.ACCount = 0
+problem.SubmitCount = 0
+
+// 5. 设置默认限制（如果为0）
+if problem.TimeLimit == 0 {
+problem.TimeLimit = 1000
+utils.Logger.Debugf("CreateProblem: 使用默认时间限制 1000ms")
+}
+if problem.MemoryLimit == 0 {
+problem.MemoryLimit = 256
+utils.Logger.Debugf("CreateProblem: 使用默认内存限制 256MB")
+}
+
+// 6. 确保Tags不为nil
+if problem.Tags == nil {
+problem.Tags = []string{}
+}
+
+// 7. 记录详细日志
+utils.Logger.Infof("CreateProblem: title=%s, difficulty=%s, status=%s, isPublic=%v, createdBy=%s", 
+problem.Title, problem.Difficulty, problem.Status, problem.IsPublic, problem.CreatedBy.Hex())
+
+// 8. 持久化到数据库
+collection := utils.GetCollection("problems")
+_, err := collection.InsertOne(ctx, problem)
+if err != nil {
+utils.Logger.Errorf("CreateProblem: 数据库插入失败, error=%v", err)
+return fmt.Errorf("数据库操作失败: %w", err)
+}
+
+utils.Logger.Infof("CreateProblem: 题目创建成功, id=%s", problem.ID.Hex())
+return nil
+}
 // GetProblemByID 根据ID获取题目
 func (s *ProblemService) GetProblemByID(ctx context.Context, id primitive.ObjectID) (*models.Problem, error) {
 	collection := utils.GetCollection("problems")
