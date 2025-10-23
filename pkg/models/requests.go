@@ -40,6 +40,62 @@ type UpdateUserRequest struct {
 
 // ==================== 题目模块请求 ====================
 
+// CreateProblemRequest 创建题目请求
+type CreateProblemRequest struct {
+	// 基本信息（必填）
+	Title       string            `json:"title" binding:"required,min=1,max=200"`
+	Description string            `json:"description" binding:"required,min=10"`
+
+	// 题目详情（可选）
+	Input        string `json:"input"`
+	Output       string `json:"output"`
+	SampleInput  string `json:"sample_input"`
+	SampleOutput string `json:"sample_output"`
+	Hint         string `json:"hint"`
+	Source       string `json:"source"`
+	Author       string `json:"author"`
+
+	// 难度和标签（必填）
+	Difficulty ProblemDifficulty `json:"difficulty" binding:"required,oneof=easy medium hard"`
+	Tags       []string          `json:"tags" binding:"max=10,dive,min=1,max=20"`
+
+	// 限制条件（可选，有默认值）
+	TimeLimit   *int `json:"time_limit" binding:"omitempty,min=100,max=10000"`  // 默认1000ms
+	MemoryLimit *int `json:"memory_limit" binding:"omitempty,min=32,max=1024"` // 默认256MB
+
+	// 状态控制（可选）
+	Status   *ProblemStatus `json:"status" binding:"omitempty,oneof=draft published archived"`
+	IsPublic *bool          `json:"is_public"` // 可选，默认false
+}
+
+// UpdateProblemRequest 更新题目请求
+type UpdateProblemRequest struct {
+	// 基本信息（可选）
+	Title       *string `json:"title" binding:"omitempty,min=1,max=200"`
+	Description *string `json:"description" binding:"omitempty,min=10"`
+
+	// 题目详情（可选）
+	Input        *string `json:"input"`
+	Output       *string `json:"output"`
+	SampleInput  *string `json:"sample_input"`
+	SampleOutput *string `json:"sample_output"`
+	Hint         *string `json:"hint"`
+	Source       *string `json:"source"`
+	Author       *string `json:"author"`
+
+	// 难度和标签（可选）
+	Difficulty *ProblemDifficulty `json:"difficulty" binding:"omitempty,oneof=easy medium hard"`
+	Tags       *[]string          `json:"tags" binding:"omitempty,max=10,dive,min=1,max=20"`
+
+	// 限制条件（可选）
+	TimeLimit   *int `json:"time_limit" binding:"omitempty,min=100,max=10000"`
+	MemoryLimit *int `json:"memory_limit" binding:"omitempty,min=32,max=1024"`
+
+	// 状态控制（可选）
+	Status   *ProblemStatus `json:"status" binding:"omitempty,oneof=draft published archived"`
+	IsPublic *bool          `json:"is_public"`
+}
+
 // RunCodeRequest 运行代码请求
 // 注意：这个已在 service 包中定义，这里只是引用说明
 
