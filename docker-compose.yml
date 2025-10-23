@@ -54,14 +54,17 @@ services:
 
   # 代码评测服务 (go-judge)
   judge:
-    image: criyle/go-judge:latest
+    build:
+      context: ./deploy/judge
+      dockerfile: Dockerfile
     container_name: zk-arena-judge
     ports:
       - "5050:5050"
     volumes:
       - judge_data:/judge
     environment:
-      - JUDGE_DEBUG=1
+      - JUDGE_DEBUG=0
+      - JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
     restart: unless-stopped
     networks:
       - zk-arena-network

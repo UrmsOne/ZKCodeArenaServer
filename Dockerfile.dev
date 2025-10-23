@@ -1,6 +1,7 @@
-# 开发环境 Dockerfile (支持热更新)
-FROM golang:1.23-alpine
+FROM golang:1.24-alpine
 
+# 更换apk源
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.ustc.edu.cn/g' /etc/apk/repositories
 # 设置工作目录
 WORKDIR /app
 
@@ -8,7 +9,9 @@ WORKDIR /app
 RUN apk add --no-cache git ca-certificates tzdata wget
 
 # 安装 Air 热更新工具
-RUN go install github.com/cosmtrek/air@latest
+RUN go env -w GOPROXY=https://goproxy.cn,direct
+
+RUN go install github.com/air-verse/air@v1.60.0
 
 # 复制 go mod 文件
 COPY go.mod go.sum ./
@@ -20,7 +23,7 @@ RUN go mod download
 COPY . .
 
 # 创建必要的目录
-RUN mkdir -p logs tmp
+RUN mkdir -p /app/logs
 
 # 暴露端口
 EXPOSE 8080

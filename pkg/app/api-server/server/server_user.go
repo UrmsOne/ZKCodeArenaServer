@@ -148,7 +148,7 @@ func (s *Server) GetUserProfile(c *gin.Context) {
 // @Tags         用户
 // @Accept       json
 // @Produce      json
-// @Param        request body object{real_name=string,email=string,bio=string,school=string,major=string,grade=string,class=string,phone=string} true "更新信息"
+// @Param        request body models.UpdateProfileRequest true "更新信息"
 // @Success      200 {object} models.UserProfile "更新后的用户资料"
 // @Failure      400 {object} map[string]interface{} "请求参数错误"
 // @Failure      401 {object} map[string]interface{} "未认证用户"

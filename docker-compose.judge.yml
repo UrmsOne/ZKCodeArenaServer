@@ -1,0 +1,36 @@
+version: '3.8'
+
+# Judge 评测服务独立部署配置
+# 用途：单独部署或重建 judge 服务
+# 使用方法：docker-compose -f docker-compose.judge.yml up -d
+
+services:
+  # 代码评测服务
+  judge:
+    build:
+      context: ./deploy/judge
+      dockerfile: Dockerfile
+    container_name: zk-arena-judge
+    ports:
+      - "5050:5050"
+    volumes:
+      - judge_data:/judge
+    environment:
+      - JUDGE_DEBUG=1                                          # 调试模式：1=开启，0=关闭
+      - JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64         # Java 环境变量
+    restart: unless-stopped
+    networks:
+      - zk-arena-network
+    privileged: true                                           # 沙箱需要特权模式
+
+volumes:
+  judge_data:
+    driver: local
+
+networks:
+  zk-arena-network:
+    # 如果网络已存在（与其他服务共享），使用 external
+    # external: true
+    # 如果独立部署，使用 bridge
+    driver: bridge
+

@@ -87,6 +87,11 @@ func (s *Server) GetProblems(c *gin.Context) {
 	}
 
 	ctx := c.Request.Context()
+	
+	// 调试日志
+	utils.Logger.Infof("GetProblems - page:%d, pageSize:%d, difficulty:%s, tags:%v, includePrivate:%v, role:%s", 
+		page, pageSize, difficulty, tags, includePrivate, role)
+	
 	problems, total, err := s.svc.ProblemService.GetProblems(
 		ctx,
 		page,
@@ -101,6 +106,9 @@ func (s *Server) GetProblems(c *gin.Context) {
 		utils.InternalServerErrorResponse(c, "获取题目列表失败: "+err.Error())
 		return
 	}
+	
+	// 调试日志
+	utils.Logger.Infof("GetProblems - total:%d, returned:%d", total, len(problems))
 
 	utils.SuccessResponse(c, gin.H{
 		"problems":   problems,
@@ -152,20 +160,20 @@ func (s *Server) GetProblem(c *gin.Context) {
 
 // CreateProblem godoc
 // @Summary      创建题目（教师/管理员）
-// @Description  创建新题目（仅管理员和教师）
+// @Description  创建新题目，默认状态为草稿，草稿状态不能公开
 // @Tags         题目
 // @Accept       json
 // @Produce      json
-// @Param        request body models.Problem true "题目信息"
+// @Param        request body models.CreateProblemRequest true "题目信息"
 // @Success      200 {object} models.Problem "创建成功"
-// @Failure      400 {object} map[string]interface{} "请求参数错误"
+// @Failure      400 {object} map[string]interface{} "请求参数错误或业务规则错误"
 // @Failure      401 {object} map[string]interface{} "需要登录"
 // @Failure      403 {object} map[string]interface{} "权限不足"
 // @Failure      500 {object} map[string]interface{} "创建失败"
 // @Security     BearerAuth
 // @Router       /problem [post]
 func (s *Server) CreateProblem(c *gin.Context) {
-	// 检查权限：只有管理员和老师可以创建题目
+	// 1. 检查权限：只有管理员和老师可以创建题目
 	role, exists := c.Get("role")
 	if !exists {
 		utils.UnauthorizedResponse(c, "需要登录")
@@ -174,26 +182,66 @@ func (s *Server) CreateProblem(c *gin.Context) {
 
 	userRole := role.(string)
 	if userRole != string(models.RoleAdmin) && userRole != string(models.RoleTeacher) {
-		utils.ForbiddenResponse(c, "权限不足")
+		utils.ForbiddenResponse(c, "权限不足，只有管理员和教师可以创建题目")
 		return
 	}
 
-	var problem models.Problem
-	if err := c.ShouldBindJSON(&problem); err != nil {
+	// 2. 绑定和验证请求参数
+	var req models.CreateProblemRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.BadRequestResponse(c, "请求参数错误: "+err.Error())
 		return
 	}
 
-	// 设置创建者
+	// 3. 业务规则预检：草稿状态不能公开
+	if req.Status != nil && *req.Status == models.StatusDraft {
+		if req.IsPublic != nil && *req.IsPublic == true {
+			utils.BadRequestResponse(c, "草稿状态的题目不能设为公开")
+			return
+		}
+	}
+
+	// 4. 构建Problem对象
+	problem := models.Problem{
+		Title:        req.Title,
+		Description:  req.Description,
+		Input:        req.Input,
+		Output:       req.Output,
+		SampleInput:  req.SampleInput,
+		SampleOutput: req.SampleOutput,
+		Hint:         req.Hint,
+		Source:       req.Source,
+		Author:       req.Author,
+		Difficulty:   req.Difficulty,
+		Tags:         req.Tags,
+	}
+
+	// 5. 设置可选字段（使用指针判断是否传入）
+	if req.TimeLimit != nil {
+		problem.TimeLimit = *req.TimeLimit
+	}
+	if req.MemoryLimit != nil {
+		problem.MemoryLimit = *req.MemoryLimit
+	}
+	if req.Status != nil {
+		problem.Status = *req.Status
+	}
+	if req.IsPublic != nil {
+		problem.IsPublic = *req.IsPublic
+	}
+
+	// 6. 设置创建者
 	userID, _ := c.Get("user_id")
 	problem.CreatedBy, _ = primitive.ObjectIDFromHex(userID.(string))
 
+	// 7. 调用Service层
 	ctx := c.Request.Context()
 	if err := s.svc.ProblemService.CreateProblem(ctx, &problem); err != nil {
 		utils.InternalServerErrorResponse(c, "创建题目失败: "+err.Error())
 		return
 	}
 
+	// 8. 返回成功响应
 	utils.SuccessResponse(c, problem)
 }
 
