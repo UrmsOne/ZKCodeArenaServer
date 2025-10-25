@@ -32,8 +32,8 @@ chmod +x scripts/start.sh
 # 安装 Go 1.23+
 # 安装 Docker
 
-# 安装 Air 热更新工具
-go install github.com/cosmtrek/air@latest
+# 安装 Air 热更新工具 (使用兼容 Go 1.23 的版本)
+go install github.com/air-verse/air@v1.49.0
 ```
 
 2. **启动依赖服务**

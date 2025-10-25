@@ -9,12 +9,13 @@ package service
 
 import (
 	"context"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo/options"
 	"time"
 	"zk-code-arena-server/pkg/models"
 	"zk-code-arena-server/pkg/utils"
+
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type SubmitService struct{}
@@ -49,7 +50,7 @@ func (s *SubmitService) GetSubmitByID(ctx context.Context, id primitive.ObjectID
 // GetSubmits 获取提交列表
 func (s *SubmitService) GetSubmits(ctx context.Context, page, pageSize int, userID, problemID primitive.ObjectID) ([]*models.SubmitList, int64, error) {
 	collection := utils.GetCollection("submits")
-	
+
 	// 构建查询条件
 	filter := bson.M{}
 	if !userID.IsZero() {
@@ -83,7 +84,7 @@ func (s *SubmitService) GetSubmits(ctx context.Context, page, pageSize int, user
 		if err := cursor.Decode(&submit); err != nil {
 			return nil, 0, err
 		}
-		
+
 		submits = append(submits, &models.SubmitList{
 			ID:         submit.ID,
 			ProblemID:  submit.ProblemID,
@@ -126,7 +127,7 @@ func (s *SubmitService) getMemoryUsed(result *models.JudgeResult) int {
 // GetSubmitsByStatus 根据状态获取提交列表
 func (s *SubmitService) GetSubmitsByStatus(ctx context.Context, status models.SubmitStatus) ([]*models.Submit, error) {
 	collection := utils.GetCollection("submits")
-	
+
 	filter := bson.M{"status": status}
 	cursor, err := collection.Find(ctx, filter)
 	if err != nil {
@@ -145,14 +146,14 @@ func (s *SubmitService) GetSubmitsByStatus(ctx context.Context, status models.Su
 // UpdateSubmitStatus 更新提交状态
 func (s *SubmitService) UpdateSubmitStatus(ctx context.Context, submitID primitive.ObjectID, status models.SubmitStatus) error {
 	collection := utils.GetCollection("submits")
-	
+
 	update := bson.M{
 		"$set": bson.M{
 			"status":     status,
 			"updated_at": time.Now(),
 		},
 	}
-	
+
 	_, err := collection.UpdateOne(ctx, bson.M{"_id": submitID}, update)
 	return err
 }
@@ -160,7 +161,7 @@ func (s *SubmitService) UpdateSubmitStatus(ctx context.Context, submitID primiti
 // UpdateSubmitResult 更新提交结果
 func (s *SubmitService) UpdateSubmitResult(ctx context.Context, submitID primitive.ObjectID, result *models.JudgeResult) error {
 	collection := utils.GetCollection("submits")
-	
+
 	update := bson.M{
 		"$set": bson.M{
 			"status":     result.Status,
@@ -168,7 +169,7 @@ func (s *SubmitService) UpdateSubmitResult(ctx context.Context, submitID primiti
 			"updated_at": time.Now(),
 		},
 	}
-	
+
 	_, err := collection.UpdateOne(ctx, bson.M{"_id": submitID}, update)
 	return err
 }
@@ -176,16 +177,16 @@ func (s *SubmitService) UpdateSubmitResult(ctx context.Context, submitID primiti
 // BatchUpdateStatus 批量更新状态（用于服务重启恢复）
 func (s *SubmitService) BatchUpdateStatus(ctx context.Context, fromStatus, toStatus models.SubmitStatus, errorMsg string) error {
 	collection := utils.GetCollection("submits")
-	
+
 	filter := bson.M{"status": fromStatus}
-	
+
 	update := bson.M{
 		"$set": bson.M{
 			"status":     toStatus,
 			"updated_at": time.Now(),
 		},
 	}
-	
+
 	// 如果是标记为系统错误，添加错误信息到结果中
 	if toStatus == models.StatusSystemError && errorMsg != "" {
 		update["$set"].(bson.M)["result"] = &models.JudgeResult{
@@ -195,7 +196,7 @@ func (s *SubmitService) BatchUpdateStatus(ctx context.Context, fromStatus, toSta
 			TestResults: []models.TestResult{},
 		}
 	}
-	
+
 	_, err := collection.UpdateMany(ctx, filter, update)
 	return err
 }
