@@ -1,3 +1,4 @@
+basePath: /api/v1
 definitions:
   models.AddClazzMemberRequest:
     properties:
@@ -808,8 +809,12 @@ definitions:
     - code
     - language
     type: object
+host: localhost:8080
 info:
   contact: {}
+  description: ZK Code Arena 在线编程平台API文档
+  title: ZK Code Arena API
+  version: "1.0"
 paths:
   /courses:
     post:
@@ -2686,4 +2691,10 @@ paths:
       summary: 用户注册
       tags:
       - 用户
+securityDefinitions:
+  BearerAuth:
+    description: 输入"Bearer " + JWT Token
+    in: header
+    name: Authorization
+    type: apiKey
 swagger: "2.0"

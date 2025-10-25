@@ -1,8 +1,13 @@
 {
     "swagger": "2.0",
     "info": {
-        "contact": {}
+        "description": "ZK Code Arena 在线编程平台API文档",
+        "title": "ZK Code Arena API",
+        "contact": {},
+        "version": "1.0"
     },
+    "host": "localhost:8080",
+    "basePath": "/api/v1",
     "paths": {
         "/courses": {
             "put": {
@@ -4012,6 +4017,14 @@
                     "type": "string"
                 }
             }
+        }
+    },
+    "securityDefinitions": {
+        "BearerAuth": {
+            "description": "输入\"Bearer \" + JWT Token",
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
         }
     }
 }

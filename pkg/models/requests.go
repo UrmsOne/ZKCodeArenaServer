@@ -43,8 +43,8 @@ type UpdateUserRequest struct {
 // CreateProblemRequest 创建题目请求
 type CreateProblemRequest struct {
 	// 基本信息（必填）
-	Title       string            `json:"title" binding:"required,min=1,max=200"`
-	Description string            `json:"description" binding:"required,min=10"`
+	Title       string `json:"title" binding:"required,min=1,max=200"`
+	Description string `json:"description" binding:"required,min=10"`
 
 	// 题目详情（可选）
 	Input        string `json:"input"`
@@ -60,7 +60,7 @@ type CreateProblemRequest struct {
 	Tags       []string          `json:"tags" binding:"max=10,dive,min=1,max=20"`
 
 	// 限制条件（可选，有默认值）
-	TimeLimit   *int `json:"time_limit" binding:"omitempty,min=100,max=10000"`  // 默认1000ms
+	TimeLimit   *int `json:"time_limit" binding:"omitempty,min=100,max=10000"` // 默认1000ms
 	MemoryLimit *int `json:"memory_limit" binding:"omitempty,min=32,max=1024"` // 默认256MB
 
 	// 状态控制（可选）
@@ -299,4 +299,30 @@ type FinishTaskRequest struct {
 	RelationID string `bson:"relation_id" json:"relation_id" binding:"required"`
 	TaskID     string `bson:"task_id" json:"task_id" binding:"required"`
 	ClazzID    string `bson:"clazz_id" json:"clazz_id" binding:"required"`
+}
+
+// ==================== 学生班级模块请求 ====================
+
+// AddStudentToClassRequest 添加学生到班级请求
+type AddStudentToClassRequest struct {
+	StudentID string `json:"student_id" binding:"required"`
+	ClassID   string `json:"class_id" binding:"required"`
+	CourseID  string `json:"course_id" binding:"required"`
+}
+
+// RemoveStudentFromClassRequest 从班级移除学生请求
+type RemoveStudentFromClassRequest struct {
+	StudentID string `json:"student_id" binding:"required"`
+	ClassID   string `json:"class_id" binding:"required"`
+	CourseID  string `json:"course_id" binding:"required"`
+}
+
+// GetStudentClassesRequest 获取学生班级请求
+type GetStudentClassesRequest struct {
+	StudentID string `json:"student_id" binding:"required"`
+}
+
+// GetClassStudentsRequest 获取班级学生请求
+type GetClassStudentsRequest struct {
+	ClassID string `json:"class_id" binding:"required"`
 }

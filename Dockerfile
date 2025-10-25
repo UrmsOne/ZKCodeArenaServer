@@ -43,6 +43,9 @@ COPY --from=builder /app/main .
 # 复制配置文件
 COPY --from=builder /app/conf ./conf
 
+# 复制Swagger文档
+COPY --from=builder /app/docs ./docs
+
 # 创建日志目录
 RUN mkdir -p logs && chown -R appuser:appuser /app
 

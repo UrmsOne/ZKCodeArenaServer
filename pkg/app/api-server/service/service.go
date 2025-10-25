@@ -25,6 +25,7 @@ type Service struct {
 	JudgeService      *JudgeService
 	TestCaseService   *TestCaseService
 	CourseService     *CourseService
+	ClazzService      *ClazzService
 	StatisticsService *StatisticsService
 }
 
@@ -87,7 +88,10 @@ func NewService() *Service {
 	// 4. 创建需要依赖注入的服务
 	// ProblemService 需要 sandboxClient 和 testCaseService
 	problemService := NewProblemService(sandboxClient, testCaseService)
-	
+
+	// ClazzService 班级服务
+	clazzService := NewClazzService()
+
 	// JudgeService 需要所有基础服务的引用
 	judgeService := NewJudgeService(
 		sandboxClient,
@@ -96,7 +100,7 @@ func NewService() *Service {
 		problemService,
 		messageQueue,
 	)
-	
+
 	// StatisticsService 需要其他服务的引用
 	statisticsService := NewStatisticsService(submitService, problemService, userService)
 
@@ -107,6 +111,7 @@ func NewService() *Service {
 		JudgeService:      judgeService,
 		TestCaseService:   testCaseService,
 		CourseService:     courseService,
+		ClazzService:      clazzService,
 		StatisticsService: statisticsService,
 	}
 }

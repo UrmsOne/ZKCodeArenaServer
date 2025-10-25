@@ -3,6 +3,17 @@
 @Date: 2025/1/25 13:09
 @Name: server.go
 @Description: 服务器主文件
+
+@title ZK Code Arena API
+@version 1.0
+@description ZK Code Arena 在线编程平台API文档
+@host localhost:8080
+@BasePath /api/v1
+
+@securityDefinitions.apikey BearerAuth
+@in header
+@name Authorization
+@description 输入"Bearer " + JWT Token
 */
 
 package server
@@ -83,6 +94,8 @@ func (s *Server) RegisterRoutes() {
 		s.RegisterTestCase(v1)
 		//课程相关路由
 		s.RegisterCourse(v1)
+		// 班级相关路由
+		s.RegisterClazz(v1)
 		// 统计相关路由
 		s.RegisterStatistics(v1)
 	}
