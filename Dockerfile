@@ -22,6 +22,9 @@ RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main ./cmd
 # 运行阶段
 FROM alpine:latest
 
+#切换镜像源
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories
+
 # 安装必要的运行时依赖
 RUN apk --no-cache add ca-certificates tzdata
 
