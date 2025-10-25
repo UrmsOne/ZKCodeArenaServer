@@ -80,8 +80,9 @@ func (s *Server) UpdateClazzInfo(c *gin.Context) {
 	utils.SuccessResponse(c, nil)
 }
 
-// @Description  课程创建者添加老师（支持批量添加，只有课程创建者可以操作）
+// addCourseTeacher godoc
 // @Summary      课程创建者添加老师
+// @Description  课程创建者添加老师（支持批量添加，只有课程创建者可以操作）
 // @Tags         课程
 // @Accept       json
 // @Produce      json
@@ -116,8 +117,9 @@ func (s *Server) addCourseTeacher(c *gin.Context) {
 	utils.SuccessResponse(c, nil)
 }
 
-// @Description  课程创建者删除课程老师（支持批量删除，只有课程创建者可以操作）
+// removeCourseTeacher godoc
 // @Summary      课程创建者删除课程老师
+// @Description  课程创建者删除课程老师（支持批量删除，只有课程创建者可以操作）
 // @Tags         课程
 // @Accept       json
 // @Produce      json
@@ -152,8 +154,9 @@ func (s *Server) removeCourseTeacher(c *gin.Context) {
 	utils.SuccessResponse(c, nil)
 }
 
-// @Description  班级添加老师（支持批量添加，只有课程创建者可以操作，且教师必须已加入课程）
+// addClazzTeacher godoc
 // @Summary      班级添加老师
+// @Description  班级添加老师（支持批量添加，只有课程创建者可以操作，且教师必须已加入课程）
 // @Tags         课程
 // @Accept       json
 // @Produce      json
@@ -183,8 +186,9 @@ func (s *Server) addClazzTeacher(c *gin.Context) {
 	utils.SuccessResponse(c, nil)
 }
 
-// @Description  班级删除老师（支持批量删除，只有课程创建者可以操作）
+// removeClazzTeacher godoc
 // @Summary      班级删除老师
+// @Description  班级删除老师（支持批量删除，只有课程创建者可以操作）
 // @Tags         课程
 // @Accept       json
 // @Produce      json
