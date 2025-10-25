@@ -24,6 +24,10 @@ COPY . .
 # 创建必要的目录
 RUN mkdir -p /app/logs
 
+# 安装 swag 工具并生成 Swagger 文档
+RUN go install github.com/swaggo/swag/cmd/swag@latest && \
+    swag init -g cmd/main.go -o docs --parseDependency --parseInternal
+
 # 编译应用
 RUN go build -buildvcs=false -o /app/server ./cmd
 

@@ -16,6 +16,10 @@ RUN go mod download
 # 复制源代码
 COPY . .
 
+# 安装 swag 工具并生成 Swagger 文档
+RUN go install github.com/swaggo/swag/cmd/swag@latest && \
+    swag init -g cmd/main.go -o docs --parseDependency --parseInternal
+
 # 构建应用
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main ./cmd
 
@@ -39,6 +43,9 @@ COPY --from=builder /app/main .
 
 # 复制配置文件
 COPY --from=builder /app/conf ./conf
+
+# 复制 Swagger 文档
+COPY --from=builder /app/docs ./docs
 
 # 创建日志目录
 RUN mkdir -p logs && chown -R appuser:appuser /app

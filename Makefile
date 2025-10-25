@@ -13,6 +13,7 @@ help:
 	@echo "  make clean        - 清理构建文件"
 	@echo "  make test         - 运行测试"
 	@echo "  make lint         - 代码检查"
+	@echo "  make swagger      - 生成 Swagger 文档"
 	@echo "  make docker-build - 构建 Docker 镜像"
 	@echo "  make docker-run   - 使用 Docker 运行"
 	@echo "  make docker-dev   - 使用 Docker 开发环境"
@@ -113,7 +114,17 @@ fmt:
 	@echo "🎨 格式化代码..."
 	go fmt ./...
 
-# 生成文档
+# 生成 Swagger 文档
+swagger:
+	@echo "📚 生成 Swagger 文档..."
+	@if command -v swag >/dev/null 2>&1; then \
+		swag init -g cmd/main.go -o docs --parseDependency --parseInternal; \
+		echo "✅ Swagger 文档已生成"; \
+	else \
+		echo "请先安装 swag: go install github.com/swaggo/swag/cmd/swag@latest"; \
+	fi
+
+# 生成 godoc 文档
 docs:
 	@echo "📚 生成文档..."
 	@if command -v godoc >/dev/null 2>&1; then \
