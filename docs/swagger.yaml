@@ -1,11 +1,37 @@
-basePath: /api/v1
 definitions:
   models.AddClazzMemberRequest:
     properties:
+      clazz_id:
+        type: string
       member_id:
         type: string
     required:
+    - clazz_id
     - member_id
+    type: object
+  models.AddClazzTeachersRequest:
+    properties:
+      clazz_id:
+        type: string
+      teacher_ids:
+        items:
+          type: string
+        type: array
+    required:
+    - clazz_id
+    - teacher_ids
+    type: object
+  models.AddCourseTeachersRequest:
+    properties:
+      course_id:
+        type: string
+      teacher_ids:
+        items:
+          type: string
+        type: array
+    required:
+    - course_id
+    - teacher_ids
     type: object
   models.AddTaskRequest:
     properties:
@@ -96,6 +122,70 @@ definitions:
     required:
     - name
     type: object
+  models.CreateProblemRequest:
+    properties:
+      author:
+        type: string
+      description:
+        minLength: 10
+        type: string
+      difficulty:
+        allOf:
+        - $ref: '#/definitions/models.ProblemDifficulty'
+        description: 难度和标签（必填）
+        enum:
+        - easy
+        - medium
+        - hard
+      hint:
+        type: string
+      input:
+        description: 题目详情（可选）
+        type: string
+      is_public:
+        description: 可选，默认false
+        type: boolean
+      memory_limit:
+        description: 默认256MB
+        maximum: 1024
+        minimum: 32
+        type: integer
+      output:
+        type: string
+      sample_input:
+        type: string
+      sample_output:
+        type: string
+      source:
+        type: string
+      status:
+        allOf:
+        - $ref: '#/definitions/models.ProblemStatus'
+        description: 状态控制（可选）
+        enum:
+        - draft
+        - published
+        - archived
+      tags:
+        items:
+          type: string
+        maxItems: 10
+        type: array
+      time_limit:
+        description: 限制条件（可选，有默认值）
+        maximum: 10000
+        minimum: 100
+        type: integer
+      title:
+        description: 基本信息（必填）
+        maxLength: 200
+        minLength: 1
+        type: string
+    required:
+    - description
+    - difficulty
+    - title
+    type: object
   models.CreateTestCaseRequest:
     properties:
       input:
@@ -180,6 +270,17 @@ definitions:
     - student_id
     type: object
   models.PageQueryCourseRequest:
+    properties:
+      name:
+        type: string
+      page_num:
+        type: integer
+      page_size:
+        type: integer
+      status:
+        type: integer
+    type: object
+  models.PageQueryTeacherCoursesRequest:
     properties:
       name:
         type: string
@@ -282,12 +383,39 @@ definitions:
     - StatusArchived
   models.RemoveClazzMembersRequest:
     properties:
+      clazz_id:
+        type: string
       member_ids:
         items:
           type: string
         type: array
     required:
+    - clazz_id
     - member_ids
+    type: object
+  models.RemoveClazzTeachersRequest:
+    properties:
+      clazz_id:
+        type: string
+      teacher_ids:
+        items:
+          type: string
+        type: array
+    required:
+    - clazz_id
+    - teacher_ids
+    type: object
+  models.RemoveCourseTeachersRequest:
+    properties:
+      course_id:
+        type: string
+      teacher_ids:
+        items:
+          type: string
+        type: array
+    required:
+    - course_id
+    - teacher_ids
     type: object
   models.Submit:
     properties:
@@ -434,6 +562,23 @@ definitions:
         description: ms
         type: integer
     type: object
+  models.UpdateClazzRequest:
+    properties:
+      clazz_id:
+        type: string
+      description:
+        type: string
+      max_members:
+        type: integer
+      name:
+        type: string
+      require_invite:
+        type: boolean
+      schedule:
+        type: string
+    required:
+    - clazz_id
+    type: object
   models.UpdateCourseRequest:
     properties:
       description:
@@ -446,6 +591,64 @@ definitions:
         $ref: '#/definitions/models.CourseStatus'
     required:
     - id
+    type: object
+  models.UpdateProblemRequest:
+    properties:
+      author:
+        type: string
+      description:
+        minLength: 10
+        type: string
+      difficulty:
+        allOf:
+        - $ref: '#/definitions/models.ProblemDifficulty'
+        description: 难度和标签（可选）
+        enum:
+        - easy
+        - medium
+        - hard
+      hint:
+        type: string
+      input:
+        description: 题目详情（可选）
+        type: string
+      is_public:
+        type: boolean
+      memory_limit:
+        maximum: 1024
+        minimum: 32
+        type: integer
+      output:
+        type: string
+      sample_input:
+        type: string
+      sample_output:
+        type: string
+      source:
+        type: string
+      status:
+        allOf:
+        - $ref: '#/definitions/models.ProblemStatus'
+        description: 状态控制（可选）
+        enum:
+        - draft
+        - published
+        - archived
+      tags:
+        items:
+          type: string
+        maxItems: 10
+        type: array
+      time_limit:
+        description: 限制条件（可选）
+        maximum: 10000
+        minimum: 100
+        type: integer
+      title:
+        description: 基本信息（可选）
+        maxLength: 200
+        minLength: 1
+        type: string
     type: object
   models.UpdateTaskRequest:
     properties:
@@ -605,21 +808,8 @@ definitions:
     - code
     - language
     type: object
-host: localhost:8080
 info:
-  contact:
-    email: support@zkcodearena.com
-    name: API Support
-    url: http://localhost/support
-  description: |-
-    ZK Code Arena 在线编程平台 REST API 文档
-    提供用户管理、题库管理、班级课程管理、代码评测等功能
-  license:
-    name: MIT
-    url: https://opensource.org/licenses/MIT
-  termsOfService: http://localhost/terms/
-  title: ZK Code Arena API
-  version: "1.0"
+  contact: {}
 paths:
   /courses:
     post:
@@ -805,6 +995,35 @@ paths:
       summary: 更新课程头像
       tags:
       - 课程
+  /courses/{courseId}/clazzes:
+    get:
+      consumes:
+      - application/json
+      description: 根据课程ID获取该课程的所有班级列表
+      parameters:
+      - description: 课程ID
+        in: path
+        name: courseId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 班级列表
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 获取课程的所有班级
+      tags:
+      - 课程
   /courses/clazzes:
     post:
       consumes:
@@ -833,6 +1052,40 @@ paths:
       security:
       - BearerAuth: []
       summary: 为课程创建班级
+      tags:
+      - 课程
+    put:
+      consumes:
+      - application/json
+      description: 更新班级的基本信息（不包括教师和成员）
+      parameters:
+      - description: 班级ID
+        in: path
+        name: clazzId
+        required: true
+        type: string
+      - description: 更新的班级信息
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.UpdateClazzRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 更新成功
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 更新班级信息
       tags:
       - 课程
   /courses/clazzes/{clazzId}:
@@ -892,7 +1145,41 @@ paths:
       summary: 获取班级详情
       tags:
       - 课程
-  /courses/clazzes/{clazzId}/members:
+  /courses/clazzes/join:
+    get:
+      consumes:
+      - application/json
+      description: 学生通过邀请码加入班级
+      parameters:
+      - description: 班级ID
+        in: query
+        name: clazzId
+        required: true
+        type: string
+      - description: 邀请码
+        in: query
+        name: invite_code
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 加入成功
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 加入班级
+      tags:
+      - 课程
+  /courses/clazzes/members:
     post:
       consumes:
       - application/json
@@ -927,7 +1214,7 @@ paths:
       summary: 添加班级成员
       tags:
       - 课程
-  /courses/clazzes/{clazzId}/members/remove:
+  /courses/clazzes/members/remove:
     post:
       consumes:
       - application/json
@@ -962,27 +1249,23 @@ paths:
       summary: 移除班级成员
       tags:
       - 课程
-  /courses/clazzes/join:
-    get:
+  /courses/clazzes/teachers:
+    delete:
       consumes:
       - application/json
-      description: 学生通过邀请码加入班级
+      description: 班级删除老师（支持批量删除，只有课程创建者可以操作）
       parameters:
-      - description: 班级ID
-        in: query
-        name: clazzId
+      - description: 移除教师请求
+        in: body
+        name: request
         required: true
-        type: string
-      - description: 邀请码
-        in: query
-        name: invite_code
-        required: true
-        type: string
+        schema:
+          $ref: '#/definitions/models.RemoveClazzTeachersRequest'
       produces:
       - application/json
       responses:
         "200":
-          description: 加入成功
+          description: 移除成功
           schema:
             additionalProperties: true
             type: object
@@ -993,7 +1276,36 @@ paths:
             type: object
       security:
       - BearerAuth: []
-      summary: 加入班级
+      summary: 班级删除老师
+      tags:
+      - 课程
+    post:
+      consumes:
+      - application/json
+      description: 班级添加老师（支持批量添加，只有课程创建者可以操作，且教师必须已加入课程）
+      parameters:
+      - description: 添加教师请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.AddClazzTeachersRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 添加成功
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 班级添加老师
       tags:
       - 课程
   /courses/finishtask:
@@ -1173,6 +1485,95 @@ paths:
       summary: 删除任务
       tags:
       - 课程
+  /courses/teacher/query:
+    post:
+      consumes:
+      - application/json
+      description: 分页查询当前老师加入的课程列表
+      parameters:
+      - description: 分页查询参数
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.PageQueryTeacherCoursesRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 课程列表
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 分页查询老师加入的课程
+      tags:
+      - 课程
+  /courses/teachers:
+    delete:
+      consumes:
+      - application/json
+      description: 课程创建者删除课程老师（支持批量删除，只有课程创建者可以操作）
+      parameters:
+      - description: 删除教师请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.RemoveCourseTeachersRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 删除成功
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 课程创建者删除课程老师
+      tags:
+      - 课程
+    post:
+      consumes:
+      - application/json
+      description: 课程创建者添加老师（支持批量添加，只有课程创建者可以操作）
+      parameters:
+      - description: 添加教师请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.AddCourseTeachersRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 添加成功
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 课程创建者添加老师
+      tags:
+      - 课程
   /problem:
     get:
       consumes:
@@ -1228,14 +1629,14 @@ paths:
     post:
       consumes:
       - application/json
-      description: 创建新题目（仅管理员和教师）
+      description: 创建新题目，默认状态为草稿，草稿状态不能公开
       parameters:
       - description: 题目信息
         in: body
         name: request
         required: true
         schema:
-          $ref: '#/definitions/models.Problem'
+          $ref: '#/definitions/models.CreateProblemRequest'
       produces:
       - application/json
       responses:
@@ -1244,7 +1645,7 @@ paths:
           schema:
             $ref: '#/definitions/models.Problem'
         "400":
-          description: 请求参数错误
+          description: 请求参数错误或业务规则错误
           schema:
             additionalProperties: true
             type: object
@@ -1345,7 +1746,7 @@ paths:
     put:
       consumes:
       - application/json
-      description: 更新题目信息（管理员或题目创建者）
+      description: 更新题目信息（管理员或题目创建者），草稿状态不能设为公开
       parameters:
       - description: 题目ID
         in: path
@@ -1357,7 +1758,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/models.Problem'
+          $ref: '#/definitions/models.UpdateProblemRequest'
       produces:
       - application/json
       responses:
@@ -1366,7 +1767,7 @@ paths:
           schema:
             $ref: '#/definitions/models.Problem'
         "400":
-          description: 请求参数错误
+          description: 请求参数错误或业务规则错误
           schema:
             additionalProperties: true
             type: object
@@ -2285,10 +2686,4 @@ paths:
       summary: 用户注册
       tags:
       - 用户
-securityDefinitions:
-  BearerAuth:
-    description: Type "Bearer" followed by a space and JWT token.
-    in: header
-    name: Authorization
-    type: apiKey
 swagger: "2.0"

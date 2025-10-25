@@ -36,7 +36,7 @@ func (s *Server) RegisterCourse(g *gin.RouterGroup) {
 			jwtGroup.POST("/clazzes", s.CreateClassForCourse)
 			jwtGroup.GET("/clazzes/join", s.JoinClass)
 			jwtGroup.GET("/clazzes/:clazzId", s.GetClazzById)
-			jwtGroup.PUT("/clazzes/:clazzId", s.UpdateClazzInfo)
+			jwtGroup.PUT("/clazzes", s.UpdateClazzInfo)
 			jwtGroup.DELETE("/clazzes/:clazzId", s.DeleteClazz)
 			jwtGroup.POST("/clazzes/members", s.AddClazzMember)
 			jwtGroup.POST("/clazzes/members/remove", s.RemoveClazzMembers)
@@ -63,7 +63,7 @@ func (s *Server) RegisterCourse(g *gin.RouterGroup) {
 // @Success      200 {object} map[string]interface{} "更新成功"
 // @Failure      400 {object} map[string]interface{} "请求参数错误"
 // @Security     BearerAuth
-// @Router       /courses/clazzes/{clazzId} [put]
+// @Router       /courses/clazzes [put]
 func (s *Server) UpdateClazzInfo(c *gin.Context) {
 	var req models.UpdateClazzRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -89,7 +89,7 @@ func (s *Server) UpdateClazzInfo(c *gin.Context) {
 // @Success      200 {object} map[string]interface{} "添加成功"
 // @Failure      400 {object} map[string]interface{} "请求参数错误"
 // @Security     BearerAuth
-// @Router       /courses/{courseId}/teachers [post]
+// @Router       /courses/teachers [post]
 func (s *Server) addCourseTeacher(c *gin.Context) {
 	var req models.AddCourseTeachersRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -116,8 +116,8 @@ func (s *Server) addCourseTeacher(c *gin.Context) {
 	utils.SuccessResponse(c, nil)
 }
 
-// @Description  课程创建者删除老师（支持批量删除，只有课程创建者可以操作）
-// @Summary      课程创建者删除老师
+// @Description  课程创建者删除课程老师（支持批量删除，只有课程创建者可以操作）
+// @Summary      课程创建者删除课程老师
 // @Tags         课程
 // @Accept       json
 // @Produce      json
@@ -125,7 +125,7 @@ func (s *Server) addCourseTeacher(c *gin.Context) {
 // @Success      200 {object} map[string]interface{} "删除成功"
 // @Failure      400 {object} map[string]interface{} "请求参数错误"
 // @Security     BearerAuth
-// @Router       /courses/{courseId}/teachers [delete]
+// @Router       /courses/teachers [delete]
 func (s *Server) removeCourseTeacher(c *gin.Context) {
 	var req models.RemoveCourseTeachersRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
