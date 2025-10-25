@@ -36,17 +36,62 @@ func NewProblemService(sandboxClient sandbox.Client, testCaseService *TestCaseSe
 
 // CreateProblem 创建题目
 func (s *ProblemService) CreateProblem(ctx context.Context, problem *models.Problem) error {
+	// 1. 设置系统字段
 	problem.ID = primitive.NewObjectID()
 	problem.CreatedAt = time.Now()
 	problem.UpdatedAt = time.Now()
+
+	// 2. 设置默认Status（如果未传）
+	if problem.Status == "" {
+		problem.Status = models.StatusDraft
+		utils.Logger.Infof("CreateProblem: 未指定状态，设置默认状态为草稿")
+	}
+
+	// 3. 应用Status与IsPublic关联规则
+	if problem.Status == models.StatusDraft {
+		// 草稿状态强制私有
+		if problem.IsPublic {
+			utils.Logger.Warnf("CreateProblem: 草稿状态不能公开，强制设为私有")
+		}
+		problem.IsPublic = false
+	}
+	// Published/Archived状态，保持用户设置或默认私有
+	// （IsPublic由Handler层传入，这里不修改）
+
+	// 4. 设置默认计数器
 	problem.ACCount = 0
 	problem.SubmitCount = 0
 
+	// 5. 设置默认限制（如果为0）
+	if problem.TimeLimit == 0 {
+		problem.TimeLimit = 1000
+		utils.Logger.Debugf("CreateProblem: 使用默认时间限制 1000ms")
+	}
+	if problem.MemoryLimit == 0 {
+		problem.MemoryLimit = 256
+		utils.Logger.Debugf("CreateProblem: 使用默认内存限制 256MB")
+	}
+
+	// 6. 确保Tags不为nil
+	if problem.Tags == nil {
+		problem.Tags = []string{}
+	}
+
+	// 7. 记录详细日志
+	utils.Logger.Infof("CreateProblem: title=%s, difficulty=%s, status=%s, isPublic=%v, createdBy=%s",
+		problem.Title, problem.Difficulty, problem.Status, problem.IsPublic, problem.CreatedBy.Hex())
+
+	// 8. 持久化到数据库
 	collection := utils.GetCollection("problems")
 	_, err := collection.InsertOne(ctx, problem)
-	return err
-}
+	if err != nil {
+		utils.Logger.Errorf("CreateProblem: 数据库插入失败, error=%v", err)
+		return fmt.Errorf("数据库操作失败: %w", err)
+	}
 
+	utils.Logger.Infof("CreateProblem: 题目创建成功, id=%s", problem.ID.Hex())
+	return nil
+}
 // GetProblemByID 根据ID获取题目
 func (s *ProblemService) GetProblemByID(ctx context.Context, id primitive.ObjectID) (*models.Problem, error) {
 	collection := utils.GetCollection("problems")
@@ -74,22 +119,32 @@ func (s *ProblemService) GetProblems(
 	filter := bson.M{}
 
 	if !includePrivate {
+		// 公开模式：只显示公开且已发布的题目
 		filter["is_public"] = true
 		filter["status"] = models.StatusPublished
+		utils.Logger.Debugf("GetProblems: 公开模式，过滤条件: is_public=true, status=published")
 	} else {
+		// 私有模式：根据角色决定可见范围
 		switch role {
 		case models.RoleAdmin:
 			// 管理员可以查看全部题目
+			utils.Logger.Debugf("GetProblems: 管理员模式，查看所有题目")
 		case models.RoleTeacher:
 			if userID != nil {
+				// 教师查看自己创建的所有题目（包括草稿和私有）
 				filter["created_by"] = *userID
+				utils.Logger.Debugf("GetProblems: 教师模式，查看自己创建的题目, userID=%s", userID.Hex())
 			} else {
+				// 无用户ID，退回到公开模式
 				filter["is_public"] = true
 				filter["status"] = models.StatusPublished
+				utils.Logger.Debugf("GetProblems: 教师模式但无userID，退回公开模式")
 			}
 		default:
+			// 学生或未认证用户，只能看公开已发布的题目
 			filter["is_public"] = true
 			filter["status"] = models.StatusPublished
+			utils.Logger.Debugf("GetProblems: 学生/游客模式，只看公开已发布题目")
 		}
 	}
 
@@ -143,10 +198,48 @@ func (s *ProblemService) GetProblems(
 
 // UpdateProblem 更新题目
 func (s *ProblemService) UpdateProblem(ctx context.Context, problem *models.Problem) error {
+	// 1. 应用Status与IsPublic关联规则
+	oldStatus := problem.Status
+	oldIsPublic := problem.IsPublic
+
+	if problem.Status == models.StatusDraft {
+		// 草稿状态强制私有
+		if problem.IsPublic {
+			utils.Logger.Warnf("UpdateProblem: 草稿状态不能公开，强制设为私有, problemID=%s", problem.ID.Hex())
+		}
+		problem.IsPublic = false
+	}
+
+	// 2. 记录状态变更日志
+	if oldStatus != problem.Status {
+		utils.Logger.Infof("UpdateProblem: 状态变更 %s -> %s, problemID=%s", oldStatus, problem.Status, problem.ID.Hex())
+	}
+	if oldIsPublic != problem.IsPublic {
+		utils.Logger.Infof("UpdateProblem: 公开状态变更 %v -> %v, problemID=%s", oldIsPublic, problem.IsPublic, problem.ID.Hex())
+	}
+
+	// 3. 更新时间戳
 	problem.UpdatedAt = time.Now()
+
+	// 4. 确保Tags不为nil
+	if problem.Tags == nil {
+		problem.Tags = []string{}
+	}
+
+	// 5. 记录详细更新日志
+	utils.Logger.Infof("UpdateProblem: title=%s, difficulty=%s, status=%s, isPublic=%v, problemID=%s",
+		problem.Title, problem.Difficulty, problem.Status, problem.IsPublic, problem.ID.Hex())
+
+	// 6. 执行更新
 	collection := utils.GetCollection("problems")
 	_, err := collection.ReplaceOne(ctx, bson.M{"_id": problem.ID}, problem)
-	return err
+	if err != nil {
+		utils.Logger.Errorf("UpdateProblem: 数据库更新失败, problemID=%s, error=%v", problem.ID.Hex(), err)
+		return fmt.Errorf("数据库操作失败: %w", err)
+	}
+
+	utils.Logger.Infof("UpdateProblem: 题目更新成功, problemID=%s", problem.ID.Hex())
+	return nil
 }
 
 // DeleteProblem 删除题目

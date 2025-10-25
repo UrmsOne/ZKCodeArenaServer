@@ -152,20 +152,20 @@ func (s *Server) GetProblem(c *gin.Context) {
 
 // CreateProblem godoc
 // @Summary      创建题目（教师/管理员）
-// @Description  创建新题目（仅管理员和教师）
+// @Description  创建新题目，默认状态为草稿，草稿状态不能公开
 // @Tags         题目
 // @Accept       json
 // @Produce      json
-// @Param        request body models.Problem true "题目信息"
+// @Param        request body models.CreateProblemRequest true "题目信息"
 // @Success      200 {object} models.Problem "创建成功"
-// @Failure      400 {object} map[string]interface{} "请求参数错误"
+// @Failure      400 {object} map[string]interface{} "请求参数错误或业务规则错误"
 // @Failure      401 {object} map[string]interface{} "需要登录"
 // @Failure      403 {object} map[string]interface{} "权限不足"
 // @Failure      500 {object} map[string]interface{} "创建失败"
 // @Security     BearerAuth
 // @Router       /problem [post]
 func (s *Server) CreateProblem(c *gin.Context) {
-	// 检查权限：只有管理员和老师可以创建题目
+	// 1. 检查权限：只有管理员和老师可以创建题目
 	role, exists := c.Get("role")
 	if !exists {
 		utils.UnauthorizedResponse(c, "需要登录")
@@ -174,39 +174,79 @@ func (s *Server) CreateProblem(c *gin.Context) {
 
 	userRole := role.(string)
 	if userRole != string(models.RoleAdmin) && userRole != string(models.RoleTeacher) {
-		utils.ForbiddenResponse(c, "权限不足")
+		utils.ForbiddenResponse(c, "权限不足，只有管理员和教师可以创建题目")
 		return
 	}
 
-	var problem models.Problem
-	if err := c.ShouldBindJSON(&problem); err != nil {
+	// 2. 绑定和验证请求参数
+	var req models.CreateProblemRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.BadRequestResponse(c, "请求参数错误: "+err.Error())
 		return
 	}
 
-	// 设置创建者
+	// 3. 业务规则预检：草稿状态不能公开
+	if req.Status != nil && *req.Status == models.StatusDraft {
+		if req.IsPublic != nil && *req.IsPublic == true {
+			utils.BadRequestResponse(c, "草稿状态的题目不能设为公开")
+			return
+		}
+	}
+
+	// 4. 构建Problem对象
+	problem := models.Problem{
+		Title:        req.Title,
+		Description:  req.Description,
+		Input:        req.Input,
+		Output:       req.Output,
+		SampleInput:  req.SampleInput,
+		SampleOutput: req.SampleOutput,
+		Hint:         req.Hint,
+		Source:       req.Source,
+		Author:       req.Author,
+		Difficulty:   req.Difficulty,
+		Tags:         req.Tags,
+	}
+
+	// 5. 设置可选字段（使用指针判断是否传入）
+	if req.TimeLimit != nil {
+		problem.TimeLimit = *req.TimeLimit
+	}
+	if req.MemoryLimit != nil {
+		problem.MemoryLimit = *req.MemoryLimit
+	}
+	if req.Status != nil {
+		problem.Status = *req.Status
+	}
+	if req.IsPublic != nil {
+		problem.IsPublic = *req.IsPublic
+	}
+
+	// 6. 设置创建者
 	userID, _ := c.Get("user_id")
 	problem.CreatedBy, _ = primitive.ObjectIDFromHex(userID.(string))
 
+	// 7. 调用Service层
 	ctx := c.Request.Context()
 	if err := s.svc.ProblemService.CreateProblem(ctx, &problem); err != nil {
 		utils.InternalServerErrorResponse(c, "创建题目失败: "+err.Error())
 		return
 	}
 
+	// 8. 返回成功响应
 	utils.SuccessResponse(c, problem)
 }
 
 // UpdateProblem godoc
 // @Summary      更新题目（教师/管理员）
-// @Description  更新题目信息（管理员或题目创建者）
+// @Description  更新题目信息（管理员或题目创建者），草稿状态不能设为公开
 // @Tags         题目
 // @Accept       json
 // @Produce      json
 // @Param        id path string true "题目ID"
-// @Param        request body models.Problem true "更新的题目信息"
+// @Param        request body models.UpdateProblemRequest true "更新的题目信息"
 // @Success      200 {object} models.Problem "更新成功"
-// @Failure      400 {object} map[string]interface{} "请求参数错误"
+// @Failure      400 {object} map[string]interface{} "请求参数错误或业务规则错误"
 // @Failure      401 {object} map[string]interface{} "需要登录"
 // @Failure      403 {object} map[string]interface{} "权限不足"
 // @Failure      404 {object} map[string]interface{} "题目不存在"
@@ -214,7 +254,7 @@ func (s *Server) CreateProblem(c *gin.Context) {
 // @Security     BearerAuth
 // @Router       /problem/{id} [put]
 func (s *Server) UpdateProblem(c *gin.Context) {
-	// 检查权限：只有管理员和老师可以更新题目
+	// 1. 检查权限：只有管理员和老师可以更新题目
 	role, exists := c.Get("role")
 	if !exists {
 		utils.UnauthorizedResponse(c, "需要登录")
@@ -223,10 +263,11 @@ func (s *Server) UpdateProblem(c *gin.Context) {
 
 	userRole := role.(string)
 	if userRole != string(models.RoleAdmin) && userRole != string(models.RoleTeacher) {
-		utils.ForbiddenResponse(c, "权限不足")
+		utils.ForbiddenResponse(c, "权限不足，只有管理员和教师可以更新题目")
 		return
 	}
 
+	// 2. 解析题目ID
 	idStr := c.Param("id")
 	id, err := primitive.ObjectIDFromHex(idStr)
 	if err != nil {
@@ -234,12 +275,22 @@ func (s *Server) UpdateProblem(c *gin.Context) {
 		return
 	}
 
-	var updateReq models.Problem
-	if err := c.ShouldBindJSON(&updateReq); err != nil {
+	// 3. 绑定和验证请求参数
+	var req models.UpdateProblemRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.BadRequestResponse(c, "请求参数错误: "+err.Error())
 		return
 	}
 
+	// 4. 业务规则预检：草稿状态不能公开
+	if req.Status != nil && *req.Status == models.StatusDraft {
+		if req.IsPublic != nil && *req.IsPublic == true {
+			utils.BadRequestResponse(c, "草稿状态的题目不能设为公开")
+			return
+		}
+	}
+
+	// 5. 获取现有题目
 	ctx := c.Request.Context()
 	problem, err := s.svc.ProblemService.GetProblemByID(ctx, id)
 	if err != nil {
@@ -247,7 +298,7 @@ func (s *Server) UpdateProblem(c *gin.Context) {
 		return
 	}
 
-	// 检查权限：只有创建者或管理员可以更新
+	// 6. 检查权限：只有创建者或管理员可以更新
 	userID, _ := c.Get("user_id")
 	currentUserID, _ := primitive.ObjectIDFromHex(userID.(string))
 	if userRole != string(models.RoleAdmin) && problem.CreatedBy != currentUserID {
@@ -255,28 +306,60 @@ func (s *Server) UpdateProblem(c *gin.Context) {
 		return
 	}
 
-	// 更新题目信息
-	problem.Title = updateReq.Title
-	problem.Description = updateReq.Description
-	problem.Input = updateReq.Input
-	problem.Output = updateReq.Output
-	problem.SampleInput = updateReq.SampleInput
-	problem.SampleOutput = updateReq.SampleOutput
-	problem.Hint = updateReq.Hint
-	problem.Source = updateReq.Source
-	problem.Author = updateReq.Author
-	problem.Difficulty = updateReq.Difficulty
-	problem.TimeLimit = updateReq.TimeLimit
-	problem.MemoryLimit = updateReq.MemoryLimit
-	problem.Tags = updateReq.Tags
-	problem.Status = updateReq.Status
-	problem.IsPublic = updateReq.IsPublic
+	// 7. 更新题目信息（只更新传入的字段）
+	if req.Title != nil {
+		problem.Title = *req.Title
+	}
+	if req.Description != nil {
+		problem.Description = *req.Description
+	}
+	if req.Input != nil {
+		problem.Input = *req.Input
+	}
+	if req.Output != nil {
+		problem.Output = *req.Output
+	}
+	if req.SampleInput != nil {
+		problem.SampleInput = *req.SampleInput
+	}
+	if req.SampleOutput != nil {
+		problem.SampleOutput = *req.SampleOutput
+	}
+	if req.Hint != nil {
+		problem.Hint = *req.Hint
+	}
+	if req.Source != nil {
+		problem.Source = *req.Source
+	}
+	if req.Author != nil {
+		problem.Author = *req.Author
+	}
+	if req.Difficulty != nil {
+		problem.Difficulty = *req.Difficulty
+	}
+	if req.TimeLimit != nil {
+		problem.TimeLimit = *req.TimeLimit
+	}
+	if req.MemoryLimit != nil {
+		problem.MemoryLimit = *req.MemoryLimit
+	}
+	if req.Tags != nil {
+		problem.Tags = *req.Tags
+	}
+	if req.Status != nil {
+		problem.Status = *req.Status
+	}
+	if req.IsPublic != nil {
+		problem.IsPublic = *req.IsPublic
+	}
 
+	// 8. 调用Service层更新
 	if err := s.svc.ProblemService.UpdateProblem(ctx, problem); err != nil {
 		utils.InternalServerErrorResponse(c, "更新题目失败: "+err.Error())
 		return
 	}
 
+	// 9. 返回成功响应
 	utils.SuccessResponse(c, problem)
 }
 

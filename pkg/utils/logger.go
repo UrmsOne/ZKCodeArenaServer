@@ -18,8 +18,12 @@ import (
 
 var logger *logrus.Logger
 
+// Logger 导出的日志实例，供其他包使用
+var Logger *logrus.Logger
+
 func init() {
 	logger = logrus.New()
+	Logger = logger // 导出给外部使用
 	
 	// 使用默认配置初始化日志器
 	initLoggerWithDefaults()
@@ -44,6 +48,7 @@ func initLoggerWithDefaults() {
 func InitLogger() {
 	if logger == nil {
 		logger = logrus.New()
+		Logger = logger // 同步导出的Logger
 	}
 	
 	// 检查配置是否已初始化

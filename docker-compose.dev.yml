@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  # 开发环境应用服务 (使用 Air 热更新)
+  # 开发环境应用服务
   app:
     build:
       context: .
@@ -10,8 +10,7 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - .:/app
-      - /app/logs
+      - app_logs:/app/logs
     environment:
       - MONGO_URI=mongodb://mongo:27017
       - REDIS_HOST=redis
@@ -50,7 +49,7 @@ services:
     restart: unless-stopped
     networks:
       - zk-arena-dev-network
-        
+
   judge:
     image: criyle/go-judge:latest
     container_name: zk-arena-judge-dev
@@ -72,8 +71,9 @@ volumes:
     driver: local
   judge_dev_data:
     driver: local
+  app_logs:
+    driver: local
 
 networks:
   zk-arena-dev-network:
     driver: bridge
-    
