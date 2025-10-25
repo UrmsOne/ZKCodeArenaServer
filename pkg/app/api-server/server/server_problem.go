@@ -165,19 +165,18 @@ func (s *Server) GetProblem(c *gin.Context) {
 // @Security     BearerAuth
 // @Router       /problem [post]
 func (s *Server) CreateProblem(c *gin.Context) {
-	// 1. 检查权限：只有管理员和老师可以创建题目
+	//检查权限 只有管理员和老师可以创建题目
 	role, exists := c.Get("role")
 	if !exists {
 		utils.UnauthorizedResponse(c, "需要登录")
 		return
 	}
-
 	userRole := role.(string)
 	if userRole != string(models.RoleAdmin) && userRole != string(models.RoleTeacher) {
 		utils.ForbiddenResponse(c, "权限不足，只有管理员和教师可以创建题目")
 		return
 	}
-
+	
 	// 2. 绑定和验证请求参数
 	var req models.CreateProblemRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -290,7 +289,7 @@ func (s *Server) UpdateProblem(c *gin.Context) {
 		}
 	}
 
-	// 5. 获取现有题目
+	// 5. 获取现有题目（用于权限检查）
 	ctx := c.Request.Context()
 	problem, err := s.svc.ProblemService.GetProblemByID(ctx, id)
 	if err != nil {
@@ -306,61 +305,21 @@ func (s *Server) UpdateProblem(c *gin.Context) {
 		return
 	}
 
-	// 7. 更新题目信息（只更新传入的字段）
-	if req.Title != nil {
-		problem.Title = *req.Title
-	}
-	if req.Description != nil {
-		problem.Description = *req.Description
-	}
-	if req.Input != nil {
-		problem.Input = *req.Input
-	}
-	if req.Output != nil {
-		problem.Output = *req.Output
-	}
-	if req.SampleInput != nil {
-		problem.SampleInput = *req.SampleInput
-	}
-	if req.SampleOutput != nil {
-		problem.SampleOutput = *req.SampleOutput
-	}
-	if req.Hint != nil {
-		problem.Hint = *req.Hint
-	}
-	if req.Source != nil {
-		problem.Source = *req.Source
-	}
-	if req.Author != nil {
-		problem.Author = *req.Author
-	}
-	if req.Difficulty != nil {
-		problem.Difficulty = *req.Difficulty
-	}
-	if req.TimeLimit != nil {
-		problem.TimeLimit = *req.TimeLimit
-	}
-	if req.MemoryLimit != nil {
-		problem.MemoryLimit = *req.MemoryLimit
-	}
-	if req.Tags != nil {
-		problem.Tags = *req.Tags
-	}
-	if req.Status != nil {
-		problem.Status = *req.Status
-	}
-	if req.IsPublic != nil {
-		problem.IsPublic = *req.IsPublic
-	}
-
-	// 8. 调用Service层更新
-	if err := s.svc.ProblemService.UpdateProblem(ctx, problem); err != nil {
+	// 7. 调用 Service 层更新（直接传递请求对象）
+	if err := s.svc.ProblemService.UpdateProblem(ctx, id, &req); err != nil {
 		utils.InternalServerErrorResponse(c, "更新题目失败: "+err.Error())
 		return
 	}
 
+	// 8. 重新获取更新后的题目（用于返回）
+	updatedProblem, err := s.svc.ProblemService.GetProblemByID(ctx, id)
+	if err != nil {
+		utils.InternalServerErrorResponse(c, "获取更新后的题目失败: "+err.Error())
+		return
+	}
+
 	// 9. 返回成功响应
-	utils.SuccessResponse(c, problem)
+	utils.SuccessResponse(c, updatedProblem)
 }
 
 // DeleteProblem godoc

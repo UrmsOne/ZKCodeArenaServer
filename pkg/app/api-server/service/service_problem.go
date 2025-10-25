@@ -195,50 +195,107 @@ func (s *ProblemService) GetProblems(
 	return problems, total, nil
 }
 
-// UpdateProblem 更新题目
-func (s *ProblemService) UpdateProblem(ctx context.Context, problem *models.Problem) error {
-	// 1. 应用Status与IsPublic关联规则
-	oldStatus := problem.Status
-	oldIsPublic := problem.IsPublic
 
-	if problem.Status == models.StatusDraft {
-		// 草稿状态强制私有
-		if problem.IsPublic {
-			utils.Logger.Warnf("UpdateProblem: 草稿状态不能公开，强制设为私有, problemID=%s", problem.ID.Hex())
+func (s *ProblemService) UpdateProblem(ctx context.Context, problemID primitive.ObjectID, req *models.UpdateProblemRequest) error {
+	// 1. 构建更新字段 map
+	updateFields := bson.M{}
+
+	// 2. 添加请求中传入的字段
+	if req.Title != nil {
+		updateFields["title"] = *req.Title
+	}
+	if req.Description != nil {
+		updateFields["description"] = *req.Description
+	}
+	if req.Input != nil {
+		updateFields["input"] = *req.Input
+	}
+	if req.Output != nil {
+		updateFields["output"] = *req.Output
+	}
+	if req.SampleInput != nil {
+		updateFields["sampleInput"] = *req.SampleInput
+	}
+	if req.SampleOutput != nil {
+		updateFields["sampleOutput"] = *req.SampleOutput
+	}
+	if req.Hint != nil {
+		updateFields["hint"] = *req.Hint
+	}
+	if req.Source != nil {
+		updateFields["source"] = *req.Source
+	}
+	if req.Author != nil {
+		updateFields["author"] = *req.Author
+	}
+	if req.Difficulty != nil {
+		updateFields["difficulty"] = *req.Difficulty
+	}
+	if req.TimeLimit != nil {
+		updateFields["timeLimit"] = *req.TimeLimit
+	}
+	if req.MemoryLimit != nil {
+		updateFields["memoryLimit"] = *req.MemoryLimit
+	}
+	if req.Tags != nil {
+		tags := *req.Tags
+		if tags == nil {
+			tags = []string{}
 		}
-		problem.IsPublic = false
+		updateFields["tags"] = tags
+	}
+	if req.Status != nil {
+		updateFields["status"] = *req.Status
+		
+		// 业务规则：草稿状态强制私有
+		if *req.Status == models.StatusDraft {
+			updateFields["isPublic"] = false
+			utils.Logger.Warnf("UpdateProblem: 草稿状态不能公开，强制设为私有, problemID=%s", problemID.Hex())
+		}
+	}
+	if req.IsPublic != nil {
+		// 如果同时设置了 status 为 draft，则 isPublic 已经在上面被设置为 false
+		if req.Status == nil || *req.Status != models.StatusDraft {
+			updateFields["isPublic"] = *req.IsPublic
+		}
 	}
 
-	// 2. 记录状态变更日志
-	if oldStatus != problem.Status {
-		utils.Logger.Infof("UpdateProblem: 状态变更 %s -> %s, problemID=%s", oldStatus, problem.Status, problem.ID.Hex())
-	}
-	if oldIsPublic != problem.IsPublic {
-		utils.Logger.Infof("UpdateProblem: 公开状态变更 %v -> %v, problemID=%s", oldIsPublic, problem.IsPublic, problem.ID.Hex())
-	}
+	// 3. 必须更新的字段：更新时间
+	updateFields["updatedAt"] = time.Now()
 
-	// 3. 更新时间戳
-	problem.UpdatedAt = time.Now()
+	// 4. 记录更新操作日志
+	utils.Logger.Infof("UpdateProblem: 更新字段 %v, problemID=%s", getUpdateFieldNames(updateFields), problemID.Hex())
 
-	// 4. 确保Tags不为nil
-	if problem.Tags == nil {
-		problem.Tags = []string{}
-	}
-
-	// 5. 记录详细更新日志
-	utils.Logger.Infof("UpdateProblem: title=%s, difficulty=%s, status=%s, isPublic=%v, problemID=%s",
-		problem.Title, problem.Difficulty, problem.Status, problem.IsPublic, problem.ID.Hex())
-
-	// 6. 执行更新
+	// 5. 执行更新操作
 	collection := utils.GetCollection("problems")
-	_, err := collection.ReplaceOne(ctx, bson.M{"_id": problem.ID}, problem)
+	result, err := collection.UpdateOne(
+		ctx,
+		bson.M{"_id": problemID},
+		bson.M{"$set": updateFields},
+	)
+
 	if err != nil {
-		utils.Logger.Errorf("UpdateProblem: 数据库更新失败, problemID=%s, error=%v", problem.ID.Hex(), err)
+		utils.Logger.Errorf("UpdateProblem: 数据库更新失败, problemID=%s, error=%v", problemID.Hex(), err)
 		return fmt.Errorf("数据库操作失败: %w", err)
 	}
 
-	utils.Logger.Infof("UpdateProblem: 题目更新成功, problemID=%s", problem.ID.Hex())
+	// 6. 检查是否找到文档
+	if result.MatchedCount == 0 {
+		utils.Logger.Warnf("UpdateProblem: 题目不存在, problemID=%s", problemID.Hex())
+		return fmt.Errorf("题目不存在")
+	}
+
+	utils.Logger.Infof("UpdateProblem: 题目更新成功, 修改了 %d 个文档, problemID=%s", result.ModifiedCount, problemID.Hex())
 	return nil
+}
+
+// getUpdateFieldNames 获取更新字段的名称列表（用于日志）
+func getUpdateFieldNames(fields bson.M) []string {
+	names := make([]string, 0, len(fields))
+	for key := range fields {
+		names = append(names, key)
+	}
+	return names
 }
 
 // DeleteProblem 删除题目

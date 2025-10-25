@@ -18,8 +18,11 @@ func (s *Server) RegisterCourse(g *gin.RouterGroup) {
 			jwtGroup.PUT("/:courseId/:clazzId", s.RefreshQrcode) //这里如果直传班级也行但是会多一次数据库查询故我认为有必要冗余
 			jwtGroup.GET("/:courseId", s.GetCourseById)
 			jwtGroup.POST("/query", s.PageQueryCourse)
+			jwtGroup.POST("/teacher/query", s.PageQueryTeacherCourses)
 			jwtGroup.PUT("", s.UpdateCourse)
 			jwtGroup.PUT("/:courseId/avatar", s.UpdateCourseAvatar)
+			jwtGroup.POST("/teachers", s.addCourseTeacher)
+			jwtGroup.DELETE("/teachers", s.removeCourseTeacher)
 
 			//课程任务相关
 			jwtGroup.POST("/task", s.AddTask)
@@ -29,12 +32,16 @@ func (s *Server) RegisterCourse(g *gin.RouterGroup) {
 			jwtGroup.POST("/finishtask", s.FinishTask)
 
 			//班级相关
+			jwtGroup.GET("/:courseId/clazzes", s.GetClazzesByCourseId)
 			jwtGroup.POST("/clazzes", s.CreateClassForCourse)
 			jwtGroup.GET("/clazzes/join", s.JoinClass)
 			jwtGroup.GET("/clazzes/:clazzId", s.GetClazzById)
+			jwtGroup.PUT("/clazzes", s.UpdateClazzInfo)
 			jwtGroup.DELETE("/clazzes/:clazzId", s.DeleteClazz)
-			jwtGroup.POST("/clazzes/:clazzId/members", s.AddClazzMember)
-			jwtGroup.POST("/clazzes/:clazzId/members/remove", s.RemoveClazzMembers)
+			jwtGroup.POST("/clazzes/members", s.AddClazzMember)
+			jwtGroup.POST("/clazzes/members/remove", s.RemoveClazzMembers)
+			jwtGroup.POST("/clazzes/teachers", s.addClazzTeacher)
+			jwtGroup.DELETE("/clazzes/teachers", s.removeClazzTeacher)
 		}
 
 		// 需要老师权限的路由
@@ -43,6 +50,172 @@ func (s *Server) RegisterCourse(g *gin.RouterGroup) {
 			teacherGroup.POST("", s.CreateCourse) // 创建课程需要老师权限
 		}
 	}
+}
+
+// UpdateClazzInfo godoc
+// @Summary      更新班级信息
+// @Description  更新班级的基本信息（不包括教师和成员）
+// @Tags         课程
+// @Accept       json
+// @Produce      json
+// @Param        clazzId path string true "班级ID"
+// @Param        request body models.UpdateClazzRequest true "更新的班级信息"
+// @Success      200 {object} map[string]interface{} "更新成功"
+// @Failure      400 {object} map[string]interface{} "请求参数错误"
+// @Security     BearerAuth
+// @Router       /courses/clazzes [put]
+func (s *Server) UpdateClazzInfo(c *gin.Context) {
+	var req models.UpdateClazzRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.BadRequestResponse(c, err.Error())
+		return
+	}
+
+	userID, _ := c.Get("user_id")
+	if err := s.svc.CourseService.UpdateClazzInfo(c.Request.Context(), req.ClazzID, userID.(string), &req); err != nil {
+		utils.BadRequestResponse(c, err.Error())
+		return
+	}
+
+	utils.SuccessResponse(c, nil)
+}
+
+// @Description  课程创建者添加老师（支持批量添加，只有课程创建者可以操作）
+// @Summary      课程创建者添加老师
+// @Tags         课程
+// @Accept       json
+// @Produce      json
+// @Param        request body models.AddCourseTeachersRequest true "添加教师请求"
+// @Success      200 {object} map[string]interface{} "添加成功"
+// @Failure      400 {object} map[string]interface{} "请求参数错误"
+// @Security     BearerAuth
+// @Router       /courses/teachers [post]
+func (s *Server) addCourseTeacher(c *gin.Context) {
+	var req models.AddCourseTeachersRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.BadRequestResponse(c, err.Error())
+		return
+	}
+
+	if req.CourseId == "" {
+		utils.BadRequestResponse(c, "课程ID不能为空")
+		return
+	}
+
+	if len(req.TeacherIds) == 0 {
+		utils.BadRequestResponse(c, "教师ID列表不能为空")
+		return
+	}
+
+	userID, _ := c.Get("user_id")
+	if err := s.svc.CourseService.AddCourseTeachers(c.Request.Context(), req.CourseId, req.TeacherIds, userID.(string)); err != nil {
+		utils.BadRequestResponse(c, err.Error())
+		return
+	}
+
+	utils.SuccessResponse(c, nil)
+}
+
+// @Description  课程创建者删除课程老师（支持批量删除，只有课程创建者可以操作）
+// @Summary      课程创建者删除课程老师
+// @Tags         课程
+// @Accept       json
+// @Produce      json
+// @Param        request body models.RemoveCourseTeachersRequest true "删除教师请求"
+// @Success      200 {object} map[string]interface{} "删除成功"
+// @Failure      400 {object} map[string]interface{} "请求参数错误"
+// @Security     BearerAuth
+// @Router       /courses/teachers [delete]
+func (s *Server) removeCourseTeacher(c *gin.Context) {
+	var req models.RemoveCourseTeachersRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.BadRequestResponse(c, err.Error())
+		return
+	}
+
+	if req.CourseId == "" {
+		utils.BadRequestResponse(c, "课程ID不能为空")
+		return
+	}
+
+	if len(req.TeacherIds) == 0 {
+		utils.BadRequestResponse(c, "教师ID列表不能为空")
+		return
+	}
+
+	userID, _ := c.Get("user_id")
+	if err := s.svc.CourseService.RemoveCourseTeachers(c.Request.Context(), req.CourseId, req.TeacherIds, userID.(string)); err != nil {
+		utils.BadRequestResponse(c, err.Error())
+		return
+	}
+
+	utils.SuccessResponse(c, nil)
+}
+
+// @Description  班级添加老师（支持批量添加，只有课程创建者可以操作，且教师必须已加入课程）
+// @Summary      班级添加老师
+// @Tags         课程
+// @Accept       json
+// @Produce      json
+// @Param        request body models.AddClazzTeachersRequest true "添加教师请求"
+// @Success      200 {object} map[string]interface{} "添加成功"
+// @Failure      400 {object} map[string]interface{} "请求参数错误"
+// @Security     BearerAuth
+// @Router       /courses/clazzes/teachers [post]
+func (s *Server) addClazzTeacher(c *gin.Context) {
+	var req models.AddClazzTeachersRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.BadRequestResponse(c, err.Error())
+		return
+	}
+
+	if len(req.TeacherIds) == 0 {
+		utils.BadRequestResponse(c, "教师ID列表不能为空")
+		return
+	}
+
+	userID, _ := c.Get("user_id")
+	if err := s.svc.CourseService.AddClazzTeachers(c.Request.Context(), req.ClazzId, req.TeacherIds, userID.(string)); err != nil {
+		utils.BadRequestResponse(c, err.Error())
+		return
+	}
+
+	utils.SuccessResponse(c, nil)
+}
+
+// @Description  班级删除老师（支持批量删除，只有课程创建者可以操作）
+// @Summary      班级删除老师
+// @Tags         课程
+// @Accept       json
+// @Produce      json
+// @Param        request body models.RemoveClazzTeachersRequest true "移除教师请求"
+// @Success      200 {object} map[string]interface{} "移除成功"
+// @Failure      400 {object} map[string]interface{} "请求参数错误"
+// @Security     BearerAuth
+// @Router       /courses/clazzes/teachers [delete]
+func (s *Server) removeClazzTeacher(c *gin.Context) {
+	var req models.RemoveClazzTeachersRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.BadRequestResponse(c, err.Error())
+		return
+	}
+	if req.ClazzId == "" {
+		utils.BadRequestResponse(c, "班级ID不能为空")
+		return
+	}
+
+	if len(req.TeacherIds) == 0 {
+		utils.BadRequestResponse(c, "教师ID列表不能为空")
+		return
+	}
+
+	userID, _ := c.Get("user_id")
+	if err := s.svc.CourseService.RemoveClazzTeachers(c.Request.Context(), req.ClazzId, req.TeacherIds, userID.(string)); err != nil {
+		utils.BadRequestResponse(c, err.Error())
+		return
+	}
+
+	utils.SuccessResponse(c, nil)
 }
 
 // JoinClass godoc
@@ -489,13 +662,8 @@ func (s *Server) DeleteClazz(c *gin.Context) {
 // @Success      200 {object} map[string]interface{} "添加成功"
 // @Failure      400 {object} map[string]interface{} "请求参数错误"
 // @Security     BearerAuth
-// @Router       /courses/clazzes/{clazzId}/members [post]
+// @Router       /courses/clazzes/members [post]
 func (s *Server) AddClazzMember(c *gin.Context) {
-	clazzId := c.Param("clazzId")
-	if clazzId == "" {
-		utils.BadRequestResponse(c, "班级id为空")
-		return
-	}
 
 	var req models.AddClazzMemberRequest
 
@@ -509,7 +677,7 @@ func (s *Server) AddClazzMember(c *gin.Context) {
 		return
 	}
 	userID, _ := c.Get("user_id")
-	if err := s.svc.CourseService.AddClazzMember(c.Request.Context(), clazzId, req.MemberID, userID.(string)); err != nil {
+	if err := s.svc.CourseService.AddClazzMember(c.Request.Context(), req.ClazzID, req.MemberID, userID.(string)); err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
 	}
@@ -527,29 +695,70 @@ func (s *Server) AddClazzMember(c *gin.Context) {
 // @Success      200 {object} map[string]interface{} "移除成功"
 // @Failure      400 {object} map[string]interface{} "请求参数错误"
 // @Security     BearerAuth
-// @Router       /courses/clazzes/{clazzId}/members/remove [post]
+// @Router       /courses/clazzes/members/remove [post]
 func (s *Server) RemoveClazzMembers(c *gin.Context) {
-	clazzId := c.Param("clazzId")
-	if clazzId == "" {
-		utils.BadRequestResponse(c, "班级id为空")
-		return
-	}
 
-	var body models.RemoveClazzMembersRequest
-	if err := c.ShouldBindJSON(&body); err != nil {
+	var req models.RemoveClazzMembersRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
 	}
-
-	request := models.RemoveClazzMembersRequest{
-		ClazzID:   clazzId,
-		MemberIDs: body.MemberIDs,
-	}
-
 	userID, _ := c.Get("user_id")
-	if err := s.svc.CourseService.RemoveClazzMembers(c.Request.Context(), request, userID.(string)); err != nil {
+	if err := s.svc.CourseService.RemoveClazzMembers(c.Request.Context(), req, userID.(string)); err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
 	}
 	utils.SuccessResponse(c, nil)
+}
+
+// PageQueryTeacherCourses godoc
+// @Summary      分页查询老师加入的课程
+// @Description  分页查询当前老师加入的课程列表
+// @Tags         课程
+// @Accept       json
+// @Produce      json
+// @Param        request body models.PageQueryTeacherCoursesRequest true "分页查询参数"
+// @Success      200 {object} map[string]interface{} "课程列表"
+// @Failure      400 {object} map[string]interface{} "请求参数错误"
+// @Security     BearerAuth
+// @Router       /courses/teacher/query [post]
+func (s *Server) PageQueryTeacherCourses(c *gin.Context) {
+	var req models.PageQueryTeacherCoursesRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.BadRequestResponse(c, err.Error())
+		return
+	}
+	userID, _ := c.Get("user_id")
+	res, err := s.svc.CourseService.PageQueryTeacherCourses(c.Request.Context(), &req, userID.(string))
+	if err != nil {
+		utils.BadRequestResponse(c, err.Error())
+		return
+	}
+	utils.SuccessResponse(c, res)
+}
+
+// GetClazzesByCourseId godoc
+// @Summary      获取课程的所有班级
+// @Description  根据课程ID获取该课程的所有班级列表
+// @Tags         课程
+// @Accept       json
+// @Produce      json
+// @Param        courseId path string true "课程ID"
+// @Success      200 {object} map[string]interface{} "班级列表"
+// @Failure      400 {object} map[string]interface{} "请求参数错误"
+// @Security     BearerAuth
+// @Router       /courses/{courseId}/clazzes [get]
+func (s *Server) GetClazzesByCourseId(c *gin.Context) {
+	courseId := c.Param("courseId")
+	if courseId == "" {
+		utils.BadRequestResponse(c, "课程ID不能为空")
+		return
+	}
+	userID, _ := c.Get("user_id")
+	clazzes, err := s.svc.CourseService.GetClazzesByCourseId(c.Request.Context(), courseId, userID.(string))
+	if err != nil {
+		utils.BadRequestResponse(c, err.Error())
+		return
+	}
+	utils.SuccessResponse(c, clazzes)
 }

@@ -161,12 +161,32 @@ type PageQueryCourseRequest struct {
 	Name     *string `json:"name,omitempty"`
 }
 
+// PageQueryTeacherCoursesRequest 分页查询老师加入的课程请求
+type PageQueryTeacherCoursesRequest struct {
+	PageNum  *int64  `json:"page_num,omitempty"`
+	PageSize *int64  `json:"page_size,omitempty"`
+	Status   *int8   `json:"status,omitempty"`
+	Name     *string `json:"name,omitempty"`
+}
+
 // PageQueryCourseResponse 分页查询课程响应
 type PageQueryCourseResponse struct {
 	Total    int64    `json:"total"`
 	PageNum  int64    `json:"page_num"`
 	PageSize int64    `json:"page_size"`
 	Courses  []Course `json:"courses"`
+}
+
+// AddCourseTeachersRequest 课程添加教师请求
+type AddCourseTeachersRequest struct {
+	CourseId   string   `json:"course_id" binding:"required"`
+	TeacherIds []string `json:"teacher_ids" binding:"required"`
+}
+
+// RemoveCourseTeachersRequest 课程删除教师请求
+type RemoveCourseTeachersRequest struct {
+	CourseId   string   `json:"course_id" binding:"required"`
+	TeacherIds []string `json:"teacher_ids" binding:"required"`
 }
 
 // ==================== 班级模块请求 ====================
@@ -183,12 +203,12 @@ type CreateClazzRequest struct {
 
 // UpdateClazzRequest 更新班级请求
 type UpdateClazzRequest struct {
-	Name          string               `json:"name,omitempty"`
-	Description   string               `json:"description,omitempty"`
-	Schedule      string               `json:"schedule,omitempty"`
-	RequireInvite *bool                `json:"require_invite,omitempty"`
-	MaxMembers    *int                 `json:"max_members,omitempty"`
-	MemberIDs     []primitive.ObjectID `json:"member_ids,omitempty"`
+	ClazzID       string `bson:"clazz_id,omitempty" json:"clazz_id" binding:"required"`
+	Name          string `json:"name,omitempty"`
+	Description   string `json:"description,omitempty"`
+	Schedule      string `json:"schedule,omitempty"`
+	RequireInvite *bool  `json:"require_invite,omitempty"`
+	MaxMembers    *int   `json:"max_members,omitempty"`
 }
 
 // JoinClazzRequest 加入班级请求
@@ -199,6 +219,7 @@ type JoinClazzRequest struct {
 
 // AddClazzMemberRequest 添加班级成员请求
 type AddClazzMemberRequest struct {
+	ClazzID  string `json:"clazz_id" form:"clazzId" binding:"required"`
 	MemberID string `json:"member_id" binding:"required"`
 }
 
@@ -216,11 +237,24 @@ type GetClazzResponse struct {
 	CourseId      primitive.ObjectID   `bson:"course_id" json:"course_id" binding:"required"`
 	Schedule      string               `bson:"schedule,omitempty" json:"schedule,omitempty"`
 	MemberIDs     []primitive.ObjectID `bson:"member_ids,omitempty" json:"member_ids,omitempty"`
+	TeacherIds    []primitive.ObjectID `bson:"teacher_ids,omitempty" json:"teacher_ids,omitempty"`
 	RequireInvite bool                 `bson:"require_invite" json:"require_invite"`
 	MaxMembers    int                  `bson:"max_members,omitempty" json:"max_members,omitempty"`
 	AddNums       int                  `bson:"add_nums" json:"add_nums"`
 	Status        ClassStatus          `bson:"status" json:"status"`
 	CTime         time.Time            `bson:"ctime" json:"ctime"`
+}
+
+// AddClazzTeachersRequest 班级添加教师请求
+type AddClazzTeachersRequest struct {
+	ClazzId    string   `json:"clazz_id" binding:"required"`
+	TeacherIds []string `json:"teacher_ids" binding:"required"`
+}
+
+// RemoveClazzTeachersRequest 班级移除教师请求
+type RemoveClazzTeachersRequest struct {
+	ClazzId    string   `json:"clazz_id" binding:"required"`
+	TeacherIds []string `json:"teacher_ids" binding:"required"`
 }
 
 // ==================== 任务模块请求 ====================
@@ -266,4 +300,3 @@ type FinishTaskRequest struct {
 	TaskID     string `bson:"task_id" json:"task_id" binding:"required"`
 	ClazzID    string `bson:"clazz_id" json:"clazz_id" binding:"required"`
 }
-
