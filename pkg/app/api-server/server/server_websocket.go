@@ -47,10 +47,10 @@ func (s *Server) RegisterWebSocket(g *gin.RouterGroup) {
 // @Param        token query string false "访问令牌（可选，也可通过Authorization header传递）"
 // @Param        Authorization header string false "Bearer token"
 // @Success      101 {string} string "Switching Protocols"
-// @Failure      400 {object} map[string]interface{} "无效的提交ID或请求"
-// @Failure      401 {object} map[string]interface{} "需要登录"
-// @Failure      403 {object} map[string]interface{} "权限不足"
-// @Failure      404 {object} map[string]interface{} "提交不存在"
+// @Failure      400 {object} models.ErrorResponse "无效的提交ID或请求"
+// @Failure      401 {object} models.ErrorResponse "需要登录"
+// @Failure      403 {object} models.ErrorResponse "权限不足"
+// @Failure      404 {object} models.ErrorResponse "提交不存在"
 // @Router       /ws/submit/{id} [get]
 // @Security     BearerAuth
 func (s *Server) HandleSubmitWebSocket(c *gin.Context) {
