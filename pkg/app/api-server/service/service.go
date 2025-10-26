@@ -12,6 +12,7 @@ import (
 	"fmt"
 
 	"zk-code-arena-server/conf"
+	"zk-code-arena-server/pkg/app/api-server/repository"
 	"zk-code-arena-server/pkg/queue"
 	"zk-code-arena-server/pkg/sandbox"
 	"zk-code-arena-server/pkg/utils"
@@ -19,24 +20,28 @@ import (
 
 // Service 服务层结构
 type Service struct {
-	UserService       *UserService
-	ProblemService    *ProblemService
-	SubmitService     *SubmitService
-	JudgeService      *JudgeService
-	TestCaseService   *TestCaseService
-	CourseService     *CourseService
-	StatisticsService *StatisticsService
+	UserService         *UserService
+	ProblemService      *ProblemService
+	SubmitService       *SubmitService
+	JudgeService        *JudgeService
+	TestCaseService     *TestCaseService
+	CourseService       *CourseService
+	StatisticsService   *StatisticsService
+	DailyProblemService *DailyProblemService
 }
 
 // NewService 创建服务实例
 func NewService() *Service {
-	// 1. 创建基础服务（无依赖）
+	// 1. 创建 Repository 容器
+	repos := repository.NewRepositories()
+	
+	// 2. 创建基础服务（使用 Repository）
 	userService := NewUserService()
-	submitService := NewSubmitService()
-	testCaseService := NewTestCaseService()
+	submitService := NewSubmitService(repos.SubmitRepository)
+	testCaseService := NewTestCaseService(repos.TestCaseRepository)
 	courseService := NewCourseService()
 
-	// 2. 创建沙箱客户端
+	// 3. 创建沙箱客户端
 	// 将 conf.LanguageConfig 转换为 sandbox.LanguageConfig
 	sandboxLanguages := make(map[string]*sandbox.LanguageConfig)
 	for lang, confLang := range conf.Config.Judge.Languages {
@@ -77,16 +82,16 @@ func NewService() *Service {
 		sandboxLanguages,
 	)
 
-	// 3. 创建消息队列
+	// 4. 创建消息队列
 	queueSize := conf.Config.Judge.QueueSize
 	if queueSize <= 0 {
 		queueSize = 100
 	}
 	messageQueue := queue.NewChannelQueue(queueSize, submitService)
 
-	// 4. 创建需要依赖注入的服务
-	// ProblemService 需要 sandboxClient 和 testCaseService
-	problemService := NewProblemService(sandboxClient, testCaseService)
+	// 5. 创建需要依赖注入的服务
+	// ProblemService 需要 sandboxClient、testCaseService 和 Repository
+	problemService := NewProblemService(sandboxClient, testCaseService, repos.ProblemRepository)
 	
 	// JudgeService 需要所有基础服务的引用
 	judgeService := NewJudgeService(
@@ -98,16 +103,20 @@ func NewService() *Service {
 	)
 	
 	// StatisticsService 需要其他服务的引用
-	statisticsService := NewStatisticsService(submitService, problemService, userService)
+	statisticsService := NewStatisticsService(submitService, problemService, userService, repos.ProblemRepository)
+	
+	// DailyProblemService 需要 ProblemRepository
+	dailyProblemService := NewDailyProblemService(repos.ProblemRepository)
 
 	return &Service{
-		UserService:       userService,
-		ProblemService:    problemService,
-		SubmitService:     submitService,
-		JudgeService:      judgeService,
-		TestCaseService:   testCaseService,
-		CourseService:     courseService,
-		StatisticsService: statisticsService,
+		UserService:         userService,
+		ProblemService:      problemService,
+		SubmitService:       submitService,
+		JudgeService:        judgeService,
+		TestCaseService:     testCaseService,
+		CourseService:       courseService,
+		StatisticsService:   statisticsService,
+		DailyProblemService: dailyProblemService,
 	}
 }
 

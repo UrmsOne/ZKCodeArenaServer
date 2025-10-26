@@ -27,6 +27,15 @@ func (s *Server) RegisterStatistics(g *gin.RouterGroup) {
 	}
 }
 
+// RegisterProblemStats 注册题目统计相关路由（公开访问）
+func (s *Server) RegisterProblemStats(g *gin.RouterGroup) {
+	problemGroup := g.Group("/problems")
+	{
+		// 公开路由 - 题目难度统计
+		problemGroup.GET("/difficulty-stats", s.GetProblemDifficultyStats)
+	}
+}
+
 // GetUserStatistics godoc
 // @Summary      获取当前用户统计
 // @Description  获取当前登录用户的提交统计信息
@@ -123,6 +132,27 @@ func (s *Server) GetSystemStatistics(c *gin.Context) {
 	stats, err := s.svc.StatisticsService.GetSystemStatistics(ctx)
 	if err != nil {
 		utils.InternalServerErrorResponse(c, "获取系统统计失败: "+err.Error())
+		return
+	}
+	
+	utils.SuccessResponse(c, stats)
+}
+
+// GetProblemDifficultyStats godoc
+// @Summary      获取题目难度分布统计
+// @Description  获取各难度题目数量的轻量级统计
+// @Tags         统计
+// @Accept       json  
+// @Produce      json
+// @Success      200 {object} map[string]interface{} "难度统计"
+// @Failure      500 {object} map[string]interface{} "获取失败"
+// @Router       /problems/difficulty-stats [get]
+func (s *Server) GetProblemDifficultyStats(c *gin.Context) {
+	ctx := c.Request.Context()
+	
+	stats, err := s.svc.StatisticsService.GetProblemDifficultyStats(ctx)
+	if err != nil {
+		utils.InternalServerErrorResponse(c, "获取题目难度统计失败: "+err.Error())
 		return
 	}
 	

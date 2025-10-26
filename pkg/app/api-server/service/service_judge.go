@@ -16,6 +16,7 @@ import (
 	"zk-code-arena-server/pkg/queue"
 	"zk-code-arena-server/pkg/sandbox"
 	"zk-code-arena-server/pkg/utils"
+	wsManager "zk-code-arena-server/pkg/utils/websocket"
 )
 
 // JudgeService 判题服务
@@ -150,6 +151,9 @@ func (js *JudgeService) judgeTask(ctx context.Context, task *queue.JudgeTask) er
 	if err := js.submitService.UpdateSubmitStatus(ctx, task.SubmitID, models.StatusRunning); err != nil {
 		return fmt.Errorf("更新状态为 running 失败: %w", err)
 	}
+	
+	// WebSocket推送：开始判题
+	wsManager.BroadcastSubmitStatusUpdate(task.SubmitID, task.UserID, models.StatusRunning, nil, nil)
 
 	// 2. 获取题目信息
 	problem, err := js.problemService.GetProblemByID(ctx, task.ProblemID)
@@ -188,6 +192,10 @@ func (js *JudgeService) judgeTask(ctx context.Context, task *queue.JudgeTask) er
 			TestResults:  []models.TestResult{},
 			CompileError: err.Error(),
 		}
+		
+		// WebSocket推送：编译错误
+		wsManager.BroadcastSubmitStatusUpdate(task.SubmitID, task.UserID, models.StatusCompileError, nil, result)
+		
 		return js.submitService.UpdateSubmitResult(ctx, task.SubmitID, result)
 	}
 
@@ -210,7 +218,15 @@ func (js *JudgeService) judgeTask(ctx context.Context, task *queue.JudgeTask) er
 		TestResults: judgeCtx.Results,
 	}
 
-	return js.submitService.UpdateSubmitResult(ctx, task.SubmitID, result)
+	err = js.submitService.UpdateSubmitResult(ctx, task.SubmitID, result)
+	if err != nil {
+		return err
+	}
+	
+	// WebSocket推送：判题完成
+	wsManager.BroadcastSubmitStatusUpdate(task.SubmitID, task.UserID, finalStatus, nil, result)
+	
+	return nil
 }
 
 // compileStage 编译阶段

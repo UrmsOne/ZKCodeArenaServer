@@ -25,9 +25,10 @@ func (s *Server) RegisterSubmit(g *gin.RouterGroup) {
 		// 需要认证的路由
 		submitGroup.Use(middleware.JWTMiddleware())
 		{
-			submitGroup.POST("/", s.SubmitCode)  // 提交代码
-			submitGroup.GET("/", s.GetSubmits)   // 获取提交列表
-			submitGroup.GET("/:id", s.GetSubmit) // 获取提交详情
+			submitGroup.POST("/", s.SubmitCode)        // 提交代码
+			submitGroup.GET("/", s.GetSubmits)         // 获取提交列表
+			submitGroup.GET("/:id", s.GetSubmit)       // 获取提交详情
+			submitGroup.GET("/:id/status", s.GetSubmitStatus) // 获取提交状态（轻量级）
 		}
 	}
 }
@@ -257,4 +258,61 @@ func (s *Server) GetSubmit(c *gin.Context) {
 	}
 
 	utils.SuccessResponse(c, submit)
+}
+
+// GetSubmitStatus godoc
+// @Summary      获取提交状态（轻量级）
+// @Description  获取提交的当前状态和进度信息，用于实时状态监控，比完整详情接口更轻量
+// @Tags         提交
+// @Accept       json
+// @Produce      json
+// @Param        id path string true "提交ID"
+// @Success      200 {object} models.SubmitStatusResponse "提交状态信息"
+// @Failure      400 {object} map[string]interface{} "无效的提交ID"
+// @Failure      401 {object} map[string]interface{} "需要登录"
+// @Failure      403 {object} map[string]interface{} "权限不足"
+// @Failure      404 {object} map[string]interface{} "提交不存在"
+// @Security     BearerAuth
+// @Router       /submit/{id}/status [get]
+func (s *Server) GetSubmitStatus(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := primitive.ObjectIDFromHex(idStr)
+	if err != nil {
+		utils.BadRequestResponse(c, "无效的提交ID")
+		return
+	}
+
+	ctx := c.Request.Context()
+	
+	// 首先获取提交基本信息以进行权限检查
+	submit, err := s.svc.SubmitService.GetSubmitByID(ctx, id)
+	if err != nil {
+		utils.NotFoundResponse(c, "提交不存在")
+		return
+	}
+
+	// 检查权限：非管理员只能查看自己的提交
+	role, exists := c.Get("role")
+	if !exists {
+		utils.UnauthorizedResponse(c, "需要登录")
+		return
+	}
+
+	if role.(string) != string(models.RoleAdmin) {
+		currentUserID, _ := c.Get("user_id")
+		currentUserObjectID, _ := primitive.ObjectIDFromHex(currentUserID.(string))
+		if submit.UserID != currentUserObjectID {
+			utils.ForbiddenResponse(c, "只能查看自己的提交状态")
+			return
+		}
+	}
+
+	// 获取轻量级状态信息
+	status, err := s.svc.SubmitService.GetSubmitStatus(ctx, id)
+	if err != nil {
+		utils.InternalServerErrorResponse(c, "获取提交状态失败")
+		return
+	}
+
+	utils.SuccessResponse(c, status)
 }

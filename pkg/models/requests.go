@@ -300,3 +300,77 @@ type FinishTaskRequest struct {
 	TaskID     string `bson:"task_id" json:"task_id" binding:"required"`
 	ClazzID    string `bson:"clazz_id" json:"clazz_id" binding:"required"`
 }
+
+// ==================== 题目详情响应模型 ====================
+
+// ProblemDetailResponse 题目详情聚合响应
+type ProblemDetailResponse struct {
+	Problem     *Problem   `json:"problem"`      // 题目基本信息
+	SampleCases []TestCase `json:"sample_cases"` // 示例测试用例列表
+}
+
+// ==================== 题目查询条件模型 ====================
+
+// ProblemQueryCondition 题目查询条件 (内部使用)
+type ProblemQueryCondition struct {
+	Page           int                `json:"page"`
+	PageSize       int                `json:"page_size"`
+	Difficulty     ProblemDifficulty  `json:"difficulty"`
+	Tags           []string           `json:"tags"`
+	IncludePrivate bool               `json:"include_private"`
+	Role           UserRole           `json:"role"`
+	UserID         *primitive.ObjectID `json:"user_id"`
+	// 注意：Status和CreatedBy筛选将在后续版本中支持
+	// Status         ProblemStatus      `json:"status"`      // 管理员端专用（待实现）
+	// CreatedBy      *primitive.ObjectID `json:"created_by"`  // 管理员端专用（待实现）
+}
+
+// ==================== 提交状态响应模型 ====================
+
+// SubmitStatusResponse 轻量级提交状态响应
+type SubmitStatusResponse struct {
+	ID        primitive.ObjectID `json:"id"`         // 提交ID
+	Status    SubmitStatus      `json:"status"`     // 当前状态
+	Progress  *JudgeProgress    `json:"progress"`   // 判题进度（可选）
+	Message   string            `json:"message"`    // 状态描述信息
+	UpdatedAt time.Time         `json:"updated_at"` // 最后更新时间
+	
+	// 完成后的基本结果信息（避免返回完整详细结果）
+	TimeUsed   *int `json:"time_used,omitempty"`   // 时间使用(ms)
+	MemoryUsed *int `json:"memory_used,omitempty"` // 内存使用(KB)
+}
+
+// JudgeProgress 判题进度信息
+type JudgeProgress struct {
+	CurrentTestCase int `json:"current_test_case"` // 当前测试用例索引（从1开始）
+	TotalTestCases  int `json:"total_test_cases"`  // 总测试用例数
+	Percentage      int `json:"percentage"`        // 完成百分比 (0-100)
+}
+
+// ==================== WebSocket消息模型 ====================
+
+// WSMessage WebSocket消息基础结构
+type WSMessage struct {
+	Type    string      `json:"type"`              // 消息类型
+	SubmitID string     `json:"submit_id"`         // 提交ID
+	Data    interface{} `json:"data"`              // 消息数据
+	Timestamp time.Time `json:"timestamp"`         // 消息时间戳
+}
+
+// WSStatusUpdate WebSocket状态更新消息
+type WSStatusUpdate struct {
+	Status   SubmitStatus   `json:"status"`           // 新状态
+	Progress *JudgeProgress `json:"progress"`         // 进度信息（可选）
+	Message  string         `json:"message"`          // 状态描述
+	Result   *WSJudgeResult `json:"result,omitempty"` // 完成时的结果摘要
+}
+
+// WSJudgeResult WebSocket判题结果摘要（不包含详细测试用例）
+type WSJudgeResult struct {
+	Status       SubmitStatus `json:"status"`
+	TimeUsed     int          `json:"time_used"`     // 时间使用(ms)
+	MemoryUsed   int          `json:"memory_used"`   // 内存使用(KB)
+	PassedCases  int          `json:"passed_cases"`  // 通过的测试用例数
+	TotalCases   int          `json:"total_cases"`   // 总测试用例数
+	CompileError string       `json:"compile_error,omitempty"` // 编译错误（如果有）
+}

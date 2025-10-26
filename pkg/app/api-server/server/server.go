@@ -17,6 +17,7 @@ import (
 
 	"zk-code-arena-server/pkg/utils"
 	"zk-code-arena-server/pkg/utils/middleware"
+	wsManager "zk-code-arena-server/pkg/utils/websocket"
 
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
@@ -54,6 +55,12 @@ func NewServer(lg logrus.FieldLogger, svc *service.Service, opts *CmdOptions, st
 
 func (s *Server) Init() {
 	s.RegisterRoutes()
+	
+	// 启动WebSocket连接管理器
+	go func() {
+		wsManager := wsManager.GlobalConnectionManager
+		wsManager.Start(context.Background())
+	}()
 }
 
 // GetApp 获取 Gin 引擎实例（用于测试）
@@ -84,6 +91,10 @@ func (s *Server) RegisterRoutes() {
 		s.RegisterCourse(v1)
 		// 统计相关路由
 		s.RegisterStatistics(v1)
+		// 题目统计相关路由（公开）
+		s.RegisterProblemStats(v1)
+		// WebSocket相关路由
+		s.RegisterWebSocket(v1)
 	}
 }
 

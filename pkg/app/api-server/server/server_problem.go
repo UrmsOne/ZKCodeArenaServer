@@ -20,12 +20,17 @@ import (
 
 // RegisterProblem 注册题目相关路由
 func (s *Server) RegisterProblem(g *gin.RouterGroup) {
+	// 每日一题（独立路由，不在problem组下）
+	g.GET("/daily-problem", s.GetDailyProblem) // 获取每日推荐题目
+	
+	// 用户端题目路由组
 	problemGroup := g.Group("/problem")
 	{
 		// 公开路由
-		problemGroup.GET("/", s.GetProblems)          // 获取题目列表
+		problemGroup.GET("/", s.GetProblems)          // 获取题目列表（用户端）
 		problemGroup.GET("/search", s.SearchProblems) // 搜索题目
 		problemGroup.GET("/:id", s.GetProblem)        // 获取题目详情
+		problemGroup.GET("/:id/detail", s.GetProblemDetail) // 获取题目详情聚合信息
 	}
 
 	// 需要认证的路由
@@ -37,11 +42,17 @@ func (s *Server) RegisterProblem(g *gin.RouterGroup) {
 
 		securedGroup.POST("/:id/run", middleware.CodeRunRateLimitMiddleware(), s.RunCode) // 运行代码测试
 	}
+
+	// 管理员专用路由组
+	adminGroup := g.Group("/admin/problems").Use(middleware.JWTMiddleware(), middleware.RequireRole(models.RoleAdmin))
+	{
+		adminGroup.GET("/", s.GetProblemsForAdmin) // 获取题目列表（管理员端）
+	}
 }
 
 // GetProblems godoc
-// @Summary      获取题目列表
-// @Description  分页获取题目列表，支持按难度、标签筛选
+// @Summary      获取题目列表（用户端）
+// @Description  用户端获取题目列表，只显示公开已发布的题目，支持按难度、标签筛选
 // @Tags         题目
 // @Accept       json
 // @Produce      json
@@ -49,17 +60,18 @@ func (s *Server) RegisterProblem(g *gin.RouterGroup) {
 // @Param        page_size query int false "每页数量" default(10)
 // @Param        difficulty query string false "难度" Enums(easy, medium, hard)
 // @Param        tags query []string false "标签列表"
-// @Param        include_private query boolean false "包含私有题目（需教师或管理员权限）" default(false)
 // @Success      200 {object} map[string]interface{} "题目列表"
+// @Failure      400 {object} map[string]interface{} "请求参数错误"
 // @Failure      500 {object} map[string]interface{} "获取失败"
 // @Router       /problem [get]
 func (s *Server) GetProblems(c *gin.Context) {
+	// 参数解析和验证
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "10"))
 	difficulty := c.Query("difficulty")
 	tags := c.QueryArray("tags")
-	includePrivate := c.DefaultQuery("include_private", "false") == "true"
 
+	// 参数校验
 	if page < 1 {
 		page = 1
 	}
@@ -67,35 +79,78 @@ func (s *Server) GetProblems(c *gin.Context) {
 		pageSize = 10
 	}
 
-	roleVal, _ := c.Get("role")
-	role := models.UserRole("")
-	if roleVal != nil {
-		role = models.UserRole(roleVal.(string))
-	}
-
-	if includePrivate && role != models.RoleAdmin && role != models.RoleTeacher {
-		includePrivate = false
-	}
-
+	// 获取用户ID（可选，用于获取用户提交状态）
 	var userObjectID *primitive.ObjectID
-	if includePrivate {
-		if userIDVal, exists := c.Get("user_id"); exists {
-			if objID, err := primitive.ObjectIDFromHex(userIDVal.(string)); err == nil {
-				userObjectID = &objID
-			}
+	if userIDVal, exists := c.Get("user_id"); exists {
+		if objID, err := primitive.ObjectIDFromHex(userIDVal.(string)); err == nil {
+			userObjectID = &objID
 		}
 	}
 
+	// 调用新的用户端Service方法
 	ctx := c.Request.Context()
-	problems, total, err := s.svc.ProblemService.GetProblems(
+	problems, total, err := s.svc.ProblemService.GetProblemsForUser(
 		ctx,
 		page,
 		pageSize,
 		models.ProblemDifficulty(difficulty),
 		tags,
-		includePrivate,
-		role,
 		userObjectID,
+	)
+	if err != nil {
+		utils.InternalServerErrorResponse(c, "获取题目列表失败: "+err.Error())
+		return
+	}
+
+	utils.SuccessResponse(c, gin.H{
+		"problems":   problems,
+		"total":      total,
+		"page":       page,
+		"page_size":  pageSize,
+		"total_page": (total + int64(pageSize) - 1) / int64(pageSize),
+	})
+}
+
+// GetProblemsForAdmin godoc
+// @Summary      获取题目列表（管理员端）
+// @Description  管理员端获取题目列表，可查看所有题目包括私有和草稿状态，支持按难度、标签筛选
+// @Tags         题目
+// @Accept       json
+// @Produce      json
+// @Param        page query int false "页码" default(1)
+// @Param        page_size query int false "每页数量" default(10)
+// @Param        difficulty query string false "难度" Enums(easy, medium, hard)
+// @Param        tags query []string false "标签列表"
+// @Success      200 {object} map[string]interface{} "题目列表"
+// @Failure      400 {object} map[string]interface{} "请求参数错误"
+// @Failure      401 {object} map[string]interface{} "未授权访问"
+// @Failure      403 {object} map[string]interface{} "权限不足"
+// @Failure      500 {object} map[string]interface{} "获取失败"
+// @Router       /admin/problems [get]
+// @Security     BearerAuth
+func (s *Server) GetProblemsForAdmin(c *gin.Context) {
+	// 参数解析和验证
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "10"))
+	difficulty := c.Query("difficulty")
+	tags := c.QueryArray("tags")
+
+	// 参数校验
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 || pageSize > 100 {
+		pageSize = 10
+	}
+
+	// 调用管理员端Service方法
+	ctx := c.Request.Context()
+	problems, total, err := s.svc.ProblemService.GetProblemsForAdmin(
+		ctx,
+		page,
+		pageSize,
+		models.ProblemDifficulty(difficulty),
+		tags,
 	)
 	if err != nil {
 		utils.InternalServerErrorResponse(c, "获取题目列表失败: "+err.Error())
@@ -148,6 +203,58 @@ func (s *Server) GetProblem(c *gin.Context) {
 	}
 
 	utils.SuccessResponse(c, problem)
+}
+
+// GetProblemDetail godoc
+// @Summary      获取题目详情聚合信息
+// @Description  获取题目基本信息和示例测试用例的聚合数据，用于前端题目详情页面展示
+// @Tags         题目
+// @Accept       json
+// @Produce      json
+// @Param        id   path      string  true  "题目ID"
+// @Success      200  {object}  utils.Response{data=models.ProblemDetailResponse}  "成功"
+// @Failure      400  {object}  utils.Response  "请求参数错误"
+// @Failure      401  {object}  utils.Response  "未授权访问"
+// @Failure      404  {object}  utils.Response  "题目不存在"
+// @Failure      500  {object}  utils.Response  "服务器内部错误"
+// @Router       /problem/{id}/detail [get]
+func (s *Server) GetProblemDetail(c *gin.Context) {
+	// 参数验证：解析题目ID
+	idStr := c.Param("id")
+	id, err := primitive.ObjectIDFromHex(idStr)
+	if err != nil {
+		utils.BadRequestResponse(c, "无效的题目ID")
+		return
+	}
+
+	// 数据操作：获取题目详情聚合信息
+	ctx := c.Request.Context()
+	problemDetail, err := s.svc.ProblemService.GetProblemDetail(ctx, id)
+	if err != nil {
+		// 业务逻辑：根据错误类型返回不同响应
+		if err.Error() == "题目不存在" || err.Error() == "获取题目信息失败: mongo: no documents in result" {
+			utils.NotFoundResponse(c, "题目不存在")
+			return
+		}
+		if err.Error() == "获取示例测试用例失败: mongo: no documents in result" {
+			utils.NotFoundResponse(c, "题目测试用例不存在")
+			return
+		}
+		utils.InternalServerErrorResponse(c, "获取题目详情失败")
+		return
+	}
+
+	// 权限检查：非公开题目需要认证
+	if !problemDetail.Problem.IsPublic {
+		_, exists := c.Get("user_id")
+		if !exists {
+			utils.UnauthorizedResponse(c, "需要登录才能查看此题目")
+			return
+		}
+	}
+
+	// 成功响应
+	utils.SuccessResponse(c, problemDetail)
 }
 
 // CreateProblem godoc
@@ -425,6 +532,14 @@ func (s *Server) SearchProblems(c *gin.Context) {
 		pageSize = 10
 	}
 
+	// 获取用户ID（用于用户状态查询）
+	var userObjectID *primitive.ObjectID
+	if userIDVal, exists := c.Get("user_id"); exists {
+		if objID, err := primitive.ObjectIDFromHex(userIDVal.(string)); err == nil {
+			userObjectID = &objID
+		}
+	}
+
 	ctx := c.Request.Context()
 	problems, total, err := s.svc.ProblemService.SearchProblems(
 		ctx,
@@ -433,6 +548,7 @@ func (s *Server) SearchProblems(c *gin.Context) {
 		tags,
 		page,
 		pageSize,
+		userObjectID,
 	)
 	if err != nil {
 		utils.InternalServerErrorResponse(c, "搜索题目失败: "+err.Error())
@@ -445,5 +561,41 @@ func (s *Server) SearchProblems(c *gin.Context) {
 		"page":       page,
 		"page_size":  pageSize,
 		"total_page": (total + int64(pageSize) - 1) / int64(pageSize),
+	})
+}
+
+// GetDailyProblem godoc
+// @Summary      获取每日推荐题目
+// @Description  获取当日推荐的题目，全局统一推荐
+// @Tags         题目
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} map[string]interface{} "每日推荐题目"
+// @Failure      500 {object} map[string]interface{} "获取失败"
+// @Router       /daily-problem [get]
+func (s *Server) GetDailyProblem(c *gin.Context) {
+	ctx := c.Request.Context()
+
+	// 1. 检查是否有登录用户
+	var userObjectID *primitive.ObjectID
+	if userIDInterface, exists := c.Get("user_id"); exists {
+		if userIDStr, ok := userIDInterface.(string); ok {
+			if id, err := primitive.ObjectIDFromHex(userIDStr); err == nil {
+				userObjectID = &id
+			}
+		}
+	}
+
+	// 2. 获取每日推荐题目（已经包含用户状态）
+	dailyProblem, err := s.svc.DailyProblemService.GetDailyProblem(ctx, userObjectID)
+	if err != nil {
+		utils.InternalServerErrorResponse(c, "获取每日推荐题目失败: "+err.Error())
+		return
+	}
+
+	// 3. 返回结果
+	utils.SuccessResponse(c, gin.H{
+		"daily_problem": dailyProblem,
+		"message":       "每日推荐题目获取成功",
 	})
 }

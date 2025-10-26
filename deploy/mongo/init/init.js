@@ -21,6 +21,8 @@ db.submits.createIndex({ "problem_id": 1 });
 db.submits.createIndex({ "status": 1 });
 db.submits.createIndex({ "created_at": -1 });
 db.submits.createIndex({ "user_id": 1, "problem_id": 1 });
+// 用户题目状态查询优化索引 (用于快速查找用户对各题目的最新状态)
+db.submits.createIndex({ "user_id": 1, "problem_id": 1, "status": 1 }, { name: "idx_user_problem_status" });
 
 // 创建测试用例集合索引
 db.test_cases.createIndex({ "problem_id": 1 });

@@ -8,11 +8,13 @@ package service
 
 import (
 	"context"
+	"sync"
 	"time"
 	
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"zk-code-arena-server/pkg/app/api-server/repository"
 	"zk-code-arena-server/pkg/models"
 	"zk-code-arena-server/pkg/utils"
 )
@@ -22,14 +24,37 @@ type StatisticsService struct {
 	submitService  *SubmitService
 	problemService *ProblemService
 	userService    *UserService
+	problemRepo    *repository.ProblemRepository
+	// 难度统计缓存
+	difficultyStatsCache *DifficultyStatsCache
+}
+
+// DifficultyStatsCache 难度统计缓存
+type DifficultyStatsCache struct {
+	Data       *ProblemDifficultyStats
+	LastUpdate time.Time
+	Mutex      sync.RWMutex
+	TTL        time.Duration // 1小时TTL
+}
+
+// ProblemDifficultyStats 题目难度分布统计
+type ProblemDifficultyStats struct {
+	Easy   int64 `json:"easy"`   // 简单题数量
+	Medium int64 `json:"medium"` // 中等题数量
+	Hard   int64 `json:"hard"`   // 困难题数量
+	Total  int64 `json:"total"`  // 总题目数量
 }
 
 // NewStatisticsService 创建统计服务实例
-func NewStatisticsService(submitService *SubmitService, problemService *ProblemService, userService *UserService) *StatisticsService {
+func NewStatisticsService(submitService *SubmitService, problemService *ProblemService, userService *UserService, problemRepo *repository.ProblemRepository) *StatisticsService {
 	return &StatisticsService{
 		submitService:  submitService,
 		problemService: problemService,
 		userService:    userService,
+		problemRepo:    problemRepo,
+		difficultyStatsCache: &DifficultyStatsCache{
+			TTL: time.Hour, // 1小时TTL
+		},
 	}
 }
 
@@ -340,5 +365,83 @@ func (s *StatisticsService) getDifficultyDistribution(ctx context.Context) (map[
 	}
 	
 	return difficultyDistribution, nil
+}
+
+// GetProblemDifficultyStats 获取题目难度分布统计（带缓存）
+func (s *StatisticsService) GetProblemDifficultyStats(ctx context.Context) (*ProblemDifficultyStats, error) {
+	// 检查缓存
+	s.difficultyStatsCache.Mutex.RLock()
+	if s.difficultyStatsCache.Data != nil && 
+		time.Since(s.difficultyStatsCache.LastUpdate) < s.difficultyStatsCache.TTL {
+		// 缓存命中且未过期
+		cached := s.difficultyStatsCache.Data
+		s.difficultyStatsCache.Mutex.RUnlock()
+		utils.Logger.Infof("GetProblemDifficultyStats: 缓存命中")
+		return cached, nil
+	}
+	s.difficultyStatsCache.Mutex.RUnlock()
+
+	// 缓存未命中或已过期，需要查询数据库
+	utils.Logger.Infof("GetProblemDifficultyStats: 缓存未命中，查询数据库")
+	
+	// 使用Repository层进行聚合查询
+	collection := utils.GetCollection("problems")
+	
+	// MongoDB聚合管道：统计各难度已发布公开题目数量
+	pipeline := []bson.M{
+		// 只统计已发布且公开的题目
+		{"$match": bson.M{
+			"status":   models.StatusPublished,
+			"isPublic": true,
+		}},
+		// 按难度分组统计
+		{"$group": bson.M{
+			"_id":   "$difficulty",
+			"count": bson.M{"$sum": 1},
+		}},
+	}
+	
+	cursor, err := collection.Aggregate(ctx, pipeline)
+	if err != nil {
+		utils.Logger.Errorf("GetProblemDifficultyStats: 聚合查询失败, error=%v", err)
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+	
+	// 解析结果
+	stats := &ProblemDifficultyStats{}
+	for cursor.Next(ctx) {
+		var result struct {
+			ID    string `bson:"_id"`
+			Count int64  `bson:"count"`
+		}
+		if err := cursor.Decode(&result); err != nil {
+			utils.Logger.Warnf("GetProblemDifficultyStats: 解析结果失败, error=%v", err)
+			continue
+		}
+		
+		switch result.ID {
+		case string(models.DifficultyEasy):
+			stats.Easy = result.Count
+		case string(models.DifficultyMedium):
+			stats.Medium = result.Count
+		case string(models.DifficultyHard):
+			stats.Hard = result.Count
+		}
+	}
+	
+	// 计算总数
+	stats.Total = stats.Easy + stats.Medium + stats.Hard
+	
+	// 更新缓存
+	s.difficultyStatsCache.Mutex.Lock()
+	s.difficultyStatsCache.Data = stats
+	s.difficultyStatsCache.LastUpdate = time.Now()
+	s.difficultyStatsCache.Mutex.Unlock()
+	
+	utils.Logger.Infof("GetProblemDifficultyStats: 查询完成, easy=%d, medium=%d, hard=%d, total=%d", 
+		stats.Easy, stats.Medium, stats.Hard, stats.Total)
+	
+	return stats, nil
 }
 

@@ -30,6 +30,15 @@ const (
 	StatusArchived  ProblemStatus = "archived"  // 已归档
 )
 
+// UserProblemStatus 用户题目状态
+type UserProblemStatus string
+
+const (
+	UserStatusNotAttempted UserProblemStatus = "not_attempted" // 未尝试
+	UserStatusAttempted    UserProblemStatus = "attempted"     // 已尝试
+	UserStatusAccepted     UserProblemStatus = "accepted"      // 已通过
+)
+
 // Problem 题目模型
 type Problem struct {
 	ID           primitive.ObjectID `bson:"_id,omitempty" json:"id"`
@@ -82,4 +91,6 @@ type ProblemList struct {
 	Status      ProblemStatus      `json:"status"`
 	IsPublic    bool               `json:"is_public"`
 	CreatedAt   time.Time          `json:"created_at"`
+	// 用户状态（仅登录用户返回，未登录时为 nil）
+	UserStatus  *UserProblemStatus `json:"user_status,omitempty"`
 }

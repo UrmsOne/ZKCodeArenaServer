@@ -299,7 +299,7 @@ func (s *Server) BatchCreateTestCases(c *gin.Context) {
 	}
 
 	// 批量创建
-	result, err := s.svc.TestCaseService.BatchCreateTestCases(c.Request.Context(), testCases)
+	result, err := s.svc.TestCaseService.BatchImportTestCases(c.Request.Context(), problemID, testCases)
 	if err != nil {
 		s.lg.Errorf("批量创建测试用例失败: %v", err)
 		utils.InternalServerErrorResponse(c, "批量创建测试用例失败: "+err.Error())

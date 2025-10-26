@@ -13,10 +13,9 @@ import (
 	"strings"
 	"time"
 
-	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo/options"
 	"zk-code-arena-server/pkg/models"
+	"zk-code-arena-server/pkg/app/api-server/repository"
 	"zk-code-arena-server/pkg/sandbox"
 	"zk-code-arena-server/pkg/utils"
 )
@@ -24,12 +23,14 @@ import (
 type ProblemService struct {
 	sandboxClient   sandbox.Client
 	testCaseService *TestCaseService
+	repo           *repository.ProblemRepository
 }
 
-func NewProblemService(sandboxClient sandbox.Client, testCaseService *TestCaseService) *ProblemService {
+func NewProblemService(sandboxClient sandbox.Client, testCaseService *TestCaseService, repo *repository.ProblemRepository) *ProblemService {
 	return &ProblemService{
 		sandboxClient:   sandboxClient,
 		testCaseService: testCaseService,
+		repo:           repo,
 	}
 }
 
@@ -80,9 +81,8 @@ func (s *ProblemService) CreateProblem(ctx context.Context, problem *models.Prob
 	utils.Logger.Infof("CreateProblem: title=%s, difficulty=%s, status=%s, isPublic=%v, createdBy=%s",
 		problem.Title, problem.Difficulty, problem.Status, problem.IsPublic, problem.CreatedBy.Hex())
 
-	// 8. 持久化到数据库
-	collection := utils.GetCollection("problems")
-	_, err := collection.InsertOne(ctx, problem)
+	// 8. 持久化到数据库 - 委托给Repository层
+	err := s.repo.CreateProblem(ctx, problem)
 	if err != nil {
 		utils.Logger.Errorf("CreateProblem: 数据库插入失败, error=%v", err)
 		return fmt.Errorf("数据库操作失败: %w", err)
@@ -93,13 +93,8 @@ func (s *ProblemService) CreateProblem(ctx context.Context, problem *models.Prob
 }
 // GetProblemByID 根据ID获取题目
 func (s *ProblemService) GetProblemByID(ctx context.Context, id primitive.ObjectID) (*models.Problem, error) {
-	collection := utils.GetCollection("problems")
-	var problem models.Problem
-	err := collection.FindOne(ctx, bson.M{"_id": id}).Decode(&problem)
-	if err != nil {
-		return nil, err
-	}
-	return &problem, nil
+	// 数据操作：直接委托给Repository层
+	return s.repo.GetByID(ctx, id)
 }
 
 // GetProblems 获取题目列表
@@ -112,215 +107,137 @@ func (s *ProblemService) GetProblems(
 	role models.UserRole,
 	userID *primitive.ObjectID,
 ) ([]*models.ProblemList, int64, error) {
-	collection := utils.GetCollection("problems")
-
-	// 构建查询条件
-	filter := bson.M{}
-
+	// 业务逻辑：记录日志信息
 	if !includePrivate {
-		// 公开模式：只显示公开且已发布的题目
-		filter["is_public"] = true
-		filter["status"] = models.StatusPublished
 		utils.Logger.Debugf("GetProblems: 公开模式，过滤条件: is_public=true, status=published")
 	} else {
-		// 私有模式：根据角色决定可见范围
 		switch role {
 		case models.RoleAdmin:
-			// 管理员可以查看全部题目
 			utils.Logger.Debugf("GetProblems: 管理员模式，查看所有题目")
 		case models.RoleTeacher:
 			if userID != nil {
-				// 教师查看自己创建的所有题目（包括草稿和私有）
-				filter["created_by"] = *userID
 				utils.Logger.Debugf("GetProblems: 教师模式，查看自己创建的题目, userID=%s", userID.Hex())
 			} else {
-				// 无用户ID，退回到公开模式
-				filter["is_public"] = true
-				filter["status"] = models.StatusPublished
 				utils.Logger.Debugf("GetProblems: 教师模式但无userID，退回公开模式")
 			}
 		default:
-			// 学生或未认证用户，只能看公开已发布的题目
-			filter["is_public"] = true
-			filter["status"] = models.StatusPublished
 			utils.Logger.Debugf("GetProblems: 学生/游客模式，只看公开已发布题目")
 		}
 	}
 
-	if difficulty != "" {
-		filter["difficulty"] = difficulty
+	// 数据操作：委托给Repository层
+	return s.repo.GetProblemsWithUserStatus(ctx, page, pageSize, difficulty, tags, includePrivate, role, userID)
+}
+
+// getProblemsByCondition 核心查询方法（私有，用于内部复用）
+func (s *ProblemService) getProblemsByCondition(
+	ctx context.Context,
+	condition *models.ProblemQueryCondition,
+) ([]*models.ProblemList, int64, error) {
+	// 统一的核心查询逻辑
+	return s.repo.GetProblemsWithUserStatus(
+		ctx,
+		condition.Page,
+		condition.PageSize,
+		condition.Difficulty,
+		condition.Tags,
+		condition.IncludePrivate,
+		condition.Role,
+		condition.UserID,
+	)
+}
+
+// GetProblemsForUser 获取用户端题目列表
+func (s *ProblemService) GetProblemsForUser(
+	ctx context.Context,
+	page, pageSize int,
+	difficulty models.ProblemDifficulty,
+	tags []string,
+	userID *primitive.ObjectID,
+) ([]*models.ProblemList, int64, error) {
+	// 构建用户端查询条件
+	condition := &models.ProblemQueryCondition{
+		Page:           page,
+		PageSize:       pageSize,
+		Difficulty:     difficulty,
+		Tags:           tags,
+		IncludePrivate: false,                // 用户端固定为false，只看公开题目
+		Role:           models.RoleStudent,   // 固定为学生角色
+		UserID:         userID,               // 用于获取用户提交状态
 	}
-	if len(tags) > 0 {
-		filter["tags"] = bson.M{"$in": tags}
+	
+	// 业务逻辑：记录用户端查询日志
+	if userID != nil {
+		utils.Logger.Debugf("GetProblemsForUser: 用户端查询, userID=%s, difficulty=%s, tags=%v", 
+			userID.Hex(), difficulty, tags)
+	} else {
+		utils.Logger.Debugf("GetProblemsForUser: 未登录用户查询, difficulty=%s, tags=%v", 
+			difficulty, tags)
 	}
+	
+	return s.getProblemsByCondition(ctx, condition)
+}
 
-	// 获取总数
-	total, err := collection.CountDocuments(ctx, filter)
-	if err != nil {
-		return nil, 0, err
+// GetProblemsForAdmin 获取管理员端题目列表
+func (s *ProblemService) GetProblemsForAdmin(
+	ctx context.Context,
+	page, pageSize int,
+	difficulty models.ProblemDifficulty,
+	tags []string,
+) ([]*models.ProblemList, int64, error) {
+	// 构建管理员端查询条件
+	condition := &models.ProblemQueryCondition{
+		Page:           page,
+		PageSize:       pageSize,
+		Difficulty:     difficulty,
+		Tags:           tags,
+		IncludePrivate: true,                // 管理员可以看所有题目，包括私有
+		Role:           models.RoleAdmin,    // 管理员角色
+		UserID:         nil,                 // 管理员不需要获取用户提交状态
+		// 注意：status和createdBy筛选将在后续版本中支持
 	}
-
-	// 分页查询
-	opts := options.Find().
-		SetSkip(int64((page - 1) * pageSize)).
-		SetLimit(int64(pageSize)).
-		SetSort(bson.M{"created_at": -1})
-
-	cursor, err := collection.Find(ctx, filter, opts)
-	if err != nil {
-		return nil, 0, err
-	}
-	defer cursor.Close(ctx)
-
-	var problems []*models.ProblemList
-	for cursor.Next(ctx) {
-		var problem models.Problem
-		if err := cursor.Decode(&problem); err != nil {
-			return nil, 0, err
-		}
-
-		problems = append(problems, &models.ProblemList{
-			ID:          problem.ID,
-			Title:       problem.Title,
-			Difficulty:  problem.Difficulty,
-			Tags:        problem.Tags,
-			ACCount:     problem.ACCount,
-			SubmitCount: problem.SubmitCount,
-			Status:      problem.Status,
-			IsPublic:    problem.IsPublic,
-			CreatedAt:   problem.CreatedAt,
-		})
-	}
-
-	return problems, total, nil
+	
+	// 业务逻辑：记录管理员查询日志
+	utils.Logger.Debugf("GetProblemsForAdmin: 管理员查询, difficulty=%s, tags=%v", 
+		difficulty, tags)
+	utils.Logger.Infof("GetProblemsForAdmin: 管理员可查看所有题目（包括私有和草稿状态）")
+	
+	return s.getProblemsByCondition(ctx, condition)
 }
 
 
+
+
 func (s *ProblemService) UpdateProblem(ctx context.Context, problemID primitive.ObjectID, req *models.UpdateProblemRequest) error {
-	// 1. 构建更新字段 map
-	updateFields := bson.M{}
+	// 业务逻辑：记录更新操作日志和处理特殊业务规则
+	if req.Status != nil && *req.Status == models.StatusDraft {
+		utils.Logger.Warnf("UpdateProblem: 草稿状态不能公开，强制设为私有, problemID=%s", problemID.Hex())
+	}
+	
+	utils.Logger.Infof("UpdateProblem: 开始更新题目, problemID=%s", problemID.Hex())
 
-	// 2. 添加请求中传入的字段
-	if req.Title != nil {
-		updateFields["title"] = *req.Title
-	}
-	if req.Description != nil {
-		updateFields["description"] = *req.Description
-	}
-	if req.Input != nil {
-		updateFields["input"] = *req.Input
-	}
-	if req.Output != nil {
-		updateFields["output"] = *req.Output
-	}
-	if req.SampleInput != nil {
-		updateFields["sampleInput"] = *req.SampleInput
-	}
-	if req.SampleOutput != nil {
-		updateFields["sampleOutput"] = *req.SampleOutput
-	}
-	if req.Hint != nil {
-		updateFields["hint"] = *req.Hint
-	}
-	if req.Source != nil {
-		updateFields["source"] = *req.Source
-	}
-	if req.Author != nil {
-		updateFields["author"] = *req.Author
-	}
-	if req.Difficulty != nil {
-		updateFields["difficulty"] = *req.Difficulty
-	}
-	if req.TimeLimit != nil {
-		updateFields["timeLimit"] = *req.TimeLimit
-	}
-	if req.MemoryLimit != nil {
-		updateFields["memoryLimit"] = *req.MemoryLimit
-	}
-	if req.Tags != nil {
-		tags := *req.Tags
-		if tags == nil {
-			tags = []string{}
-		}
-		updateFields["tags"] = tags
-	}
-	if req.Status != nil {
-		updateFields["status"] = *req.Status
-		
-		// 业务规则：草稿状态强制私有
-		if *req.Status == models.StatusDraft {
-			updateFields["isPublic"] = false
-			utils.Logger.Warnf("UpdateProblem: 草稿状态不能公开，强制设为私有, problemID=%s", problemID.Hex())
-		}
-	}
-	if req.IsPublic != nil {
-		// 如果同时设置了 status 为 draft，则 isPublic 已经在上面被设置为 false
-		if req.Status == nil || *req.Status != models.StatusDraft {
-			updateFields["isPublic"] = *req.IsPublic
-		}
-	}
-
-	// 3. 必须更新的字段：更新时间
-	updateFields["updatedAt"] = time.Now()
-
-	// 4. 记录更新操作日志
-	utils.Logger.Infof("UpdateProblem: 更新字段 %v, problemID=%s", getUpdateFieldNames(updateFields), problemID.Hex())
-
-	// 5. 执行更新操作
-	collection := utils.GetCollection("problems")
-	result, err := collection.UpdateOne(
-		ctx,
-		bson.M{"_id": problemID},
-		bson.M{"$set": updateFields},
-	)
-
+	// 数据操作：委托给Repository层处理字段映射和更新
+	err := s.repo.UpdateProblemFromRequest(ctx, problemID, req)
 	if err != nil {
 		utils.Logger.Errorf("UpdateProblem: 数据库更新失败, problemID=%s, error=%v", problemID.Hex(), err)
 		return fmt.Errorf("数据库操作失败: %w", err)
 	}
 
-	// 6. 检查是否找到文档
-	if result.MatchedCount == 0 {
-		utils.Logger.Warnf("UpdateProblem: 题目不存在, problemID=%s", problemID.Hex())
-		return fmt.Errorf("题目不存在")
-	}
-
-	utils.Logger.Infof("UpdateProblem: 题目更新成功, 修改了 %d 个文档, problemID=%s", result.ModifiedCount, problemID.Hex())
+	utils.Logger.Infof("UpdateProblem: 题目更新成功, problemID=%s", problemID.Hex())
 	return nil
 }
 
-// getUpdateFieldNames 获取更新字段的名称列表（用于日志）
-func getUpdateFieldNames(fields bson.M) []string {
-	names := make([]string, 0, len(fields))
-	for key := range fields {
-		names = append(names, key)
-	}
-	return names
-}
 
 // DeleteProblem 删除题目
 func (s *ProblemService) DeleteProblem(ctx context.Context, id primitive.ObjectID) error {
-	collection := utils.GetCollection("problems")
-	_, err := collection.DeleteOne(ctx, bson.M{"_id": id})
-	return err
+	// 数据操作：直接委托给Repository层
+	return s.repo.DeleteProblem(ctx, id)
 }
 
 // UpdateProblemStats 更新题目统计信息
 func (s *ProblemService) UpdateProblemStats(ctx context.Context, problemID primitive.ObjectID, isAC bool) error {
-	collection := utils.GetCollection("problems")
-
-	update := bson.M{
-		"$inc": bson.M{
-			"submit_count": 1,
-		},
-	}
-
-	if isAC {
-		update["$inc"].(bson.M)["ac_count"] = 1
-	}
-
-	_, err := collection.UpdateOne(ctx, bson.M{"_id": problemID}, update)
-	return err
+	// 数据操作：直接委托给Repository层
+	return s.repo.UpdateProblemStats(ctx, problemID, isAC)
 }
 
 // RunCodeRequest 代码运行请求
@@ -564,71 +481,92 @@ func (s *ProblemService) SearchProblems(
 	difficulty models.ProblemDifficulty,
 	tags []string,
 	page, pageSize int,
+	userID *primitive.ObjectID,
 ) ([]*models.ProblemList, int64, error) {
-	collection := utils.GetCollection("problems")
-
-	// 构建查询条件
-	filter := bson.M{
-		"is_public": true,
-		"status":    models.StatusPublished,
+	// 业务逻辑：记录搜索相关日志
+	if userID != nil {
+		utils.Logger.Debugf("SearchProblems: 开始搜索, keyword=%s, userID=%s", keyword, userID.Hex())
+	} else {
+		utils.Logger.Debugf("SearchProblems: 未登录用户搜索, keyword=%s", keyword)
 	}
 
-	// 关键词搜索（标题和描述）
-	if keyword != "" {
-		filter["$or"] = []bson.M{
-			{"title": bson.M{"$regex": keyword, "$options": "i"}},       // 标题模糊匹配，不区分大小写
-			{"description": bson.M{"$regex": keyword, "$options": "i"}}, // 描述模糊匹配
-		}
-	}
+	// 数据操作：委托给Repository层
+	// 业务逻辑：根据用户登录状态设置默认参数
+	includePrivate := userID != nil // 登录用户可以看到私有题目
+	role := models.RoleStudent      // 默认为学生角色
+	
+	return s.repo.SearchProblems(ctx, keyword, page, pageSize, difficulty, tags, includePrivate, role, userID)
+}
 
-	// 难度筛选
-	if difficulty != "" {
-		filter["difficulty"] = difficulty
-	}
-
-	// 标签筛选
-	if len(tags) > 0 {
-		filter["tags"] = bson.M{"$in": tags}
-	}
-
-	// 获取总数
-	total, err := collection.CountDocuments(ctx, filter)
+// GetUserProblemStatuses 批量查询用户对多个题目的状态
+// 参数:
+//   - ctx: 上下文
+//   - userID: 用户ID
+//   - problemIDs: 题目ID列表
+// 返回:
+//   - map[string]models.UserProblemStatus: key为题目ID字符串，value为用户状态
+//   - error: 错误信息
+func (s *ProblemService) GetUserProblemStatuses(
+	ctx context.Context,
+	userID primitive.ObjectID,
+	problemIDs []primitive.ObjectID,
+) (map[string]models.UserProblemStatus, error) {
+	// 业务逻辑：记录查询日志
+	utils.Logger.Debugf("GetUserProblemStatuses: 查询用户状态, userID=%s, problemCount=%d", 
+		userID.Hex(), len(problemIDs))
+	
+	// 数据操作：委托给Repository层
+	statusMap, err := s.repo.GetUserProblemStatuses(ctx, userID, problemIDs)
 	if err != nil {
-		return nil, 0, err
+		utils.Logger.Errorf("GetUserProblemStatuses: Repository查询失败, userID=%s, error=%v", 
+			userID.Hex(), err)
+		return nil, err
 	}
+	
+	// 业务逻辑：转换map键类型从ObjectID到string
+	result := make(map[string]models.UserProblemStatus, len(statusMap))
+	for problemID, status := range statusMap {
+		result[problemID.Hex()] = status
+	}
+	
+	utils.Logger.Infof("GetUserProblemStatuses: 查询完成, userID=%s, 返回%d个题目状态", 
+		userID.Hex(), len(result))
+	
+	return result, nil
+}
 
-	// 分页查询
-	opts := options.Find().
-		SetSkip(int64((page - 1) * pageSize)).
-		SetLimit(int64(pageSize)).
-		SetSort(bson.M{"created_at": -1}) // 按创建时间倒序
+// GetProblemDetail 获取题目详情聚合信息
+func (s *ProblemService) GetProblemDetail(ctx context.Context, problemID primitive.ObjectID) (*models.ProblemDetailResponse, error) {
+	// 业务逻辑：记录查询日志
+	utils.Logger.Infof("GetProblemDetail: 开始获取题目详情聚合信息, problemID=%s", problemID.Hex())
 
-	cursor, err := collection.Find(ctx, filter, opts)
+	// 数据操作1：获取题目基本信息
+	problem, err := s.repo.GetByID(ctx, problemID)
 	if err != nil {
-		return nil, 0, err
-	}
-	defer cursor.Close(ctx)
-
-	// 解析结果
-	var problems []*models.ProblemList
-	for cursor.Next(ctx) {
-		var problem models.Problem
-		if err := cursor.Decode(&problem); err != nil {
-			return nil, 0, err
-		}
-
-		problems = append(problems, &models.ProblemList{
-			ID:          problem.ID,
-			Title:       problem.Title,
-			Difficulty:  problem.Difficulty,
-			Tags:        problem.Tags,
-			ACCount:     problem.ACCount,
-			SubmitCount: problem.SubmitCount,
-			Status:      problem.Status,
-			IsPublic:    problem.IsPublic,
-			CreatedAt:   problem.CreatedAt,
-		})
+		utils.Logger.Errorf("GetProblemDetail: 获取题目信息失败, problemID=%s, error=%v", problemID.Hex(), err)
+		return nil, fmt.Errorf("获取题目信息失败: %w", err)
 	}
 
-	return problems, total, nil
+	// 数据操作2：获取示例测试用例
+	sampleCases, err := s.testCaseService.GetSampleTestCases(ctx, problemID)
+	if err != nil {
+		utils.Logger.Errorf("GetProblemDetail: 获取示例测试用例失败, problemID=%s, error=%v", problemID.Hex(), err)
+		return nil, fmt.Errorf("获取示例测试用例失败: %w", err)
+	}
+
+	// 业务逻辑：数据聚合和组装
+	response := &models.ProblemDetailResponse{
+		Problem:     problem,
+		SampleCases: make([]models.TestCase, len(sampleCases)),
+	}
+
+	// 转换指针切片为值切片
+	for i, testCase := range sampleCases {
+		response.SampleCases[i] = *testCase
+	}
+
+	utils.Logger.Infof("GetProblemDetail: 题目详情聚合完成, problemID=%s, sampleCasesCount=%d", 
+		problemID.Hex(), len(sampleCases))
+
+	return response, nil
 }
