@@ -3240,7 +3240,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "101": {
-                        "description": "Switching Protocols",
+                        "description": "Switching Protocols\" example:\"WebSocket connection established",
                         "schema": {
                             "type": "string"
                         }
