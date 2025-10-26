@@ -46,7 +46,7 @@ func (s *Server) RegisterWebSocket(g *gin.RouterGroup) {
 // @Param        id path string true "提交ID"
 // @Param        token query string false "访问令牌（可选，也可通过Authorization header传递）"
 // @Param        Authorization header string false "Bearer token"
-// @Success      101 {string} string "Switching Protocols" example:"WebSocket connection established"
+// @Success      101 {object} models.WSMessage "WebSocket连接建立，后续通过WebSocket发送实时状态更新"
 // @Failure      400 {object} models.ErrorResponse "无效的提交ID或请求"
 // @Failure      401 {object} models.ErrorResponse "需要登录"
 // @Failure      403 {object} models.ErrorResponse "权限不足"

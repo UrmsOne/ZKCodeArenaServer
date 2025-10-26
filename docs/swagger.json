@@ -3234,9 +3234,9 @@
                 ],
                 "responses": {
                     "101": {
-                        "description": "Switching Protocols\" example:\"WebSocket connection established",
+                        "description": "WebSocket连接建立，后续通过WebSocket发送实时状态更新",
                         "schema": {
-                            "type": "string"
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.WSMessage"
                         }
                     },
                     "400": {
@@ -5340,6 +5340,26 @@
                 "username": {
                     "type": "string",
                     "example": "student1"
+                }
+            }
+        },
+        "zk-code-arena-server_pkg_models.WSMessage": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "description": "消息数据"
+                },
+                "submit_id": {
+                    "description": "提交ID",
+                    "type": "string"
+                },
+                "timestamp": {
+                    "description": "消息时间戳",
+                    "type": "string"
+                },
+                "type": {
+                    "description": "消息类型",
+                    "type": "string"
                 }
             }
         },
