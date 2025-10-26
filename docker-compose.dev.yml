@@ -11,7 +11,6 @@ services:
       - "8080:8080"
     volumes:
       - app_logs:/app/logs
-      - docs/swagger.json
     environment:
       - MONGO_URI=mongodb://mongo:27017
       - REDIS_HOST=redis
@@ -26,12 +25,13 @@ services:
 
   # MongoDB 数据库
   mongo:
-    image: mongo:latest
+    image: mongo:7.0
     container_name: zk-arena-mongo-dev
     ports:
       - "27017:27017"
     volumes:
-      - ./mongo_dev_data:/data/db
+      - ./data/mongo:/data/db
+      - ./deploy/mongo/init:/docker-entrypoint-initdb.d
     environment:
       - MONGO_INITDB_DATABASE=zk_code_arena
     restart: unless-stopped
@@ -40,12 +40,12 @@ services:
 
   # Redis 缓存
   redis:
-    image: redis:latest
+    image: redis:7.2-alpine
     container_name: zk-arena-redis-dev
     ports:
       - "6379:6379"
     volumes:
-      - ./redis_dev_data:/data
+      - ./data/redis:/data
     command: redis-server --appendonly yes
     restart: unless-stopped
     networks:
@@ -57,7 +57,7 @@ services:
     ports:
       - "5050:5050"
     volumes:
-      - ./judge_dev_data:/judge
+      - ./data/judge:/judge
     environment:
       - JUDGE_DEBUG=1
     restart: unless-stopped
@@ -66,12 +66,6 @@ services:
     privileged: true
 
 volumes:
-  mongo_dev_data:
-    driver: local
-  redis_dev_data:
-    driver: local
-  judge_dev_data:
-    driver: local
   app_logs:
     driver: local
 
