@@ -27,6 +27,7 @@ func (s *Server) RegisterCourse(g *gin.RouterGroup) {
 			jwtGroup.PUT("/:courseId/avatar", s.UpdateCourseAvatar)
 			jwtGroup.GET("/:courseId/clazzes", s.GetClazzesByCourseId)
 			jwtGroup.POST("/teacher/query", s.PageQueryTeacherCourses)
+			jwtGroup.POST("/query", s.PageQueryCourse)
 			jwtGroup.POST("/teachers", s.addCourseTeacher)
 			jwtGroup.DELETE("/teachers", s.removeCourseTeacher)
 			// 需要老师权限的路由
@@ -36,6 +37,32 @@ func (s *Server) RegisterCourse(g *gin.RouterGroup) {
 			}
 		}
 	}
+}
+
+// PageQueryCourse godoc
+// @Summary      分页查询课程
+// @Description  分页查询用户相关的课程列表
+// @Tags         课程
+// @Accept       json
+// @Produce      json
+// @Param        request body models.PageQueryCourseRequest true "分页查询参数"
+// @Success      200 {object} models.CourseListResponse "课程列表"
+// @Failure      400 {object} models.ErrorResponse "请求参数错误"
+// @Security     BearerAuth
+// @Router       /courses/query [post]
+func (s *Server) PageQueryCourse(c *gin.Context) {
+	var PageQueryCourseRequest models.PageQueryCourseRequest
+	if err := c.ShouldBindJSON(&PageQueryCourseRequest); err != nil {
+		utils.BadRequestResponse(c, err.Error())
+		return
+	}
+	userID, _ := c.Get("user_id")
+	res, err := s.svc.CourseService.PageQueryCourse(c.Request.Context(), &PageQueryCourseRequest, userID.(string))
+	if err != nil {
+		utils.BadRequestResponse(c, err.Error())
+		return
+	}
+	utils.SuccessResponse(c, res)
 }
 
 // @Description  课程创建者添加老师（支持批量添加，只有课程创建者可以操作）
