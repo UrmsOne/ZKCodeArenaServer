@@ -40,7 +40,6 @@ func (s *Server) RegisterClazz(g *gin.RouterGroup) {
 			jwtGroup.DELETE("/task/:taskId", s.DeleteTask)
 			jwtGroup.GET("/tasks/:clazzId", s.GetTasksByClazzId)
 			jwtGroup.GET("/task/:taskId", s.GetTaskById)
-			jwtGroup.POST("/query", s.PageQueryCourse)
 
 			// 学生班级相关接口
 			jwtGroup.POST("/student_classes", s.AddStudentToClass)
@@ -49,32 +48,6 @@ func (s *Server) RegisterClazz(g *gin.RouterGroup) {
 			jwtGroup.GET("/class_students/:classId", s.GetClassStudents)
 		}
 	}
-}
-
-// PageQueryCourse godoc
-// @Summary      分页查询课程
-// @Description  分页查询用户相关的课程列表
-// @Tags         课程
-// @Accept       json
-// @Produce      json
-// @Param        request body models.PageQueryCourseRequest true "分页查询参数"
-// @Success      200 {object} models.CourseListResponse "课程列表"
-// @Failure      400 {object} models.ErrorResponse "请求参数错误"
-// @Security     BearerAuth
-// @Router       /clazzes/query [post]
-func (s *Server) PageQueryCourse(c *gin.Context) {
-	var PageQueryCourseRequest models.PageQueryCourseRequest
-	if err := c.ShouldBindJSON(&PageQueryCourseRequest); err != nil {
-		utils.BadRequestResponse(c, err.Error())
-		return
-	}
-	userID, _ := c.Get("user_id")
-	res, err := s.svc.CourseService.PageQueryCourse(c.Request.Context(), &PageQueryCourseRequest, userID.(string))
-	if err != nil {
-		utils.BadRequestResponse(c, err.Error())
-		return
-	}
-	utils.SuccessResponse(c, res)
 }
 
 // DeleteTask godoc
