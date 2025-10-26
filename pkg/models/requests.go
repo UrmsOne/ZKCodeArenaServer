@@ -313,12 +313,12 @@ type ProblemDetailResponse struct {
 
 // ProblemQueryCondition 题目查询条件 (内部使用)
 type ProblemQueryCondition struct {
-	Page           int                `json:"page"`
-	PageSize       int                `json:"page_size"`
-	Difficulty     ProblemDifficulty  `json:"difficulty"`
-	Tags           []string           `json:"tags"`
-	IncludePrivate bool               `json:"include_private"`
-	Role           UserRole           `json:"role"`
+	Page           int                 `json:"page"`
+	PageSize       int                 `json:"page_size"`
+	Difficulty     ProblemDifficulty   `json:"difficulty"`
+	Tags           []string            `json:"tags"`
+	IncludePrivate bool                `json:"include_private"`
+	Role           UserRole            `json:"role"`
 	UserID         *primitive.ObjectID `json:"user_id"`
 	// 注意：Status和CreatedBy筛选将在后续版本中支持
 	// Status         ProblemStatus      `json:"status"`      // 管理员端专用（待实现）
@@ -330,11 +330,11 @@ type ProblemQueryCondition struct {
 // SubmitStatusResponse 轻量级提交状态响应
 type SubmitStatusResponse struct {
 	ID        primitive.ObjectID `json:"id"`         // 提交ID
-	Status    SubmitStatus      `json:"status"`     // 当前状态
-	Progress  *JudgeProgress    `json:"progress"`   // 判题进度（可选）
-	Message   string            `json:"message"`    // 状态描述信息
-	UpdatedAt time.Time         `json:"updated_at"` // 最后更新时间
-	
+	Status    SubmitStatus       `json:"status"`     // 当前状态
+	Progress  *JudgeProgress     `json:"progress"`   // 判题进度（可选）
+	Message   string             `json:"message"`    // 状态描述信息
+	UpdatedAt time.Time          `json:"updated_at"` // 最后更新时间
+
 	// 完成后的基本结果信息（避免返回完整详细结果）
 	TimeUsed   *int `json:"time_used,omitempty"`   // 时间使用(ms)
 	MemoryUsed *int `json:"memory_used,omitempty"` // 内存使用(KB)
@@ -351,10 +351,10 @@ type JudgeProgress struct {
 
 // WSMessage WebSocket消息基础结构
 type WSMessage struct {
-	Type    string      `json:"type"`              // 消息类型
-	SubmitID string     `json:"submit_id"`         // 提交ID
-	Data    interface{} `json:"data"`              // 消息数据
-	Timestamp time.Time `json:"timestamp"`         // 消息时间戳
+	Type      string      `json:"type"`      // 消息类型
+	SubmitID  string      `json:"submit_id"` // 提交ID
+	Data      interface{} `json:"data"`      // 消息数据
+	Timestamp time.Time   `json:"timestamp"` // 消息时间戳
 }
 
 // WSStatusUpdate WebSocket状态更新消息
@@ -368,9 +368,35 @@ type WSStatusUpdate struct {
 // WSJudgeResult WebSocket判题结果摘要（不包含详细测试用例）
 type WSJudgeResult struct {
 	Status       SubmitStatus `json:"status"`
-	TimeUsed     int          `json:"time_used"`     // 时间使用(ms)
-	MemoryUsed   int          `json:"memory_used"`   // 内存使用(KB)
-	PassedCases  int          `json:"passed_cases"`  // 通过的测试用例数
-	TotalCases   int          `json:"total_cases"`   // 总测试用例数
+	TimeUsed     int          `json:"time_used"`               // 时间使用(ms)
+	MemoryUsed   int          `json:"memory_used"`             // 内存使用(KB)
+	PassedCases  int          `json:"passed_cases"`            // 通过的测试用例数
+	TotalCases   int          `json:"total_cases"`             // 总测试用例数
 	CompileError string       `json:"compile_error,omitempty"` // 编译错误（如果有）
+}
+
+// ==================== 学生班级模块请求 ====================
+
+// AddStudentToClassRequest 添加学生到班级请求
+type AddStudentToClassRequest struct {
+	StudentID string `json:"student_id" binding:"required"`
+	ClassID   string `json:"class_id" binding:"required"`
+	CourseID  string `json:"course_id" binding:"required"`
+}
+
+// RemoveStudentFromClassRequest 从班级移除学生请求
+type RemoveStudentFromClassRequest struct {
+	StudentID string `json:"student_id" binding:"required"`
+	ClassID   string `json:"class_id" binding:"required"`
+	CourseID  string `json:"course_id" binding:"required"`
+}
+
+// GetStudentClassesRequest 获取学生班级请求
+type GetStudentClassesRequest struct {
+	StudentID string `json:"student_id" binding:"required"`
+}
+
+// GetClassStudentsRequest 获取班级学生请求
+type GetClassStudentsRequest struct {
+	ClassID string `json:"class_id" binding:"required"`
 }

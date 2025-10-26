@@ -70,81 +70,8 @@ func (s *CourseService) CreateCourse(ctx context.Context, req *models.CreateCour
 
 // CreateClass 为课程创建班级
 func (s *CourseService) CreateClass(ctx context.Context, req *models.CreateClazzRequest, userId string) (*models.ClazzResponse, error) {
-	coll := utils.GetCollection("courses")
-	courseID, err := primitive.ObjectIDFromHex(req.CourseId)
-	if err != nil {
-		return nil, err
-	}
-	filter := bson.M{"_id": courseID}
-	// 使用 projection 查询 created_by 和 teacher_ids 字段
-	projection := bson.M{"created_by": 1, "teacher_ids": 1}
-
-	var result struct {
-		CreatorID  primitive.ObjectID   `bson:"created_by"`
-		TeacherIds []primitive.ObjectID `bson:"teacher_ids,omitempty"`
-	}
-	// 执行查询
-	err = coll.FindOne(ctx, filter, options.FindOne().SetProjection(projection)).Decode(&result)
-	if err != nil {
-		if err == mongo.ErrNoDocuments {
-			return nil, errors.New("课程不存在")
-		}
-		log.Printf("查询失败: %v", err)
-		return nil, err
-	}
-
-	//TODO 这里业务到底是只有课程创建者才能创建班级还是老师也可以
-	if result.CreatorID.Hex() != userId {
-		return nil, errors.New("权限不足")
-	}
-
-	var maxMembers int
-	if req.MaxMembers == nil {
-		maxMembers = 60
-	} else if *req.MaxMembers > 100 {
-		maxMembers = 100
-	} else {
-		maxMembers = *req.MaxMembers
-	}
-
-	// 创建班级对象，包含从课程中获取的教师信息
-	now := time.Now()
-	clazz := &models.Clazz{
-		ID:            primitive.NewObjectID(),
-		Name:          req.Name,
-		CourseId:      courseID,
-		Description:   req.Description,
-		Schedule:      req.Schedule,
-		MemberIDs:     []primitive.ObjectID{},
-		TeacherIds:    result.TeacherIds,
-		RequireInvite: req.RequireInvite,
-		MaxMembers:    maxMembers,
-		AddNums:       0,
-		Status:        models.ClassStatusActive, // 默认为活跃状态，支持加入
-		CTime:         now,
-		MTime:         now,
-	}
-
-	insertResult, err := utils.GetCollection("clazzes").InsertOne(ctx, clazz)
-	if err != nil {
-		log.Printf("插入班级失败: %v", err)
-		return nil, errors.New("创建班级失败")
-	}
-
-	// 生成邀请码和二维码
-	inviteCode := s.generateInviteCode()
-
-	qrCode, err := s.generateQRCode(insertResult.InsertedID.(primitive.ObjectID).Hex(), inviteCode)
-	p := ""
-	if err == nil {
-		p = base64.StdEncoding.EncodeToString(qrCode)
-		// 缓存邀请码
-		s.cacheInviteCode(ctx, clazz.ID.Hex(), inviteCode, p)
-	}
-	return &models.ClazzResponse{
-		ClazzId: clazz.ID.Hex(),
-		QRCode:  p,
-	}, nil
+	// 此方法已迁移到 clazz 服务中
+	return nil, errors.New("此方法已迁移到 clazz 服务中")
 }
 
 // JoinClazz 加入班级
@@ -424,217 +351,14 @@ func (s *CourseService) PageQueryTeacherCourses(ctx context.Context, request *mo
 
 // GetClazzesByCourseId 通过课程ID查询所有班级
 func (s *CourseService) GetClazzesByCourseId(ctx context.Context, courseId string, userId string) ([]models.Clazz, error) {
-	courseObjId, err := primitive.ObjectIDFromHex(courseId)
-	if err != nil {
-		return nil, errors.New("无效的课程ID")
-	}
-
-	userObjId, err := primitive.ObjectIDFromHex(userId)
-	if err != nil {
-		return nil, errors.New("无效的用户ID")
-	}
-
-	// 验证用户是否有权限查看该课程的班级
-	// 用户必须是课程创建者或课程教师
-	coll := utils.GetCollection("courses")
-	isAuthorized, err := authorized(ctx, coll, courseObjId, userObjId)
-	if err != nil {
-		return nil, err
-	}
-
-	if !isAuthorized {
-		return nil, errors.New("权限不足")
-	}
-
-	// 查询该课程的所有班级
-	clazzColl := utils.GetCollection("clazzes")
-	filter := bson.M{"course_id": courseObjId}
-	cursor, err := clazzColl.Find(ctx, filter)
-	if err != nil {
-		return nil, err
-	}
-	defer cursor.Close(ctx)
-
-	var results []models.Clazz
-	if err = cursor.All(ctx, &results); err != nil {
-		return nil, err
-	}
-
-	return results, nil
+	// 此方法已迁移到 clazz 服务中
+	return nil, errors.New("此方法已迁移到 clazz 服务中")
 }
 
 // UpdateClazzInfo 更新班级信息（不包括教师和成员）
 func (s *CourseService) UpdateClazzInfo(ctx context.Context, clazzID string, userId string, req *models.UpdateClazzRequest) error {
-	clazzObjID, err := primitive.ObjectIDFromHex(clazzID)
-	if err != nil {
-		return errors.New("无效的班级ID")
-	}
-
-	userObjID, err := primitive.ObjectIDFromHex(userId)
-	if err != nil {
-		return errors.New("无效的用户ID")
-	}
-
-	coll := utils.GetCollection("clazzes")
-
-	// 先查询班级信息以验证权限
-	var clazz models.Clazz
-	if err = coll.FindOne(ctx, bson.M{"_id": clazzObjID}).Decode(&clazz); err != nil {
-		if errors.Is(err, mongo.ErrNoDocuments) {
-			return errors.New("班级不存在")
-		}
-		return err
-	}
-
-	// 验证操作者是否有权限修改班级
-	// 只有课程创建者或课程教师可以修改班级
-	courseObjID := clazz.CourseId
-	courseColl := utils.GetCollection("courses")
-
-	isAuthorized, err := authorized(ctx, courseColl, courseObjID, userObjID)
-	if err != nil {
-		return err
-	}
-
-	if !isAuthorized {
-		return errors.New("权限不足，只有课程创建者或教师可以修改班级")
-	}
-
-	// 构建更新字段
-	updateFields := bson.M{}
-	// 检查每个字段，如果字段非空，则加入更新内容
-	if req.Name != "" {
-		updateFields["name"] = req.Name
-	}
-	if req.Description != "" {
-		updateFields["description"] = req.Description
-	}
-	if req.Schedule != "" {
-		updateFields["schedule"] = req.Schedule
-	}
-	if req.RequireInvite != nil {
-		updateFields["require_invite"] = *req.RequireInvite
-	}
-	if req.MaxMembers != nil {
-		// 确保最大成员数不超过100
-		maxMembers := *req.MaxMembers
-		if maxMembers > 100 {
-			maxMembers = 100
-		}
-		updateFields["max_members"] = maxMembers
-	}
-
-	// 如果没有任何字段需要更新，返回早期退出
-	if len(updateFields) == 0 {
-		return errors.New("无更改内容")
-	}
-
-	updateFields["mtime"] = time.Now()
-
-	filter := bson.M{"_id": clazzObjID}
-	update := bson.M{"$set": updateFields}
-	result, err := coll.UpdateOne(ctx, filter, update)
-	if err != nil {
-		return err
-	}
-	if result.MatchedCount == 0 {
-		return errors.New("找不到该班级")
-	}
-
-	return nil
-}
-
-func (s *CourseService) DeleteTask(ctx context.Context, userId string, taskId string) error {
-	userObjId, err := primitive.ObjectIDFromHex(userId)
-	if err != nil {
-		return nil, err
-	}
-
-	// 设置默认值
-	pageNum := int64(1)
-	pageSize := int64(10)
-	if request.PageNum != nil {
-		pageNum = *request.PageNum
-	}
-	if request.PageSize != nil {
-		pageSize = *request.PageSize
-	}
-	// 设置合理的限制
-	if pageSize > 100 {
-		pageSize = 100
-	}
-
-	// 查询条件：老师ID在teacher_ids数组中
-	filter := bson.M{"teacher_ids": bson.M{"$in": []primitive.ObjectID{userObjId}}}
-
-	// 只有当 name 不为 nil 且不为空时才添加 name 查询条件
-	if request.Name != nil && *request.Name != "" {
-		filter["name"] = bson.M{"$regex": *request.Name, "$options": "i"}
-	}
-
-	// 只有当 status 不为 nil 时才添加 status 查询条件
-	if request.Status != nil {
-		filter["status"] = *request.Status
-	}
-
-	coll := utils.GetCollection("courses")
-
-	// 不再使用事务，直接进行操作
-	var course models.Course
-	if err = coll.FindOne(ctx, courseFilter).Decode(&course); err != nil {
-		if errors.Is(err, mongo.ErrNoDocuments) {
-			return errors.New("找不到该课程")
-		}
-		return err
-	}
-	res := &models.PageQueryCourseResponse{
-		Total:    total,
-		PageNum:  pageNum,
-		PageSize: pageSize,
-		Courses:  results,
-	}
-	return res, nil
-}
-
-	//检查是否课程还有学生
-	collClazz := utils.GetCollection("clazzes")
-	projection := bson.D{
-		{"add_nums", 1},
-	}
-	clazzFilter := bson.M{"course_id": courseObjId}
-
-	cursor, err := collClazz.Find(ctx, clazzFilter, options.Find().SetProjection(projection))
-	if err != nil {
-		return err
-	}
-	defer cursor.Close(ctx)
-
-	//遍历结果集
-	for cursor.Next(ctx) {
-		var result struct {
-			AddNums int32 `bson:"add_nums"`
-		}
-		if err := cursor.Decode(&result); err != nil {
-			return err
-		}
-		if result.AddNums != 0 {
-			return errors.New("课程学生未清空，不允许删除课程")
-		}
-	}
-	if err := cursor.Err(); err != nil {
-		return err
-	}
-
-	// 删除课程和相关班级，使用独立的操作而不是事务
-	if _, err := coll.DeleteOne(ctx, bson.M{"_id": courseObjId}); err != nil {
-		return err
-	}
-
-	if _, err := collClazz.DeleteMany(ctx, bson.M{"course_id": courseObjId}); err != nil {
-		return err
-	}
-
-	return nil
+	// 此方法已迁移到 clazz 服务中
+	return errors.New("此方法已迁移到 clazz 服务中")
 }
 
 // UpdateCourseInfo 更新课程信息
@@ -826,168 +550,7 @@ func (s *CourseService) FinishTask(ctx context.Context, req models.FinishTaskReq
 		return errors.New("检查班级成员失败: " + err.Error())
 	}
 
-	// 检查班级是否已满
-	if clazz.AddNums >= clazz.MaxMembers {
-		return errors.New("班级已满，无法添加更多成员")
-	}
-
-	// 添加成员
-	filter := bson.M{
-		"_id":   clazzObjID,
-		"$expr": bson.M{"$lt": []interface{}{"$add_nums", "$max_members"}}, //乐观锁
-	}
-
-	update := bson.M{
-		"$addToSet": bson.M{
-			"member_ids": memberObjID,
-		},
-		"$inc": bson.M{
-			"add_nums": 1,
-		},
-		"$set": bson.M{
-			"mtime": time.Now(),
-		},
-	}
-
-	result, err := coll.UpdateOne(ctx, filter, update)
-	if err != nil {
-		return errors.New("添加成员失败: " + err.Error())
-	}
-
-	if result.MatchedCount == 0 {
-		return errors.New("班级已满，无法添加更多成员")
-	}
-
-	return nil
-}
-
-// RemoveClazzMembers 批量移除班级成员
-func (s *CourseService) RemoveClazzMembers(ctx context.Context, req models.RemoveClazzMembersRequest, operatorID string) error {
-	clazzObjID, err := primitive.ObjectIDFromHex(req.ClazzID)
-	if err != nil {
-		return errors.New("无效的班级ID")
-	}
-
-	operatorObjID, err := primitive.ObjectIDFromHex(operatorID)
-	if err != nil {
-		return errors.New("无效的操作者ID")
-	}
-
-	var null *bool
-	// 去重成员ID
-	uniqueMemberIDs := make(map[string]*bool)
-	for _, memberID := range req.MemberIDs {
-		uniqueMemberIDs[memberID] = null
-	}
-
-	// 转换成员ID
-	memberObjIDs := make([]primitive.ObjectID, 0, len(uniqueMemberIDs))
-	for memberID := range uniqueMemberIDs {
-		objID, err := primitive.ObjectIDFromHex(memberID)
-		if err != nil {
-			return errors.New("无效的成员ID: " + memberID)
-		}
-		memberObjIDs = append(memberObjIDs, objID)
-	}
-
-	coll := utils.GetCollection("clazzes")
-
-	// 先查询班级信息以验证权限
-	var clazz models.Clazz
-	if err = coll.FindOne(ctx, bson.M{"_id": clazzObjID}).Decode(&clazz); err != nil {
-		if errors.Is(err, mongo.ErrNoDocuments) {
-			return errors.New("班级不存在")
-		}
-		return err
-	}
-
-	// 验证操作者是否有权限移除成员
-	// 只有课程创建者或课程教师可以移除成员
-	courseObjID := clazz.CourseId
-	courseColl := utils.GetCollection("courses")
-
-	isAuthorized, err := authorized(ctx, courseColl, courseObjID, operatorObjID)
-	if err != nil {
-		return err
-	}
-
-	if !isAuthorized {
-		return errors.New("权限不足，只有课程创建者或教师可以移除成员")
-	}
-
-	// 检查成员是否是班级成员
-	validMembers := make([]primitive.ObjectID, 0)
-	for _, memberObjID := range memberObjIDs {
-		if clazz.IsMember(memberObjID) {
-			validMembers = append(validMembers, memberObjID)
-		}
-	}
-
-	if len(validMembers) == 0 {
-		return errors.New("没有有效的班级成员需要移除")
-	}
-
-	// 移除成员
-	filter := bson.M{
-		"_id": clazzObjID,
-	}
-
-	update := bson.M{
-		"$pullAll": bson.M{
-			"member_ids": validMembers,
-		},
-		"$inc": bson.M{
-			"add_nums": -len(validMembers),
-		},
-		"$set": bson.M{
-			"mtime": time.Now(),
-		},
-	}
-
-	result, err := coll.UpdateOne(ctx, filter, update)
-	if err != nil {
-		return errors.New("移除成员失败: " + err.Error())
-	}
-
-	if result.MatchedCount == 0 {
-		return errors.New("班级不存在")
-	}
-
-	return nil
-}
-
-// FinishTask 完成任务
-func (s *CourseService) FinishTask(ctx context.Context, req models.FinishTaskRequest, userId string) error {
-	clazzObjId, err := primitive.ObjectIDFromHex(req.ClazzID)
-	if err != nil {
-		return errors.New("无效的班级ID")
-	}
-
-	taskObjId, err := primitive.ObjectIDFromHex(req.TaskID)
-	if err != nil {
-		return errors.New("无效的任务ID")
-	}
-
-	userObjId, err := primitive.ObjectIDFromHex(userId)
-	if err != nil {
-		return errors.New("无效的用户ID")
-	}
-	relationObjId, err := primitive.ObjectIDFromHex(req.RelationID)
-	if err != nil {
-		return err
-	}
-	// 验证用户是否有权限完成任务（必须是班级成员）
-	collClazz := utils.GetCollection("clazzes")
-	var clazz models.Clazz
-	if err = collClazz.FindOne(ctx, bson.M{"_id": clazzObjId}).Decode(&clazz); err != nil {
-		if errors.Is(err, mongo.ErrNoDocuments) {
-			return errors.New("班级不存在")
-		}
-		return err
-	}
-
-	// 检查用户是否是班级成员
-	if !clazz.IsMember(userObjId) {
+	if count == 0 {
 		return errors.New("您不是该班级成员，无法完成任务")
 	}
 
@@ -1635,6 +1198,338 @@ func (s *CourseService) RemoveClazzTeachers(ctx context.Context, clazzId string,
 	_, err = clazzColl.UpdateOne(ctx, filter, update)
 	if err != nil {
 		return errors.New("移除班级教师失败: " + err.Error())
+	}
+
+	return nil
+}
+
+// AddStudentToClass 将学生添加到班级
+func (s *CourseService) AddStudentToClass(ctx context.Context, studentID, classID, courseID string) error {
+	studentObjID, err := primitive.ObjectIDFromHex(studentID)
+	if err != nil {
+		return errors.New("无效的学生ID")
+	}
+
+	classObjID, err := primitive.ObjectIDFromHex(classID)
+	if err != nil {
+		return errors.New("无效的班级ID")
+	}
+
+	courseObjID, err := primitive.ObjectIDFromHex(courseID)
+	if err != nil {
+		return errors.New("无效的课程ID")
+	}
+
+	// 检查学生是否已经在这个班级中
+	coll := utils.GetCollection("student_classes")
+	count, err := coll.CountDocuments(ctx, bson.M{
+		"student_id": studentObjID,
+		"class_id":   classObjID,
+		"course_id":  courseObjID,
+	})
+	if err != nil {
+		return errors.New("检查学生班级关系失败: " + err.Error())
+	}
+
+	if count > 0 {
+		return errors.New("学生已经在这个班级中")
+	}
+
+	// 创建学生班级关联记录
+	now := time.Now()
+	studentClass := &models.StudentClass{
+		ID:        primitive.NewObjectID(),
+		StudentID: studentObjID,
+		ClassID:   classObjID,
+		CourseID:  courseObjID,
+		JoinTime:  now,
+		Status:    "active",
+		CTime:     now,
+		MTime:     now,
+	}
+
+	_, err = coll.InsertOne(ctx, studentClass)
+	if err != nil {
+		return errors.New("添加学生到班级失败: " + err.Error())
+	}
+
+	// 同时更新班级的成员列表
+	clazzColl := utils.GetCollection("clazzes")
+	filter := bson.M{
+		"_id":   classObjID,
+		"$expr": bson.M{"$lt": []interface{}{"$add_nums", "$max_members"}}, //乐观锁
+	}
+
+	update := bson.M{
+		"$addToSet": bson.M{
+			"member_ids": studentObjID,
+		},
+		"$inc": bson.M{
+			"add_nums": 1,
+		},
+		"$set": bson.M{
+			"mtime": now,
+		},
+	}
+
+	result, err := clazzColl.UpdateOne(ctx, filter, update)
+	if err != nil {
+		// 如果更新班级失败，需要回滚之前的学生班级关联记录
+		_, _ = coll.DeleteOne(ctx, bson.M{"_id": studentClass.ID})
+		return errors.New("更新班级成员失败: " + err.Error())
+	}
+
+	if result.MatchedCount == 0 {
+		// 如果没有匹配到班级记录，需要回滚之前的学生班级关联记录
+		_, _ = coll.DeleteOne(ctx, bson.M{"_id": studentClass.ID})
+		return errors.New("班级不存在或已满")
+	}
+
+	return nil
+}
+
+// RemoveStudentFromClass 将学生从班级中移除
+func (s *CourseService) RemoveStudentFromClass(ctx context.Context, studentID, classID, courseID string) error {
+	studentObjID, err := primitive.ObjectIDFromHex(studentID)
+	if err != nil {
+		return errors.New("无效的学生ID")
+	}
+
+	classObjID, err := primitive.ObjectIDFromHex(classID)
+	if err != nil {
+		return errors.New("无效的班级ID")
+	}
+
+	courseObjID, err := primitive.ObjectIDFromHex(courseID)
+	if err != nil {
+		return errors.New("无效的课程ID")
+	}
+
+	// 删除学生班级关联记录
+	coll := utils.GetCollection("student_classes")
+	filter := bson.M{
+		"student_id": studentObjID,
+		"class_id":   classObjID,
+		"course_id":  courseObjID,
+	}
+	result, err := coll.DeleteOne(ctx, filter)
+	if err != nil {
+		return errors.New("从班级移除学生失败: " + err.Error())
+	}
+
+	if result.DeletedCount == 0 {
+		return errors.New("学生不在该班级中")
+	}
+
+	// 同时更新班级的成员列表
+	clazzColl := utils.GetCollection("clazzes")
+	update := bson.M{
+		"$pull": bson.M{
+			"member_ids": studentObjID,
+		},
+		"$inc": bson.M{
+			"add_nums": -1,
+		},
+		"$set": bson.M{
+			"mtime": time.Now(),
+		},
+	}
+
+	_, err = clazzColl.UpdateOne(ctx, bson.M{"_id": classObjID}, update)
+	if err != nil {
+		// 注意：这里如果更新失败，学生班级关联记录已经被删除，数据会不一致
+		// 在生产环境中应该使用事务来保证一致性
+		return errors.New("更新班级成员失败: " + err.Error())
+	}
+
+	return nil
+}
+
+// GetStudentClasses 获取学生的所有班级
+func (s *CourseService) GetStudentClasses(ctx context.Context, studentID string) ([]*models.StudentClassResponse, error) {
+	studentObjID, err := primitive.ObjectIDFromHex(studentID)
+	if err != nil {
+		return nil, errors.New("无效的学生ID")
+	}
+
+	// 查询学生的所有班级关联记录
+	coll := utils.GetCollection("student_classes")
+	cursor, err := coll.Find(ctx, bson.M{"student_id": studentObjID, "status": "active"})
+	if err != nil {
+		return nil, errors.New("查询学生班级失败: " + err.Error())
+	}
+	defer cursor.Close(ctx)
+
+	var studentClasses []models.StudentClass
+	if err = cursor.All(ctx, &studentClasses); err != nil {
+		return nil, errors.New("解析学生班级数据失败: " + err.Error())
+	}
+
+	// 构建响应数据
+	var responses []*models.StudentClassResponse
+	for _, sc := range studentClasses {
+		response := &models.StudentClassResponse{
+			ID:        sc.ID,
+			StudentID: sc.StudentID,
+			ClassID:   sc.ClassID,
+			CourseID:  sc.CourseID,
+			JoinTime:  sc.JoinTime,
+			Status:    sc.Status,
+			CTime:     sc.CTime,
+			MTime:     sc.MTime,
+		}
+
+		// 获取学生信息
+		user, err := s.getUserByID(ctx, sc.StudentID)
+		if err == nil {
+			response.Student = user.ToProfile()
+		}
+
+		// 获取班级信息
+		clazzColl := utils.GetCollection("clazzes")
+		var clazz models.Clazz
+		if err = clazzColl.FindOne(ctx, bson.M{"_id": sc.ClassID}).Decode(&clazz); err == nil {
+			response.Class = &clazz
+		}
+
+		// 获取课程信息
+		course, err := s.getCourseByID(ctx, sc.CourseID)
+		if err == nil {
+			response.Course = course
+		}
+
+		responses = append(responses, response)
+	}
+
+	return responses, nil
+}
+
+// GetClassStudents 获取班级的所有学生
+func (s *CourseService) GetClassStudents(ctx context.Context, classID string) ([]*models.UserProfile, error) {
+	classObjID, err := primitive.ObjectIDFromHex(classID)
+	if err != nil {
+		return nil, errors.New("无效的班级ID")
+	}
+
+	// 查询班级的所有学生关联记录
+	coll := utils.GetCollection("student_classes")
+	cursor, err := coll.Find(ctx, bson.M{"class_id": classObjID, "status": "active"})
+	if err != nil {
+		return nil, errors.New("查询班级学生失败: " + err.Error())
+	}
+	defer cursor.Close(ctx)
+
+	var studentClasses []models.StudentClass
+	if err = cursor.All(ctx, &studentClasses); err != nil {
+		return nil, errors.New("解析班级学生数据失败: " + err.Error())
+	}
+
+	// 获取所有学生信息
+	var students []*models.UserProfile
+	for _, sc := range studentClasses {
+		user, err := s.getUserByID(ctx, sc.StudentID)
+		if err != nil {
+			continue
+		}
+		students = append(students, user.ToProfile())
+	}
+
+	return students, nil
+}
+
+// DeleteTask 删除任务
+func (s *CourseService) DeleteTask(ctx context.Context, userID string, taskID string) error {
+	// 验证用户权限
+	userObjID, err := primitive.ObjectIDFromHex(userID)
+	if err != nil {
+		return errors.New("无效的用户ID")
+	}
+
+	taskObjID, err := primitive.ObjectIDFromHex(taskID)
+	if err != nil {
+		return errors.New("无效的任务ID")
+	}
+
+	// 获取任务信息
+	collTasks := utils.GetCollection("tasks")
+	var task models.Task
+	if err = collTasks.FindOne(ctx, bson.M{"_id": taskObjID}).Decode(&task); err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return errors.New("任务不存在")
+		}
+		return err
+	}
+
+	// 验证权限：只有课程创建者或班级教师可以删除任务
+	collClazz := utils.GetCollection("clazzes")
+	var clazz models.Clazz
+	if err = collClazz.FindOne(ctx, bson.M{"_id": task.ClazzId}).Decode(&clazz); err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return errors.New("班级不存在")
+		}
+		return err
+	}
+
+	collCourse := utils.GetCollection("courses")
+	isAuthorized, err := authorized(ctx, collCourse, clazz.CourseId, userObjID)
+	if err != nil {
+		return err
+	}
+
+	if !isAuthorized {
+		return errors.New("权限不足，只有课程创建者或班级教师可以删除任务")
+	}
+
+	// 删除任务
+	if _, err = collTasks.DeleteOne(ctx, bson.M{"_id": taskObjID}); err != nil {
+		return errors.New("删除任务失败: " + err.Error())
+	}
+
+	return nil
+}
+
+// RemoveCourse 删除课程
+func (s *CourseService) RemoveCourse(ctx context.Context, userID string, courseID string) error {
+	// 验证用户权限
+	userObjID, err := primitive.ObjectIDFromHex(userID)
+	if err != nil {
+		return errors.New("无效的用户ID")
+	}
+
+	courseObjID, err := primitive.ObjectIDFromHex(courseID)
+	if err != nil {
+		return errors.New("无效的课程ID")
+	}
+
+	// 检查课程是否存在并验证权限
+	coll := utils.GetCollection("courses")
+	var course models.Course
+	if err = coll.FindOne(ctx, bson.M{"_id": courseObjID}).Decode(&course); err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return errors.New("课程不存在")
+		}
+		return err
+	}
+
+	// 只有课程创建者可以删除课程
+	if course.CreatedBy != userObjID {
+		return errors.New("权限不足，只有课程创建者可以删除课程")
+	}
+
+	// 检查课程是否还有班级
+	clazzColl := utils.GetCollection("clazzes")
+	count, err := clazzColl.CountDocuments(ctx, bson.M{"course_id": courseObjID})
+	if err != nil {
+		return errors.New("检查班级失败: " + err.Error())
+	}
+
+	if count > 0 {
+		return errors.New("课程还有班级，无法删除")
+	}
+
+	// 删除课程
+	if _, err = coll.DeleteOne(ctx, bson.M{"_id": courseObjID}); err != nil {
+		return errors.New("删除课程失败: " + err.Error())
 	}
 
 	return nil

@@ -143,3 +143,20 @@ RateLimit:
 
 Server:
   Domain: "localhost"
+
+# Scalar API 文档配置
+Scalar:
+  Title: "ZK Code Arena API"
+  Description: "在线编程竞赛平台 API 文档 - 支持题目管理、用户认证、实时判题等功能"
+  SwaggerUrl: "/swagger/doc.json"
+  Theme: "auto"  # light, dark, auto
+  Layout: "modern"  # modern, classic
+  ShowSidebar: true
+  HideDownloadButton: false
+  CustomCss: |
+    .scalar-app {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    .scalar-app .sidebar {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }

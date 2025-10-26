@@ -132,3 +132,13 @@ func (cl *Clazz) CanJoin() bool {
 	}
 	return cl.Status == ClassStatusActive
 }
+
+// IsMember 检查用户是否是班级成员
+func (cl *Clazz) IsMember(userID primitive.ObjectID) bool {
+	for _, memberID := range cl.MemberIDs {
+		if memberID == userID {
+			return true
+		}
+	}
+	return false
+}

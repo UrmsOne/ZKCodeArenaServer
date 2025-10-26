@@ -85,8 +85,11 @@ func (s *Server) RegisterRoutes() {
 	// 健康检查
 	s.app.GET("/health", s.HealthCheck)
 
-	// Swagger 文档路由
+	// Swagger 文档路由（保留兼容性）
 	s.app.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	
+	// Scalar 文档路由（现代化 API 文档）
+	s.RegisterScalar(s.app, nil)
 
 	// API 路由组
 	v1 := s.app.Group("/api/v1")

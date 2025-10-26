@@ -11,9 +11,6 @@ import (
 	"sync"
 	"time"
 
-	"zk-code-arena-server/pkg/models"
-	"zk-code-arena-server/pkg/utils"
-
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo/options"

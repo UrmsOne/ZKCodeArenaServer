@@ -27,6 +27,7 @@ type Service struct {
 	TestCaseService     *TestCaseService
 	CourseService       *CourseService
 	StatisticsService   *StatisticsService
+	ClazzService        *ClazzService
 	DailyProblemService *DailyProblemService
 }
 
@@ -34,7 +35,7 @@ type Service struct {
 func NewService() *Service {
 	// 1. 创建 Repository 容器
 	repos := repository.NewRepositories()
-	
+
 	// 2. 创建基础服务（使用 Repository）
 	userService := NewUserService()
 	submitService := NewSubmitService(repos.SubmitRepository)
@@ -92,7 +93,10 @@ func NewService() *Service {
 	// 5. 创建需要依赖注入的服务
 	// ProblemService 需要 sandboxClient、testCaseService 和 Repository
 	problemService := NewProblemService(sandboxClient, testCaseService, repos.ProblemRepository)
-	
+
+	// ClazzService 班级服务
+	clazzService := NewClazzService()
+
 	// JudgeService 需要所有基础服务的引用
 	judgeService := NewJudgeService(
 		sandboxClient,
@@ -104,7 +108,7 @@ func NewService() *Service {
 
 	// StatisticsService 需要其他服务的引用
 	statisticsService := NewStatisticsService(submitService, problemService, userService, repos.ProblemRepository)
-	
+
 	// DailyProblemService 需要 ProblemRepository
 	dailyProblemService := NewDailyProblemService(repos.ProblemRepository)
 
@@ -116,6 +120,7 @@ func NewService() *Service {
 		TestCaseService:     testCaseService,
 		CourseService:       courseService,
 		StatisticsService:   statisticsService,
+		ClazzService:        clazzService,
 		DailyProblemService: dailyProblemService,
 	}
 }

@@ -79,6 +79,16 @@ type configYaml struct {
 			Window int `yaml:"Window"`
 		} `yaml:"Submit"`
 	} `yaml:"RateLimit"`
+	Scalar struct {
+		Title              string `yaml:"Title"`
+		Description        string `yaml:"Description"`
+		SwaggerURL         string `yaml:"SwaggerUrl"`
+		Theme              string `yaml:"Theme"`
+		Layout             string `yaml:"Layout"`
+		ShowSidebar        bool   `yaml:"ShowSidebar"`
+		HideDownloadButton bool   `yaml:"HideDownloadButton"`
+		CustomCSS          string `yaml:"CustomCss"`
+	} `yaml:"Scalar"`
 }
 
 // JudgeConfig 判题配置
