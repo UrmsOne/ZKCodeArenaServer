@@ -42,10 +42,10 @@ func (s *Server) RegisterProblemStats(g *gin.RouterGroup) {
 // @Tags         统计
 // @Accept       json
 // @Produce      json
-// @Success      200 {object} map[string]interface{} "用户统计信息"
-// @Failure      401 {object} map[string]interface{} "需要登录"
-// @Failure      400 {object} map[string]interface{} "无效的用户ID"
-// @Failure      500 {object} map[string]interface{} "获取失败"
+// @Success      200 {object} models.UserStatsResponse "用户统计信息"
+// @Failure      401 {object} models.ErrorResponse "需要登录"
+// @Failure      400 {object} models.ErrorResponse "无效的用户ID"
+// @Failure      500 {object} models.ErrorResponse "获取失败"
 // @Security     BearerAuth
 // @Router       /statistics/user [get]
 func (s *Server) GetUserStatistics(c *gin.Context) {
@@ -78,10 +78,10 @@ func (s *Server) GetUserStatistics(c *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Param        id path string true "用户ID"
-// @Success      200 {object} map[string]interface{} "用户统计信息"
-// @Failure      400 {object} map[string]interface{} "无效的用户ID"
-// @Failure      403 {object} map[string]interface{} "权限不足"
-// @Failure      500 {object} map[string]interface{} "获取失败"
+// @Success      200 {object} models.UserStatsResponse "用户统计信息"
+// @Failure      400 {object} models.UserStatsResponse "无效的用户ID"
+// @Failure      403 {object} models.UserStatsResponse "权限不足"
+// @Failure      500 {object} models.UserStatsResponse "获取失败"
 // @Security     BearerAuth
 // @Router       /statistics/user/{id} [get]
 func (s *Server) GetUserStatisticsByID(c *gin.Context) {
@@ -115,9 +115,9 @@ func (s *Server) GetUserStatisticsByID(c *gin.Context) {
 // @Tags         统计
 // @Accept       json
 // @Produce      json
-// @Success      200 {object} map[string]interface{} "系统统计信息"
-// @Failure      403 {object} map[string]interface{} "权限不足"
-// @Failure      500 {object} map[string]interface{} "获取失败"
+// @Success      200 {object} models.SystemStatsResponse "系统统计信息"
+// @Failure      403 {object} models.ErrorResponse "权限不足"
+// @Failure      500 {object} models.ErrorResponse "获取失败"
 // @Security     BearerAuth
 // @Router       /statistics/system [get]
 func (s *Server) GetSystemStatistics(c *gin.Context) {
@@ -144,8 +144,8 @@ func (s *Server) GetSystemStatistics(c *gin.Context) {
 // @Tags         统计
 // @Accept       json  
 // @Produce      json
-// @Success      200 {object} map[string]interface{} "难度统计"
-// @Failure      500 {object} map[string]interface{} "获取失败"
+// @Success      200 {object} models.DifficultyStatsResponse "难度统计"
+// @Failure      500 {object} models.ErrorResponse "获取失败"
 // @Router       /problems/difficulty-stats [get]
 func (s *Server) GetProblemDifficultyStats(c *gin.Context) {
 	ctx := c.Request.Context()

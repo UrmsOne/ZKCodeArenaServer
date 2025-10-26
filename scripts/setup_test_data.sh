@@ -28,7 +28,7 @@ fi
 echo "📦 找到 MongoDB 容器: $MONGO_CONTAINER"
 
 # 检查数据库是否已有数据
-USER_COUNT=$(docker exec $MONGO_CONTAINER mongo zk_code_arena --quiet --eval "db.users.count()")
+USER_COUNT=$(docker exec $MONGO_CONTAINER mongosh zk_code_arena --quiet --eval "db.users.countDocuments()")
 
 if [ "$USER_COUNT" -gt 1 ]; then
     echo "⚠️  数据库中已存在 $USER_COUNT 个用户"

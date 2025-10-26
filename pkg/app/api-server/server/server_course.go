@@ -44,8 +44,8 @@ func (s *Server) RegisterCourse(g *gin.RouterGroup) {
 // @Accept       json
 // @Produce      json
 // @Param        request body models.AddCourseTeachersRequest true "添加教师请求"
-// @Success      200 {object} map[string]interface{} "添加成功"
-// @Failure      400 {object} map[string]interface{} "请求参数错误"
+// @Success      200 {object} models.SuccessResponse "添加成功"
+// @Failure      400 {object} models.ErrorResponse "请求参数错误"
 // @Security     BearerAuth
 // @Router       /courses/teachers [post]
 func (s *Server) addCourseTeacher(c *gin.Context) {
@@ -80,8 +80,8 @@ func (s *Server) addCourseTeacher(c *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Param        request body models.RemoveCourseTeachersRequest true "删除教师请求"
-// @Success      200 {object} map[string]interface{} "删除成功"
-// @Failure      400 {object} map[string]interface{} "请求参数错误"
+// @Success      200 {object} models.DeleteResponse "删除成功"
+// @Failure      400 {object} models.ErrorResponse "请求参数错误"
 // @Security     BearerAuth
 // @Router       /courses/teachers [delete]
 func (s *Server) removeCourseTeacher(c *gin.Context) {
@@ -117,8 +117,8 @@ func (s *Server) removeCourseTeacher(c *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Param        request body models.CreateCourseRequest true "课程信息"
-// @Success      200 {object} map[string]interface{} "创建成功，返回课程ID"
-// @Failure      400 {object} map[string]interface{} "请求参数错误"
+// @Success      200 {object} models.CreateResponse "创建成功，返回课程ID"
+// @Failure      400 {object} models.ErrorResponse "请求参数错误"
 // @Security     BearerAuth
 // @Router       /courses [post]
 func (s *Server) CreateCourse(c *gin.Context) {
@@ -143,8 +143,8 @@ func (s *Server) CreateCourse(c *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Param        courseId path string true "课程ID"
-// @Success      200 {object} map[string]interface{} "课程详情"
-// @Failure      400 {object} map[string]interface{} "请求参数错误"
+// @Success      200 {object} models.Course "课程详情"
+// @Failure      400 {object} models.ErrorResponse "请求参数错误"
 // @Security     BearerAuth
 // @Router       /courses/{courseId} [get]
 func (s *Server) GetCourseById(c *gin.Context) {
@@ -169,8 +169,8 @@ func (s *Server) GetCourseById(c *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Param        request body models.UpdateCourseRequest true "更新的课程信息"
-// @Success      200 {object} map[string]interface{} "更新成功"
-// @Failure      400 {object} map[string]interface{} "请求参数错误"
+// @Success      200 {object} models.UpdateResponse "更新成功"
+// @Failure      400 {object} models.ErrorResponse "请求参数错误"
 // @Security     BearerAuth
 // @Router       /courses [put]
 func (s *Server) UpdateCourse(c *gin.Context) {
@@ -197,8 +197,8 @@ func (s *Server) UpdateCourse(c *gin.Context) {
 // @Produce      json
 // @Param        courseId path string true "课程ID"
 // @Param        file formData file true "头像文件"
-// @Success      200 {object} map[string]interface{} "更新成功"
-// @Failure      400 {object} map[string]interface{} "请求参数错误"
+// @Success      200 {object} models.UpdateResponse "更新成功"
+// @Failure      400 {object} models.ErrorResponse "请求参数错误"
 // @Security     BearerAuth
 // @Router       /courses/{courseId}/avatar [put]
 func (s *Server) UpdateCourseAvatar(c *gin.Context) {
@@ -233,8 +233,8 @@ func (s *Server) UpdateCourseAvatar(c *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Param        courseId path string true "课程ID"
-// @Success      200 {object} map[string]interface{} "删除成功"
-// @Failure      400 {object} map[string]interface{} "请求参数错误"
+// @Success      200 {object} models.DeleteResponse "删除成功"
+// @Failure      400 {object} models.ErrorResponse "请求参数错误"
 // @Security     BearerAuth
 // @Router       /courses/{courseId} [delete]
 func (s *Server) RemoveCourse(c *gin.Context) {
@@ -258,8 +258,8 @@ func (s *Server) RemoveCourse(c *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Param        request body models.PageQueryTeacherCoursesRequest true "分页查询参数"
-// @Success      200 {object} map[string]interface{} "课程列表"
-// @Failure      400 {object} map[string]interface{} "请求参数错误"
+// @Success      200 {object} models.CourseListResponse "课程列表"
+// @Failure      400 {object} models.ErrorResponse "请求参数错误"
 // @Security     BearerAuth
 // @Router       /courses/teacher/query [post]
 func (s *Server) PageQueryTeacherCourses(c *gin.Context) {

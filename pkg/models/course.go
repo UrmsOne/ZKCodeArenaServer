@@ -43,51 +43,51 @@ const (
 
 // Clazz 班级嵌入文档,TODO 根据业务需求判断是否一个班级要有对应的教师，且教师必须是被邀请加入了课程，是否有多个教师
 type Clazz struct {
-	ID            primitive.ObjectID   `bson:"_id,omitempty" json:"id"`
-	Name          string               `bson:"name" json:"name" binding:"required"`
-	Description   string               `bson:"description,omitempty" json:"description,omitempty"`
-	CourseId      primitive.ObjectID   `bson:"course_id" json:"course_id" binding:"required"`
-	Schedule      string               `bson:"schedule,omitempty" json:"schedule,omitempty"`
-	MemberIDs     []primitive.ObjectID `bson:"member_ids,omitempty" json:"member_ids,omitempty"`
-	TeacherIds    []primitive.ObjectID `bson:"teacher_ids,omitempty" json:"teacher_ids,omitempty"`
-	RequireInvite bool                 `bson:"require_invite" json:"require_invite"`
-	MaxMembers    int                  `bson:"max_members,omitempty" json:"max_members,omitempty"`
-	AddNums       int                  `bson:"add_nums" json:"add_nums"`
-	Status        ClassStatus          `bson:"status" json:"status"`
-	CTime         time.Time            `bson:"ctime" json:"ctime"`
-	CID           primitive.ObjectID   `bson:"c_id" json:"c_id"`
-	MTime         time.Time            `bson:"mtime" json:"mtime"`
+	ID            primitive.ObjectID   `bson:"_id,omitempty" json:"id" swaggertype:"string" example:"507f1f77bcf86cd799439011"`
+	Name          string               `bson:"name" json:"name" binding:"required" example:"算法与数据结构 - 第1班"`
+	Description   string               `bson:"description,omitempty" json:"description,omitempty" example:"算法与数据结构课程的第1个教学班"`
+	CourseId      primitive.ObjectID   `bson:"course_id" json:"course_id" binding:"required" swaggertype:"string" example:"507f1f77bcf86cd799439012"`
+	Schedule      string               `bson:"schedule,omitempty" json:"schedule,omitempty" example:"周二 14:00-16:00"`
+	MemberIDs     []primitive.ObjectID `bson:"member_ids,omitempty" json:"member_ids,omitempty" swaggertype:"array,string" example:"507f1f77bcf86cd799439013,507f1f77bcf86cd799439014"`
+	TeacherIds    []primitive.ObjectID `bson:"teacher_ids,omitempty" json:"teacher_ids,omitempty" swaggertype:"array,string" example:"507f1f77bcf86cd799439015"`
+	RequireInvite bool                 `bson:"require_invite" json:"require_invite" example:"false"`
+	MaxMembers    int                  `bson:"max_members,omitempty" json:"max_members,omitempty" example:"50"`
+	AddNums       int                  `bson:"add_nums" json:"add_nums" example:"25"`
+	Status        ClassStatus          `bson:"status" json:"status" example:"1"`
+	CTime         time.Time            `bson:"ctime" json:"ctime" example:"2024-10-26T10:00:00Z"`
+	CID           primitive.ObjectID   `bson:"c_id" json:"c_id" swaggertype:"string" example:"507f1f77bcf86cd799439016"`
+	MTime         time.Time            `bson:"mtime" json:"mtime" example:"2024-10-26T10:00:00Z"`
 }
 
 // Course 课程模型
 type Course struct {
-	ID          primitive.ObjectID   `bson:"_id,omitempty" json:"id"`
-	Avatar      string               `bson:"avatar,omitempty" json:"avatar,omitempty"`
-	Name        string               `bson:"name" json:"name" binding:"required"`
-	TeacherIds  []primitive.ObjectID `bson:"teacher_ids,omitempty" json:"teacher_ids,omitempty"`
-	Description string               `bson:"description,omitempty" json:"description,omitempty"`
-	CreatedBy   primitive.ObjectID   `bson:"created_by" json:"created_by"`
-	Status      CourseStatus         `bson:"status" json:"status"`
-	CTime       time.Time            `bson:"ctime" json:"ctime"`
-	MTime       time.Time            `bson:"mtime" json:"mtime"`
+	ID          primitive.ObjectID   `bson:"_id,omitempty" json:"id" swaggertype:"string" example:"507f1f77bcf86cd799439011"`
+	Avatar      string               `bson:"avatar,omitempty" json:"avatar,omitempty" example:"https://api.dicebear.com/7.x/shapes/svg?seed=algorithm"`
+	Name        string               `bson:"name" json:"name" binding:"required" example:"算法与数据结构"`
+	TeacherIds  []primitive.ObjectID `bson:"teacher_ids,omitempty" json:"teacher_ids,omitempty" swaggertype:"array,string" example:"507f1f77bcf86cd799439012,507f1f77bcf86cd799439013"`
+	Description string               `bson:"description,omitempty" json:"description,omitempty" example:"本课程主要介绍常用的数据结构和算法，包括线性表、栈、队列、树、图等数据结构"`
+	CreatedBy   primitive.ObjectID   `bson:"created_by" json:"created_by" swaggertype:"string" example:"507f1f77bcf86cd799439014"`
+	Status      CourseStatus         `bson:"status" json:"status" example:"1"`
+	CTime       time.Time            `bson:"ctime" json:"ctime" example:"2024-10-26T10:00:00Z"`
+	MTime       time.Time            `bson:"mtime" json:"mtime" example:"2024-10-26T10:00:00Z"`
 }
 
 // Task 课程任务模型
 type Task struct {
-	ID          primitive.ObjectID   `bson:"_id,omitempty" json:"id"`
-	Title       string               `bson:"title" json:"title" binding:"required"`
-	Description string               `bson:"description,omitempty" json:"description,omitempty"`
-	Type        TaskType             `bson:"type" json:"type" binding:"required"`
-	StartTime   time.Time            `bson:"start_time" json:"start_time" binding:"required"`
-	EndTime     *time.Time           `bson:"end_time" json:"end_time"`
-	RelationIDs []primitive.ObjectID `bson:"relation_ids,omitempty" json:"relation_ids,omitempty"`
-	Status      TaskStatus           `bson:"status" json:"status"`
-	FinishIds   []primitive.ObjectID `bson:"finish_ids" json:"finish_ids"` // 完成任务的成员ID集合
-	CourseId    primitive.ObjectID   `bson:"course_id" json:"course_id"`
-	ClazzId     primitive.ObjectID   `bson:"clazz_id" json:"clazz_id"`
-	CTime       time.Time            `bson:"ctime" json:"ctime"`
-	CID         primitive.ObjectID   `bson:"c_id" json:"c_id"`
-	MTime       time.Time            `bson:"mtime" json:"mtime"`
+	ID          primitive.ObjectID   `bson:"_id,omitempty" json:"id" swaggertype:"string" example:"507f1f77bcf86cd799439011"`
+	Title       string               `bson:"title" json:"title" binding:"required" example:"第1周编程作业"`
+	Description string               `bson:"description,omitempty" json:"description,omitempty" example:"本周需要完成2道编程题目，请认真阅读题目要求并提交代码。"`
+	Type        TaskType             `bson:"type" json:"type" binding:"required" example:"1"`
+	StartTime   time.Time            `bson:"start_time" json:"start_time" binding:"required" example:"2024-10-26T10:00:00Z"`
+	EndTime     *time.Time           `bson:"end_time" json:"end_time" example:"2024-11-02T23:59:59Z"`
+	RelationIDs []primitive.ObjectID `bson:"relation_ids,omitempty" json:"relation_ids,omitempty" swaggertype:"array,string" example:"507f1f77bcf86cd799439011,507f1f77bcf86cd799439012"`
+	Status      TaskStatus           `bson:"status" json:"status" example:"1"`
+	FinishIds   []primitive.ObjectID `bson:"finish_ids" json:"finish_ids" swaggertype:"array,string" example:"507f1f77bcf86cd799439013,507f1f77bcf86cd799439014"` // 完成任务的成员ID集合
+	CourseId    primitive.ObjectID   `bson:"course_id" json:"course_id" swaggertype:"string" example:"507f1f77bcf86cd799439015"`
+	ClazzId     primitive.ObjectID   `bson:"clazz_id" json:"clazz_id" swaggertype:"string" example:"507f1f77bcf86cd799439016"`
+	CTime       time.Time            `bson:"ctime" json:"ctime" example:"2024-10-26T10:00:00Z"`
+	CID         primitive.ObjectID   `bson:"c_id" json:"c_id" swaggertype:"string" example:"507f1f77bcf86cd799439017"`
+	MTime       time.Time            `bson:"mtime" json:"mtime" example:"2024-10-26T10:00:00Z"`
 }
 type RelationsUsers struct {
 	ID         primitive.ObjectID `bson:"_id,omitempty" json:"id"`

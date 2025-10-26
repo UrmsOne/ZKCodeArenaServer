@@ -144,10 +144,10 @@ func (s *Server) SubmitCode(c *gin.Context) {
 // @Param        page_size query int false "每页数量" default(10)
 // @Param        problem_id query string false "题目ID筛选"
 // @Param        user_id query string false "用户ID筛选（管理员可用）"
-// @Success      200 {object} map[string]interface{} "提交列表"
-// @Failure      400 {object} map[string]interface{} "请求参数错误"
-// @Failure      401 {object} map[string]interface{} "需要登录"
-// @Failure      500 {object} map[string]interface{} "获取失败"
+// @Success      200 {object} models.SubmitListResponse "提交列表"
+// @Failure      400 {object} models.ErrorResponse "请求参数错误"
+// @Failure      401 {object} models.ErrorResponse "需要登录"
+// @Failure      500 {object} models.ErrorResponse "获取失败"
 // @Security     BearerAuth
 // @Router       /submit [get]
 func (s *Server) GetSubmits(c *gin.Context) {

@@ -45,9 +45,9 @@ func (s *Server) RegisterUser(g *gin.RouterGroup) {
 // @Accept       json
 // @Produce      json
 // @Param        request body models.User true "用户信息"
-// @Success      200 {object} map[string]interface{} "注册成功"
-// @Failure      400 {object} map[string]interface{} "请求参数错误"
-// @Failure      500 {object} map[string]interface{} "注册失败"
+// @Success      200 {object} models.RegisterResponse "注册成功"
+// @Failure      400 {object} models.ErrorResponse "请求参数错误"
+// @Failure      500 {object} models.ErrorResponse "注册失败"
 // @Router       /user/register [post]
 func (s *Server) CreateUser(c *gin.Context) {
 	var user models.User
@@ -75,9 +75,9 @@ func (s *Server) CreateUser(c *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Param        request body models.LoginRequest true "登录信息"
-// @Success      200 {object} map[string]interface{} "登录成功，返回token和用户信息"
-// @Failure      400 {object} map[string]interface{} "请求参数错误"
-// @Failure      401 {object} map[string]interface{} "账号或密码错误"
+// @Success      200 {object} models.LoginResponse "登录成功，返回token和用户信息"
+// @Failure      400 {object} models.ErrorResponse "请求参数错误"
+// @Failure      401 {object} models.ErrorResponse "账号或密码错误"
 // @Router       /user/login [post]
 func (s *Server) LoginUser(c *gin.Context) {
 	var loginReq models.LoginRequest
@@ -115,8 +115,8 @@ func (s *Server) LoginUser(c *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Success      200 {object} models.UserProfile "用户资料"
-// @Failure      401 {object} map[string]interface{} "未认证用户"
-// @Failure      404 {object} map[string]interface{} "用户不存在"
+// @Failure      401 {object} models.ErrorResponse "未认证用户"
+// @Failure      404 {object} models.ErrorResponse "用户不存在"
 // @Security     BearerAuth
 // @Router       /user/profile [get]
 func (s *Server) GetUserProfile(c *gin.Context) {
@@ -150,10 +150,10 @@ func (s *Server) GetUserProfile(c *gin.Context) {
 // @Produce      json
 // @Param        request body object{real_name=string,email=string,bio=string,school=string,major=string,grade=string,class=string,phone=string} true "更新信息"
 // @Success      200 {object} models.UserProfile "更新后的用户资料"
-// @Failure      400 {object} map[string]interface{} "请求参数错误"
-// @Failure      401 {object} map[string]interface{} "未认证用户"
-// @Failure      404 {object} map[string]interface{} "用户不存在"
-// @Failure      500 {object} map[string]interface{} "更新失败"
+// @Failure      400 {object} models.ErrorResponse "请求参数错误"
+// @Failure      401 {object} models.ErrorResponse "未认证用户"
+// @Failure      404 {object} models.ErrorResponse "用户不存在"
+// @Failure      500 {object} models.ErrorResponse "更新失败"
 // @Security     BearerAuth
 // @Router       /user/profile [put]
 func (s *Server) UpdateUserProfile(c *gin.Context) {
@@ -210,9 +210,9 @@ func (s *Server) UpdateUserProfile(c *gin.Context) {
 // @Param        page query int false "页码" default(1)
 // @Param        page_size query int false "每页数量" default(10)
 // @Param        role query string false "用户角色筛选" Enums(admin, teacher, student)
-// @Success      200 {object} map[string]interface{} "用户列表"
-// @Failure      403 {object} map[string]interface{} "权限不足"
-// @Failure      500 {object} map[string]interface{} "获取失败"
+// @Success      200 {object} models.ErrorResponse "用户列表"
+// @Failure      403 {object} models.ErrorResponse "权限不足"
+// @Failure      500 {object} models.ErrorResponse "获取失败"
 // @Security     BearerAuth
 // @Router       /user [get]
 func (s *Server) GetUsers(c *gin.Context) {
@@ -264,10 +264,10 @@ func (s *Server) GetUsers(c *gin.Context) {
 // @Produce      json
 // @Param        id path string true "用户ID"
 // @Success      200 {object} models.UserProfile "用户信息"
-// @Failure      400 {object} map[string]interface{} "无效的用户ID"
-// @Failure      401 {object} map[string]interface{} "未认证用户"
-// @Failure      403 {object} map[string]interface{} "权限不足"
-// @Failure      404 {object} map[string]interface{} "用户不存在"
+// @Failure      400 {object} models.ErrorResponse "无效的用户ID"
+// @Failure      401 {object} models.ErrorResponse "未认证用户"
+// @Failure      403 {object} models.ErrorResponse "权限不足"
+// @Failure      404 {object} models.ErrorResponse "用户不存在"
 // @Security     BearerAuth
 // @Router       /user/{id} [get]
 func (s *Server) GetUserByID(c *gin.Context) {
@@ -314,10 +314,10 @@ func (s *Server) GetUserByID(c *gin.Context) {
 // @Param        id path string true "用户ID"
 // @Param        request body models.UpdateUserRequest true "更新信息"
 // @Success      200 {object} models.UserProfile "更新后的用户信息"
-// @Failure      400 {object} map[string]interface{} "请求参数错误"
-// @Failure      403 {object} map[string]interface{} "权限不足"
-// @Failure      404 {object} map[string]interface{} "用户不存在"
-// @Failure      500 {object} map[string]interface{} "更新失败"
+// @Failure      400 {object} models.ErrorResponse "请求参数错误"
+// @Failure      403 {object} models.ErrorResponse "权限不足"
+// @Failure      404 {object} models.ErrorResponse "用户不存在"
+// @Failure      500 {object} models.ErrorResponse "更新失败"
 // @Security     BearerAuth
 // @Router       /user/{id} [put]
 func (s *Server) UpdateUser(c *gin.Context) {
@@ -372,10 +372,10 @@ func (s *Server) UpdateUser(c *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Param        id path string true "用户ID"
-// @Success      200 {object} map[string]interface{} "删除成功"
-// @Failure      400 {object} map[string]interface{} "无效的用户ID"
-// @Failure      403 {object} map[string]interface{} "权限不足"
-// @Failure      500 {object} map[string]interface{} "删除失败"
+// @Success      200 {object} models.ErrorResponse "删除成功"
+// @Failure      400 {object} models.ErrorResponse "无效的用户ID"
+// @Failure      403 {object} models.ErrorResponse "权限不足"
+// @Failure      500 {object} models.ErrorResponse "删除失败"
 // @Security     BearerAuth
 // @Router       /user/{id} [delete]
 func (s *Server) DeleteUser(c *gin.Context) {

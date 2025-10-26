@@ -38,9 +38,9 @@ func (s *Server) RegisterTestCase(g *gin.RouterGroup) {
 // @Accept       json
 // @Produce      json
 // @Param        problem_id path string true "题目ID"
-// @Success      200 {object} map[string]interface{} "测试用例列表"
-// @Failure      400 {object} map[string]interface{} "无效的题目ID"
-// @Failure      500 {object} map[string]interface{} "获取失败"
+// @Success      200 {object} models.TestCaseListResponse "测试用例列表"
+// @Failure      400 {object} models.ErrorResponse "无效的题目ID"
+// @Failure      500 {object} models.ErrorResponse "获取失败"
 // @Security     BearerAuth
 // @Router       /testcase/problem/{problem_id} [get]
 func (s *Server) GetTestCasesByProblemID(c *gin.Context) {
@@ -72,8 +72,8 @@ func (s *Server) GetTestCasesByProblemID(c *gin.Context) {
 // @Produce      json
 // @Param        id path string true "测试用例ID"
 // @Success      200 {object} models.TestCase "测试用例详情"
-// @Failure      400 {object} map[string]interface{} "无效的测试用例ID"
-// @Failure      500 {object} map[string]interface{} "获取失败"
+// @Failure      400 {object} models.ErrorResponse "无效的测试用例ID"
+// @Failure      500 {object} models.ErrorResponse "获取失败"
 // @Security     BearerAuth
 // @Router       /testcase/{id} [get]
 func (s *Server) GetTestCase(c *gin.Context) {
@@ -102,8 +102,8 @@ func (s *Server) GetTestCase(c *gin.Context) {
 // @Produce      json
 // @Param        request body models.CreateTestCaseRequest true "测试用例信息"
 // @Success      200 {object} models.TestCase "创建成功"
-// @Failure      400 {object} map[string]interface{} "请求参数错误"
-// @Failure      500 {object} map[string]interface{} "创建失败"
+// @Failure      400 {object} models.ErrorResponse "请求参数错误"
+// @Failure      500 {object} models.ErrorResponse "创建失败"
 // @Security     BearerAuth
 // @Router       /testcase [post]
 func (s *Server) CreateTestCase(c *gin.Context) {
@@ -155,9 +155,9 @@ func (s *Server) CreateTestCase(c *gin.Context) {
 // @Param        id path string true "测试用例ID"
 // @Param        request body models.UpdateTestCaseRequest true "更新信息"
 // @Success      200 {object} models.TestCase "更新成功"
-// @Failure      400 {object} map[string]interface{} "请求参数错误"
-// @Failure      404 {object} map[string]interface{} "测试用例不存在"
-// @Failure      500 {object} map[string]interface{} "更新失败"
+// @Failure      400 {object} models.ErrorResponse "请求参数错误"
+// @Failure      404 {object} models.ErrorResponse "测试用例不存在"
+// @Failure      500 {object} models.ErrorResponse "更新失败"
 // @Security     BearerAuth
 // @Router       /testcase/{id} [put]
 func (s *Server) UpdateTestCase(c *gin.Context) {
@@ -218,9 +218,9 @@ func (s *Server) UpdateTestCase(c *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Param        id path string true "测试用例ID"
-// @Success      200 {object} map[string]interface{} "删除成功"
-// @Failure      400 {object} map[string]interface{} "无效的测试用例ID"
-// @Failure      500 {object} map[string]interface{} "删除失败"
+// @Success      200 {object} models.ErrorResponse "删除成功"
+// @Failure      400 {object} models.ErrorResponse "无效的测试用例ID"
+// @Failure      500 {object} models.ErrorResponse "删除失败"
 // @Security     BearerAuth
 // @Router       /testcase/{id} [delete]
 func (s *Server) DeleteTestCase(c *gin.Context) {
@@ -249,12 +249,12 @@ func (s *Server) DeleteTestCase(c *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Param        request body models.BatchCreateTestCasesRequest true "批量测试用例"
-// @Success      200 {object} map[string]interface{} "创建成功"
-// @Failure      400 {object} map[string]interface{} "请求参数错误"
-// @Failure      401 {object} map[string]interface{} "需要登录"
-// @Failure      403 {object} map[string]interface{} "权限不足"
-// @Failure      404 {object} map[string]interface{} "题目不存在"
-// @Failure      500 {object} map[string]interface{} "创建失败"
+// @Success      200 {object} models.CreateResponse "创建成功"
+// @Failure      400 {object} models.ErrorResponse "请求参数错误"
+// @Failure      401 {object} models.ErrorResponse "需要登录"
+// @Failure      403 {object} models.ErrorResponse "权限不足"
+// @Failure      404 {object} models.ErrorResponse "题目不存在"
+// @Failure      500 {object} models.ErrorResponse "创建失败"
 // @Security     BearerAuth
 // @Router       /testcase/batch [post]
 func (s *Server) BatchCreateTestCases(c *gin.Context) {

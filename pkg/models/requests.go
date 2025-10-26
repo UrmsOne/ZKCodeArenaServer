@@ -171,9 +171,9 @@ type PageQueryTeacherCoursesRequest struct {
 
 // PageQueryCourseResponse 分页查询课程响应
 type PageQueryCourseResponse struct {
-	Total    int64    `json:"total"`
-	PageNum  int64    `json:"page_num"`
-	PageSize int64    `json:"page_size"`
+	Total    int64    `json:"total" example:"100"`
+	PageNum  int64    `json:"page_num" example:"1"`
+	PageSize int64    `json:"page_size" example:"10"`
 	Courses  []Course `json:"courses"`
 }
 
@@ -329,22 +329,22 @@ type ProblemQueryCondition struct {
 
 // SubmitStatusResponse 轻量级提交状态响应
 type SubmitStatusResponse struct {
-	ID        primitive.ObjectID `json:"id"`         // 提交ID
-	Status    SubmitStatus       `json:"status"`     // 当前状态
+	ID        primitive.ObjectID `json:"id" swaggertype:"string" example:"507f1f77bcf86cd799439011"`         // 提交ID
+	Status    SubmitStatus       `json:"status" example:"accepted"`     // 当前状态
 	Progress  *JudgeProgress     `json:"progress"`   // 判题进度（可选）
-	Message   string             `json:"message"`    // 状态描述信息
-	UpdatedAt time.Time          `json:"updated_at"` // 最后更新时间
+	Message   string             `json:"message" example:"判题完成"`    // 状态描述信息
+	UpdatedAt time.Time          `json:"updated_at" example:"2024-10-26T10:00:00Z"` // 最后更新时间
 
 	// 完成后的基本结果信息（避免返回完整详细结果）
-	TimeUsed   *int `json:"time_used,omitempty"`   // 时间使用(ms)
-	MemoryUsed *int `json:"memory_used,omitempty"` // 内存使用(KB)
+	TimeUsed   *int `json:"time_used,omitempty" example:"150"`   // 时间使用(ms)
+	MemoryUsed *int `json:"memory_used,omitempty" example:"1024"` // 内存使用(KB)
 }
 
 // JudgeProgress 判题进度信息
 type JudgeProgress struct {
-	CurrentTestCase int `json:"current_test_case"` // 当前测试用例索引（从1开始）
-	TotalTestCases  int `json:"total_test_cases"`  // 总测试用例数
-	Percentage      int `json:"percentage"`        // 完成百分比 (0-100)
+	CurrentTestCase int `json:"current_test_case" example:"3"` // 当前测试用例索引（从1开始）
+	TotalTestCases  int `json:"total_test_cases" example:"5"`  // 总测试用例数
+	Percentage      int `json:"percentage" example:"60"`        // 完成百分比 (0-100)
 }
 
 // ==================== WebSocket消息模型 ====================
@@ -399,4 +399,157 @@ type GetStudentClassesRequest struct {
 // GetClassStudentsRequest 获取班级学生请求
 type GetClassStudentsRequest struct {
 	ClassID string `json:"class_id" binding:"required"`
+}
+
+// ==================== 通用响应模型 ====================
+
+// SuccessResponse 通用成功响应
+type SuccessResponse struct {
+	Success bool        `json:"success" example:"true"`
+	Message string      `json:"message" example:"操作成功"`
+	Data    interface{} `json:"data,omitempty"`
+}
+
+// ErrorResponse 通用错误响应
+type ErrorResponse struct {
+	Success bool   `json:"success" example:"false"`
+	Error   string `json:"error" example:"请求参数错误"`
+	Message string `json:"message" example:"缺少必需的参数"`
+}
+
+// ==================== 列表响应模型 ====================
+
+// ProblemListResponse 题目列表响应
+type ProblemListResponse struct {
+	Problems   []Problem `json:"problems"`
+	Total      int64     `json:"total" example:"100"`
+	Page       int       `json:"page" example:"1"`
+	PageSize   int       `json:"page_size" example:"10"`
+	TotalPages int       `json:"total_pages" example:"10"`
+}
+
+// SubmitListResponse 提交列表响应
+type SubmitListResponse struct {
+	Submits    []Submit `json:"submits"`
+	Total      int64    `json:"total" example:"50"`
+	Page       int      `json:"page" example:"1"`
+	PageSize   int      `json:"page_size" example:"10"`
+	TotalPages int      `json:"total_pages" example:"5"`
+}
+
+// CourseListResponse 课程列表响应
+type CourseListResponse struct {
+	Courses []Course `json:"courses"`
+	Total   int64    `json:"total" example:"20"`
+}
+
+// TestCaseListResponse 测试用例列表响应
+type TestCaseListResponse struct {
+	TestCases []TestCase `json:"test_cases"`
+	Total     int64      `json:"total" example:"15"`
+}
+
+// ==================== 创建/更新响应模型 ====================
+
+// CreateResponse 创建成功响应
+type CreateResponse struct {
+	Success bool   `json:"success" example:"true"`
+	Message string `json:"message" example:"创建成功"`
+	ID      string `json:"id" example:"507f1f77bcf86cd799439011"`
+}
+
+// UpdateResponse 更新成功响应
+type UpdateResponse struct {
+	Success bool   `json:"success" example:"true"`
+	Message string `json:"message" example:"更新成功"`
+}
+
+// DeleteResponse 删除成功响应
+type DeleteResponse struct {
+	Success bool   `json:"success" example:"true"`
+	Message string `json:"message" example:"删除成功"`
+}
+
+// ==================== 认证响应模型 ====================
+
+// LoginResponse 登录响应
+type LoginResponse struct {
+	Success bool        `json:"success" example:"true"`
+	Message string      `json:"message" example:"登录成功"`
+	Token   string      `json:"token" example:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."`
+	User    UserProfile `json:"user"`
+}
+
+// RegisterResponse 注册响应  
+type RegisterResponse struct {
+	Success bool   `json:"success" example:"true"`
+	Message string `json:"message" example:"注册成功"`
+	UserID  string `json:"user_id" example:"507f1f77bcf86cd799439011"`
+}
+
+// ==================== 统计响应模型 ====================
+
+// UserStatsResponse 用户统计响应
+type UserStatsResponse struct {
+	UserID         string `json:"user_id" example:"507f1f77bcf86cd799439011"`
+	Username       string `json:"username" example:"student1"`
+	TotalSubmits   int    `json:"total_submits" example:"45"`
+	AcceptedCount  int    `json:"accepted_count" example:"20"`
+	AcceptanceRate string `json:"acceptance_rate" example:"44.4%"`
+	SolvedProblems int    `json:"solved_problems" example:"18"`
+	Ranking        int    `json:"ranking" example:"15"`
+}
+
+// SystemStatsResponse 系统统计响应
+type SystemStatsResponse struct {
+	TotalUsers       int `json:"total_users" example:"150"`
+	TotalProblems    int `json:"total_problems" example:"80"`
+	TotalSubmits     int `json:"total_submits" example:"2500"`
+	TotalCourses     int `json:"total_courses" example:"12"`
+	TotalClasses     int `json:"total_classes" example:"25"`
+	ActiveUsers24h   int `json:"active_users_24h" example:"35"`
+	NewUsersToday    int `json:"new_users_today" example:"3"`
+	SubmitsToday     int `json:"submits_today" example:"120"`
+}
+
+// DifficultyStatsResponse 难度统计响应
+type DifficultyStatsResponse struct {
+	Easy   DifficultyStatItem `json:"easy"`
+	Medium DifficultyStatItem `json:"medium"`
+	Hard   DifficultyStatItem `json:"hard"`
+}
+
+// DifficultyStatItem 难度统计项
+type DifficultyStatItem struct {
+	Count      int     `json:"count" example:"25"`
+	Percentage float64 `json:"percentage" example:"31.25"`
+}
+
+// ==================== 代码运行响应模型 ====================
+
+// RunCodeResponse 代码运行响应
+type RunCodeResponse struct {
+	Success    bool     `json:"success" example:"true"`
+	Status     string   `json:"status" example:"accepted"`
+	Output     string   `json:"output" example:"Hello World!"`
+	Error      string   `json:"error,omitempty" example:""`
+	TimeUsed   int      `json:"time_used" example:"126"`
+	MemoryUsed int      `json:"memory_used" example:"1024"`
+	TestCases  []string `json:"test_cases,omitempty"`
+}
+
+// SearchProblemsResponse 搜索题目响应
+type SearchProblemsResponse struct {
+	Problems   []Problem `json:"problems"`
+	Total      int       `json:"total" example:"15"`
+	Query      string    `json:"query" example:"二分查找"`
+	SearchTime string    `json:"search_time" example:"0.05s"`
+}
+
+// DailyProblemResponse 每日一题响应
+type DailyProblemResponse struct {
+	Problem    Problem   `json:"problem"`
+	Date       string    `json:"date" example:"2024-10-26"`
+	IsFinished bool      `json:"is_finished" example:"false"`
+	Progress   string    `json:"progress" example:"今日已有15位同学完成"`
 }
