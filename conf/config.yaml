@@ -10,7 +10,7 @@ Mongo:
   DbName: zk_code_arena
 
 Judge:
-  SandboxURL: "http://localhost:5050"  # 沙箱服务地址
+  SandboxURL: "http://judge:5050"  # 沙箱服务地址
   Workers: 4                            # 消费者数量
   QueueSize: 100                        # 队列容量
 
@@ -121,9 +121,9 @@ JWT:
   ExpireTime: 24h
 
 Redis:
-  Host: "localhost"
-  Port: 16379
-  Password: ""
+  Host: "redis"
+  Port: 6379
+  Password: "redis123"
   DB: 0
   PoolSize: 10
 

@@ -1,5 +1,5 @@
 /*
-@Author:
+@Author: sir
 @Date: 2025/10/6
 @Name: video_factory.go
 @Description: 视频任务处理策略实现

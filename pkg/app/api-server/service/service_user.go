@@ -186,3 +186,38 @@ func (s *UserService) DeleteUser(ctx context.Context, id primitive.ObjectID) err
 	_, err := collection.DeleteOne(ctx, bson.M{"_id": id})
 	return err
 }
+
+// GetStudentClasses 获取学生加入的所有班级
+func (s *UserService) GetStudentClasses(ctx context.Context, studentID string) ([]*models.StudentClassResponse, error) {
+	// 这里应该调用课程服务来获取学生班级信息
+	// 由于服务之间不应该直接依赖，我们可以通过数据库直接查询
+	collection := utils.GetCollection("student_classes")
+	cursor, err := collection.Find(ctx, bson.M{"student_id": studentID, "status": "active"})
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var studentClasses []models.StudentClass
+	if err = cursor.All(ctx, &studentClasses); err != nil {
+		return nil, err
+	}
+
+	// 构建响应数据
+	var responses []*models.StudentClassResponse
+	for _, sc := range studentClasses {
+		response := &models.StudentClassResponse{
+			ID:        sc.ID,
+			StudentID: sc.StudentID,
+			ClassID:   sc.ClassID,
+			CourseID:  sc.CourseID,
+			JoinTime:  sc.JoinTime,
+			Status:    sc.Status,
+			CTime:     sc.CTime,
+			MTime:     sc.MTime,
+		}
+		responses = append(responses, response)
+	}
+
+	return responses, nil
+}

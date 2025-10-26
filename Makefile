@@ -100,7 +100,8 @@ setup:
 	@echo "📦 下载依赖..."
 	go mod download
 	@echo "🔧 安装 Air..."
-	go install github.com/cosmtrek/air@latest
+	# 使用兼容 Go 1.23 的版本
+	go install github.com/air-verse/air@v1.49.0
 	@echo "✅ 开发环境初始化完成"
 
 # 安装依赖

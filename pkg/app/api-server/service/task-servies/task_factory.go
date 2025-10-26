@@ -1,5 +1,5 @@
 /*
-@Author:
+@Author: sir
 @Date: 2025/10/6
 @Name: task_factory.go
 @Description: 任务处理策略模式接口定义

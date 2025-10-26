@@ -125,42 +125,6 @@ type ClazzResponse struct {
 	QRCode  string `json:"qrcode,omitempty"`
 }
 
-// 成员方法
-// AddMember 添加成员到班级
-func (cl *Clazz) AddMember(userID primitive.ObjectID) {
-	// 检查是否已存在
-	for _, memberID := range cl.MemberIDs {
-		if memberID == userID {
-			return
-		}
-	}
-	cl.MemberIDs = append(cl.MemberIDs, userID)
-	cl.AddNums = len(cl.MemberIDs)
-	cl.MTime = time.Now()
-}
-
-// RemoveMember 从班级移除成员
-func (cl *Clazz) RemoveMember(userID primitive.ObjectID) {
-	for i, memberID := range cl.MemberIDs {
-		if memberID == userID {
-			cl.MemberIDs = append(cl.MemberIDs[:i], cl.MemberIDs[i+1:]...)
-			cl.AddNums = len(cl.MemberIDs)
-			cl.MTime = time.Now()
-			return
-		}
-	}
-}
-
-// IsMember 检查用户是否是班级成员
-func (cl *Clazz) IsMember(userID primitive.ObjectID) bool {
-	for _, memberID := range cl.MemberIDs {
-		if memberID == userID {
-			return true
-		}
-	}
-	return false
-}
-
 // CanJoin 检查是否可以加入班级
 func (cl *Clazz) CanJoin() bool {
 	if cl.AddNums >= cl.MaxMembers {

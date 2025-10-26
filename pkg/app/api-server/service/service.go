@@ -101,7 +101,7 @@ func NewService() *Service {
 		problemService,
 		messageQueue,
 	)
-	
+
 	// StatisticsService 需要其他服务的引用
 	statisticsService := NewStatisticsService(submitService, problemService, userService, repos.ProblemRepository)
 	

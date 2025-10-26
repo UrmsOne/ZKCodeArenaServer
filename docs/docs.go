@@ -9,16 +9,7 @@ const docTemplate = `{
     "info": {
         "description": "{{escape .Description}}",
         "title": "{{.Title}}",
-        "termsOfService": "http://localhost/terms/",
-        "contact": {
-            "name": "API Support",
-            "url": "http://localhost/support",
-            "email": "support@zkcodearena.com"
-        },
-        "license": {
-            "name": "MIT",
-            "url": "https://opensource.org/licenses/MIT"
-        },
+        "contact": {},
         "version": "{{.Version}}"
     },
     "host": "{{.Host}}",
@@ -117,6 +108,58 @@ const docTemplate = `{
             }
         },
         "/courses/clazzes": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "更新班级的基本信息（不包括教师和成员）",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "课程"
+                ],
+                "summary": "更新班级信息",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "班级ID",
+                        "name": "clazzId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "更新的班级信息",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.UpdateClazzRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "更新成功",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "请求参数错误",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
             "post": {
                 "security": [
                     {
@@ -215,6 +258,206 @@ const docTemplate = `{
                 }
             }
         },
+        "/courses/clazzes/members": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "手动添加成员到班级",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "课程"
+                ],
+                "summary": "添加班级成员",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "班级ID",
+                        "name": "clazzId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "成员ID",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.AddClazzMemberRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "添加成功",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "请求参数错误",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/courses/clazzes/members/remove": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "批量移除班级成员",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "课程"
+                ],
+                "summary": "移除班级成员",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "班级ID",
+                        "name": "clazzId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "成员ID列表",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.RemoveClazzMembersRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "移除成功",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "请求参数错误",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/courses/clazzes/teachers": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "班级添加老师（支持批量添加，只有课程创建者可以操作，且教师必须已加入课程）",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "课程"
+                ],
+                "summary": "班级添加老师",
+                "parameters": [
+                    {
+                        "description": "添加教师请求",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.AddClazzTeachersRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "添加成功",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "请求参数错误",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "班级删除老师（支持批量删除，只有课程创建者可以操作）",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "课程"
+                ],
+                "summary": "班级删除老师",
+                "parameters": [
+                    {
+                        "description": "移除教师请求",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.RemoveClazzTeachersRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "移除成功",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "请求参数错误",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/courses/clazzes/{clazzId}": {
             "get": {
                 "security": [
@@ -288,114 +531,6 @@ const docTemplate = `{
                 "responses": {
                     "200": {
                         "description": "删除成功",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "400": {
-                        "description": "请求参数错误",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            }
-        },
-        "/courses/clazzes/{clazzId}/members": {
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "手动添加成员到班级",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "课程"
-                ],
-                "summary": "添加班级成员",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "班级ID",
-                        "name": "clazzId",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "成员ID",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/models.AddClazzMemberRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "添加成功",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "400": {
-                        "description": "请求参数错误",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            }
-        },
-        "/courses/clazzes/{clazzId}/members/remove": {
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "批量移除班级成员",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "课程"
-                ],
-                "summary": "移除班级成员",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "班级ID",
-                        "name": "clazzId",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "成员ID列表",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/models.RemoveClazzMembersRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "移除成功",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -687,6 +822,145 @@ const docTemplate = `{
                 }
             }
         },
+        "/courses/teacher/query": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "分页查询当前老师加入的课程列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "课程"
+                ],
+                "summary": "分页查询老师加入的课程",
+                "parameters": [
+                    {
+                        "description": "分页查询参数",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.PageQueryTeacherCoursesRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "课程列表",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "请求参数错误",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/courses/teachers": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "课程创建者添加老师（支持批量添加，只有课程创建者可以操作）",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "课程"
+                ],
+                "summary": "课程创建者添加老师",
+                "parameters": [
+                    {
+                        "description": "添加教师请求",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.AddCourseTeachersRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "添加成功",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "请求参数错误",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "课程创建者删除课程老师（支持批量删除，只有课程创建者可以操作）",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "课程"
+                ],
+                "summary": "课程创建者删除课程老师",
+                "parameters": [
+                    {
+                        "description": "删除教师请求",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.RemoveCourseTeachersRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "删除成功",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "请求参数错误",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/courses/{courseId}": {
             "get": {
                 "security": [
@@ -812,6 +1086,51 @@ const docTemplate = `{
                 "responses": {
                     "200": {
                         "description": "更新成功",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "请求参数错误",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/courses/{courseId}/clazzes": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "根据课程ID获取该课程的所有班级列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "课程"
+                ],
+                "summary": "获取课程的所有班级",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "课程ID",
+                        "name": "courseId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "班级列表",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -959,7 +1278,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "创建新题目（仅管理员和教师）",
+                "description": "创建新题目，默认状态为草稿，草稿状态不能公开",
                 "consumes": [
                     "application/json"
                 ],
@@ -977,7 +1296,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/models.Problem"
+                            "$ref": "#/definitions/models.CreateProblemRequest"
                         }
                     }
                 ],
@@ -989,7 +1308,7 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "请求参数错误",
+                        "description": "请求参数错误或业务规则错误",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -1151,7 +1470,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "更新题目信息（管理员或题目创建者）",
+                "description": "更新题目信息（管理员或题目创建者），草稿状态不能设为公开",
                 "consumes": [
                     "application/json"
                 ],
@@ -1176,7 +1495,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/models.Problem"
+                            "$ref": "#/definitions/models.UpdateProblemRequest"
                         }
                     }
                 ],
@@ -1188,7 +1507,7 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "请求参数错误",
+                        "description": "请求参数错误或业务规则错误",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -2556,11 +2875,51 @@ const docTemplate = `{
         "models.AddClazzMemberRequest": {
             "type": "object",
             "required": [
+                "clazz_id",
                 "member_id"
             ],
             "properties": {
+                "clazz_id": {
+                    "type": "string"
+                },
                 "member_id": {
                     "type": "string"
+                }
+            }
+        },
+        "models.AddClazzTeachersRequest": {
+            "type": "object",
+            "required": [
+                "clazz_id",
+                "teacher_ids"
+            ],
+            "properties": {
+                "clazz_id": {
+                    "type": "string"
+                },
+                "teacher_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "models.AddCourseTeachersRequest": {
+            "type": "object",
+            "required": [
+                "course_id",
+                "teacher_ids"
+            ],
+            "properties": {
+                "course_id": {
+                    "type": "string"
+                },
+                "teacher_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },
@@ -2690,6 +3049,97 @@ const docTemplate = `{
                 }
             }
         },
+        "models.CreateProblemRequest": {
+            "type": "object",
+            "required": [
+                "description",
+                "difficulty",
+                "title"
+            ],
+            "properties": {
+                "author": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string",
+                    "minLength": 10
+                },
+                "difficulty": {
+                    "description": "难度和标签（必填）",
+                    "enum": [
+                        "easy",
+                        "medium",
+                        "hard"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/models.ProblemDifficulty"
+                        }
+                    ]
+                },
+                "hint": {
+                    "type": "string"
+                },
+                "input": {
+                    "description": "题目详情（可选）",
+                    "type": "string"
+                },
+                "is_public": {
+                    "description": "可选，默认false",
+                    "type": "boolean"
+                },
+                "memory_limit": {
+                    "description": "默认256MB",
+                    "type": "integer",
+                    "maximum": 1024,
+                    "minimum": 32
+                },
+                "output": {
+                    "type": "string"
+                },
+                "sample_input": {
+                    "type": "string"
+                },
+                "sample_output": {
+                    "type": "string"
+                },
+                "source": {
+                    "type": "string"
+                },
+                "status": {
+                    "description": "状态控制（可选）",
+                    "enum": [
+                        "draft",
+                        "published",
+                        "archived"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/models.ProblemStatus"
+                        }
+                    ]
+                },
+                "tags": {
+                    "type": "array",
+                    "maxItems": 10,
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "time_limit": {
+                    "description": "限制条件（可选，有默认值）",
+                    "type": "integer",
+                    "maximum": 10000,
+                    "minimum": 100
+                },
+                "title": {
+                    "description": "基本信息（必填）",
+                    "type": "string",
+                    "maxLength": 200,
+                    "minLength": 1
+                }
+            }
+        },
         "models.CreateTestCaseRequest": {
             "type": "object",
             "required": [
@@ -2807,6 +3257,23 @@ const docTemplate = `{
             }
         },
         "models.PageQueryCourseRequest": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "page_num": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "integer"
+                }
+            }
+        },
+        "models.PageQueryTeacherCoursesRequest": {
             "type": "object",
             "properties": {
                 "name": {
@@ -2951,10 +3418,50 @@ const docTemplate = `{
         "models.RemoveClazzMembersRequest": {
             "type": "object",
             "required": [
+                "clazz_id",
                 "member_ids"
             ],
             "properties": {
+                "clazz_id": {
+                    "type": "string"
+                },
                 "member_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "models.RemoveClazzTeachersRequest": {
+            "type": "object",
+            "required": [
+                "clazz_id",
+                "teacher_ids"
+            ],
+            "properties": {
+                "clazz_id": {
+                    "type": "string"
+                },
+                "teacher_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "models.RemoveCourseTeachersRequest": {
+            "type": "object",
+            "required": [
+                "course_id",
+                "teacher_ids"
+            ],
+            "properties": {
+                "course_id": {
+                    "type": "string"
+                },
+                "teacher_ids": {
                     "type": "array",
                     "items": {
                         "type": "string"
@@ -3156,6 +3663,32 @@ const docTemplate = `{
                 }
             }
         },
+        "models.UpdateClazzRequest": {
+            "type": "object",
+            "required": [
+                "clazz_id"
+            ],
+            "properties": {
+                "clazz_id": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "max_members": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "require_invite": {
+                    "type": "boolean"
+                },
+                "schedule": {
+                    "type": "string"
+                }
+            }
+        },
         "models.UpdateCourseRequest": {
             "type": "object",
             "required": [
@@ -3173,6 +3706,90 @@ const docTemplate = `{
                 },
                 "status": {
                     "$ref": "#/definitions/models.CourseStatus"
+                }
+            }
+        },
+        "models.UpdateProblemRequest": {
+            "type": "object",
+            "properties": {
+                "author": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string",
+                    "minLength": 10
+                },
+                "difficulty": {
+                    "description": "难度和标签（可选）",
+                    "enum": [
+                        "easy",
+                        "medium",
+                        "hard"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/models.ProblemDifficulty"
+                        }
+                    ]
+                },
+                "hint": {
+                    "type": "string"
+                },
+                "input": {
+                    "description": "题目详情（可选）",
+                    "type": "string"
+                },
+                "is_public": {
+                    "type": "boolean"
+                },
+                "memory_limit": {
+                    "type": "integer",
+                    "maximum": 1024,
+                    "minimum": 32
+                },
+                "output": {
+                    "type": "string"
+                },
+                "sample_input": {
+                    "type": "string"
+                },
+                "sample_output": {
+                    "type": "string"
+                },
+                "source": {
+                    "type": "string"
+                },
+                "status": {
+                    "description": "状态控制（可选）",
+                    "enum": [
+                        "draft",
+                        "published",
+                        "archived"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/models.ProblemStatus"
+                        }
+                    ]
+                },
+                "tags": {
+                    "type": "array",
+                    "maxItems": 10,
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "time_limit": {
+                    "description": "限制条件（可选）",
+                    "type": "integer",
+                    "maximum": 10000,
+                    "minimum": 100
+                },
+                "title": {
+                    "description": "基本信息（可选）",
+                    "type": "string",
+                    "maxLength": 200,
+                    "minLength": 1
                 }
             }
         },
@@ -3410,7 +4027,7 @@ const docTemplate = `{
     },
     "securityDefinitions": {
         "BearerAuth": {
-            "description": "Type \"Bearer\" followed by a space and JWT token.",
+            "description": "输入\"Bearer \" + JWT Token",
             "type": "apiKey",
             "name": "Authorization",
             "in": "header"
@@ -3425,7 +4042,7 @@ var SwaggerInfo = &swag.Spec{
 	BasePath:         "/api/v1",
 	Schemes:          []string{},
 	Title:            "ZK Code Arena API",
-	Description:      "ZK Code Arena 在线编程平台 REST API 文档\n提供用户管理、题库管理、班级课程管理、代码评测等功能",
+	Description:      "ZK Code Arena 在线编程平台API文档",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",
