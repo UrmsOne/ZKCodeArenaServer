@@ -1765,7 +1765,7 @@ paths:
       - BearerAuth: []
       summary: 完成任务
       tags:
-      - 课程
+      - 班级
   /clazzes/join:
     get:
       consumes:
@@ -1864,34 +1864,6 @@ paths:
       summary: 移除班级成员
       tags:
       - 班级
-  /clazzes/query:
-    post:
-      consumes:
-      - application/json
-      description: 分页查询用户相关的课程列表
-      parameters:
-      - description: 分页查询参数
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/zk-code-arena-server_pkg_models.PageQueryCourseRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 课程列表
-          schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_models.CourseListResponse'
-        "400":
-          description: 请求参数错误
-          schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_models.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: 分页查询课程
-      tags:
-      - 课程
   /clazzes/student_classes:
     delete:
       consumes:
@@ -2003,7 +1975,7 @@ paths:
       - BearerAuth: []
       summary: 添加任务
       tags:
-      - 课程
+      - 班级
     put:
       consumes:
       - application/json
@@ -2030,7 +2002,7 @@ paths:
       - BearerAuth: []
       summary: 更新任务
       tags:
-      - 课程
+      - 班级
   /clazzes/task/{taskId}:
     delete:
       consumes:
@@ -2057,7 +2029,7 @@ paths:
       - BearerAuth: []
       summary: 删除任务
       tags:
-      - 课程
+      - 班级
     get:
       consumes:
       - application/json
@@ -2306,6 +2278,34 @@ paths:
       security:
       - BearerAuth: []
       summary: 更新课程头像
+      tags:
+      - 课程
+  /courses/query:
+    post:
+      consumes:
+      - application/json
+      description: 分页查询用户相关的课程列表
+      parameters:
+      - description: 分页查询参数
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/zk-code-arena-server_pkg_models.PageQueryCourseRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 课程列表
+          schema:
+            $ref: '#/definitions/zk-code-arena-server_pkg_models.CourseListResponse'
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/zk-code-arena-server_pkg_models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: 分页查询课程
       tags:
       - 课程
   /courses/teacher/query:

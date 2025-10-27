@@ -357,10 +357,10 @@ func (p *ProblemRepository) UpdateProblemFromRequest(ctx context.Context, proble
 		updateFields["output"] = *req.Output
 	}
 	if req.SampleInput != nil {
-		updateFields["sampleInput"] = *req.SampleInput
+		updateFields["sample_input"] = *req.SampleInput
 	}
 	if req.SampleOutput != nil {
-		updateFields["sampleOutput"] = *req.SampleOutput
+		updateFields["sample_output"] = *req.SampleOutput
 	}
 	if req.Hint != nil {
 		updateFields["hint"] = *req.Hint
@@ -375,10 +375,10 @@ func (p *ProblemRepository) UpdateProblemFromRequest(ctx context.Context, proble
 		updateFields["difficulty"] = *req.Difficulty
 	}
 	if req.TimeLimit != nil {
-		updateFields["timeLimit"] = *req.TimeLimit
+		updateFields["time_limit"] = *req.TimeLimit
 	}
 	if req.MemoryLimit != nil {
-		updateFields["memoryLimit"] = *req.MemoryLimit
+		updateFields["memory_limit"] = *req.MemoryLimit
 	}
 	if req.Tags != nil {
 		tags := *req.Tags
@@ -392,18 +392,18 @@ func (p *ProblemRepository) UpdateProblemFromRequest(ctx context.Context, proble
 		
 		// 业务规则：草稿状态强制私有
 		if *req.Status == models.StatusDraft {
-			updateFields["isPublic"] = false
+			updateFields["is_public"] = false
 		}
 	}
 	if req.IsPublic != nil {
 		// 如果同时设置了 status 为 draft，则 isPublic 已经在上面被设置为 false
 		if req.Status == nil || *req.Status != models.StatusDraft {
-			updateFields["isPublic"] = *req.IsPublic
+			updateFields["is_public"] = *req.IsPublic
 		}
 	}
 
 	// 必须更新的字段：更新时间
-	updateFields["updatedAt"] = time.Now()
+	updateFields["updated_at"] = time.Now()
 
 	// 执行更新操作
 	result, err := p.UpdateOne(ctx, "problems", bson.M{"_id": problemID}, bson.M{"$set": updateFields})

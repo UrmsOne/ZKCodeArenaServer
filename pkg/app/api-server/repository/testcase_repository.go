@@ -49,7 +49,7 @@ func (r *TestCaseRepository) CreateTestCase(ctx context.Context, testCase *model
 		return err
 	}
 	
-	_, err := r.InsertOne(ctx, "testcases", testCase)
+	_, err := r.InsertOne(ctx, "test_cases", testCase)
 	if err != nil {
 		utils.Logger.Errorf("CreateTestCase: 创建测试用例失败, problemID=%s, error=%v", testCase.ProblemID.Hex(), err)
 		return fmt.Errorf("创建测试用例失败: %w", err)
@@ -62,7 +62,7 @@ func (r *TestCaseRepository) CreateTestCase(ctx context.Context, testCase *model
 // GetByID 根据ID查询测试用例
 func (r *TestCaseRepository) GetByID(ctx context.Context, id primitive.ObjectID) (*models.TestCase, error) {
 	var testCase models.TestCase
-	err := r.FindOne(ctx, "testcases", bson.M{"_id": id}, &testCase)
+	err := r.FindOne(ctx, "test_cases", bson.M{"_id": id}, &testCase)
 	if err != nil {
 		return nil, err
 	}
@@ -74,7 +74,7 @@ func (r *TestCaseRepository) GetByProblemID(ctx context.Context, problemID primi
 	filter := bson.M{"problem_id": problemID}
 	opts := options.Find().SetSort(bson.M{"order": 1, "created_at": 1})
 	
-	cursor, err := r.Find(ctx, "testcases", filter, opts)
+	cursor, err := r.Find(ctx, "test_cases", filter, opts)
 	if err != nil {
 		return nil, fmt.Errorf("查询测试用例失败: %w", err)
 	}
@@ -100,7 +100,7 @@ func (r *TestCaseRepository) GetSampleTestCases(ctx context.Context, problemID p
 	}
 	opts := options.Find().SetSort(bson.M{"order": 1, "created_at": 1})
 	
-	cursor, err := r.Find(ctx, "testcases", filter, opts)
+	cursor, err := r.Find(ctx, "test_cases", filter, opts)
 	if err != nil {
 		return nil, fmt.Errorf("查询示例测试用例失败: %w", err)
 	}
@@ -121,7 +121,7 @@ func (r *TestCaseRepository) GetSampleTestCases(ctx context.Context, problemID p
 // UpdateTestCase 更新测试用例（使用通用更新函数）
 func (r *TestCaseRepository) UpdateTestCase(ctx context.Context, testCaseID primitive.ObjectID, req interface{}) error {
 	// 使用BaseRepository的通用更新方法
-	result, err := r.UpdateOne(ctx, "testcases", bson.M{"_id": testCaseID}, req)
+	result, err := r.UpdateOne(ctx, "test_cases", bson.M{"_id": testCaseID}, req)
 	if err != nil {
 		return err
 	}
@@ -142,7 +142,7 @@ func (r *TestCaseRepository) UpdateTestCaseComplete(ctx context.Context, testCas
 		return err
 	}
 	
-	result, err := r.UpdateOne(ctx, "testcases", bson.M{"_id": testCase.ID}, testCase)
+	result, err := r.UpdateOne(ctx, "test_cases", bson.M{"_id": testCase.ID}, testCase)
 	if err != nil {
 		return err
 	}
@@ -157,7 +157,7 @@ func (r *TestCaseRepository) UpdateTestCaseComplete(ctx context.Context, testCas
 
 // DeleteTestCase 删除测试用例
 func (r *TestCaseRepository) DeleteTestCase(ctx context.Context, id primitive.ObjectID) error {
-	result, err := r.DeleteOne(ctx, "testcases", bson.M{"_id": id})
+	result, err := r.DeleteOne(ctx, "test_cases", bson.M{"_id": id})
 	if err != nil {
 		return err
 	}
@@ -173,7 +173,7 @@ func (r *TestCaseRepository) DeleteTestCase(ctx context.Context, id primitive.Ob
 // CountByProblemID 统计题目的测试用例数量
 func (r *TestCaseRepository) CountByProblemID(ctx context.Context, problemID primitive.ObjectID) (int64, error) {
 	filter := bson.M{"problem_id": problemID}
-	return r.CountDocuments(ctx, "testcases", filter)
+	return r.CountDocuments(ctx, "test_cases", filter)
 }
 
 // BatchCreateTestCases 批量创建测试用例
@@ -206,7 +206,7 @@ func (r *TestCaseRepository) BatchCreateTestCases(ctx context.Context, testCases
 	
 	// 执行批量插入
 	if len(documents) > 0 {
-		insertResult, err := r.InsertMany(ctx, "testcases", documents)
+		insertResult, err := r.InsertMany(ctx, "test_cases", documents)
 		if err != nil {
 			utils.Logger.Errorf("BatchCreateTestCases: 批量插入失败, error=%v", err)
 			return nil, fmt.Errorf("批量插入失败: %w", err)
@@ -224,7 +224,7 @@ func (r *TestCaseRepository) BatchCreateTestCases(ctx context.Context, testCases
 func (r *TestCaseRepository) DeleteByProblemID(ctx context.Context, problemID primitive.ObjectID) error {
 	filter := bson.M{"problem_id": problemID}
 	
-	coll := r.db.Collection("testcases")
+	coll := r.db.Collection("test_cases")
 	result, err := coll.DeleteMany(ctx, filter)
 	if err != nil {
 		utils.Logger.Errorf("DeleteByProblemID: 删除失败, problemID=%s, error=%v", problemID.Hex(), err)
@@ -244,7 +244,7 @@ func (r *TestCaseRepository) UpdateTestCaseOrder(ctx context.Context, testCaseID
 		Order: order,
 	}
 	
-	result, err := r.UpdateOne(ctx, "testcases", bson.M{"_id": testCaseID}, updateData)
+	result, err := r.UpdateOne(ctx, "test_cases", bson.M{"_id": testCaseID}, updateData)
 	if err != nil {
 		return err
 	}
@@ -270,7 +270,7 @@ func (r *TestCaseRepository) GetTestCaseStats(ctx context.Context, problemID pri
 		},
 	}
 	
-	cursor, err := r.Aggregate(ctx, "testcases", pipeline)
+	cursor, err := r.Aggregate(ctx, "test_cases", pipeline)
 	if err != nil {
 		return nil, fmt.Errorf("查询测试用例统计失败: %w", err)
 	}

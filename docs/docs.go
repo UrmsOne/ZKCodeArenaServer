@@ -312,7 +312,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "课程"
+                    "班级"
                 ],
                 "summary": "完成任务",
                 "parameters": [
@@ -496,51 +496,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/clazzes/query": {
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "分页查询用户相关的课程列表",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "课程"
-                ],
-                "summary": "分页查询课程",
-                "parameters": [
-                    {
-                        "description": "分页查询参数",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.PageQueryCourseRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "课程列表",
-                        "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.CourseListResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "请求参数错误",
-                        "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
         "/clazzes/student_classes": {
             "post": {
                 "security": [
@@ -690,7 +645,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "课程"
+                    "班级"
                 ],
                 "summary": "更新任务",
                 "parameters": [
@@ -733,7 +688,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "课程"
+                    "班级"
                 ],
                 "summary": "添加任务",
                 "parameters": [
@@ -819,7 +774,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "课程"
+                    "班级"
                 ],
                 "summary": "删除任务",
                 "parameters": [
@@ -1142,6 +1097,51 @@ const docTemplate = `{
                         "description": "创建成功，返回课程ID",
                         "schema": {
                             "$ref": "#/definitions/zk-code-arena-server_pkg_models.CreateResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "请求参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/courses/query": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "分页查询用户相关的课程列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "课程"
+                ],
+                "summary": "分页查询课程",
+                "parameters": [
+                    {
+                        "description": "分页查询参数",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.PageQueryCourseRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "课程列表",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.CourseListResponse"
                         }
                     },
                     "400": {
