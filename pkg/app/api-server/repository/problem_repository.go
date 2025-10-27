@@ -62,29 +62,6 @@ func (r *ProblemRepository) GetByID(ctx context.Context, id primitive.ObjectID) 
 	return &problem, nil
 }
 
-// UpdateProblem 更新题目（使用通用更新函数）
-func (r *ProblemRepository) UpdateProblem(ctx context.Context, problemID primitive.ObjectID, req *models.UpdateProblemRequest) error {
-	// 业务规则验证
-	if err := r.validateProblemUpdate(req); err != nil {
-		return err
-	}
-	
-	// 使用BaseRepository的通用更新方法
-	result, err := r.UpdateOne(ctx, "problems", bson.M{"_id": problemID}, req)
-	if err != nil {
-		return err
-	}
-	
-	// 检查是否找到文档
-	if result.MatchedCount == 0 {
-		utils.Logger.Warnf("UpdateProblem: 题目不存在, problemID=%s", problemID.Hex())
-		return fmt.Errorf("题目不存在")
-	}
-	
-	utils.Logger.Infof("UpdateProblem: 题目更新成功, problemID=%s", problemID.Hex())
-	return nil
-}
-
 // DeleteProblem 删除题目
 func (r *ProblemRepository) DeleteProblem(ctx context.Context, id primitive.ObjectID) error {
 	result, err := r.DeleteOne(ctx, "problems", bson.M{"_id": id})
@@ -405,10 +382,16 @@ func (p *ProblemRepository) UpdateProblemFromRequest(ctx context.Context, proble
 	// 必须更新的字段：更新时间
 	updateFields["updated_at"] = time.Now()
 
-	// 执行更新操作
-	result, err := p.UpdateOne(ctx, "problems", bson.M{"_id": problemID}, bson.M{"$set": updateFields})
+	// 执行更新操作（直接传入 updateFields，UpdateOne 会自动添加 $set）
+	// 注意：不要再手动包装 bson.M{"$set": ...}，会导致双重 $set 错误
+	filter := bson.M{"_id": problemID}
+	update := bson.M{"$set": updateFields}
+	
+	coll := p.db.Collection("problems")
+	result, err := coll.UpdateOne(ctx, filter, update)
 	if err != nil {
-		return err
+		utils.Logger.Errorf("UpdateProblemFromRequest: 更新失败, error=%v", err)
+		return fmt.Errorf("数据库更新失败: %w", err)
 	}
 	
 	// 检查是否找到文档

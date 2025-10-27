@@ -40,7 +40,7 @@ func (s *Server) RegisterSubmit(g *gin.RouterGroup) {
 // @Accept       json
 // @Produce      json
 // @Param        request body models.SubmitCodeRequest true "提交信息"
-// @Success      200 {object} models.Submit "提交记录"
+// @Success      200 {object} utils.Response{data=models.Submit} "提交记录"
 // @Failure      400 {object} map[string]interface{} "请求参数错误"
 // @Failure      401 {object} map[string]interface{} "未认证用户"
 // @Failure      404 {object} map[string]interface{} "题目不存在"
@@ -144,7 +144,7 @@ func (s *Server) SubmitCode(c *gin.Context) {
 // @Param        page_size query int false "每页数量" default(10)
 // @Param        problem_id query string false "题目ID筛选"
 // @Param        user_id query string false "用户ID筛选（管理员可用）"
-// @Success      200 {object} models.SubmitListResponse "提交列表"
+// @Success      200 {object} utils.Response{data=object{submits=[]models.Submit,total=int64,page=int,page_size=int,total_page=int64}} "提交列表"
 // @Failure      400 {object} models.ErrorResponse "请求参数错误"
 // @Failure      401 {object} models.ErrorResponse "需要登录"
 // @Failure      500 {object} models.ErrorResponse "获取失败"
@@ -219,7 +219,7 @@ func (s *Server) GetSubmits(c *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Param        id path string true "提交ID"
-// @Success      200 {object} models.Submit "提交详情"
+// @Success      200 {object} utils.Response{data=models.Submit} "提交详情"
 // @Failure      400 {object} models.ErrorResponse "无效的提交ID"
 // @Failure      401 {object} models.ErrorResponse "需要登录"
 // @Failure      403 {object} models.ErrorResponse "权限不足"
@@ -267,7 +267,7 @@ func (s *Server) GetSubmit(c *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Param        id path string true "提交ID"
-// @Success      200 {object} models.SubmitStatusResponse "提交状态信息"
+// @Success      200 {object} utils.Response{data=models.SubmitStatusResponse} "提交状态信息"
 // @Failure      400 {object} map[string]interface{} "无效的提交ID"
 // @Failure      401 {object} map[string]interface{} "需要登录"
 // @Failure      403 {object} map[string]interface{} "权限不足"

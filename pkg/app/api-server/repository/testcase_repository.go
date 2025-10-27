@@ -40,8 +40,10 @@ func NewTestCaseRepository() *TestCaseRepository {
 // CreateTestCase 创建测试用例
 func (r *TestCaseRepository) CreateTestCase(ctx context.Context, testCase *models.TestCase) error {
 	// 设置系统字段
+	now := time.Now()
 	testCase.ID = primitive.NewObjectID()
-	testCase.CreatedAt = time.Now()
+	testCase.CreatedAt = now
+	testCase.UpdatedAt = now
 	
 	// 验证测试用例
 	if err := r.validateTestCase(testCase); err != nil {
@@ -191,8 +193,10 @@ func (r *TestCaseRepository) BatchCreateTestCases(ctx context.Context, testCases
 	
 	for i, testCase := range testCases {
 		// 设置系统字段
+		now := time.Now()
 		testCase.ID = primitive.NewObjectID()
-		testCase.CreatedAt = time.Now()
+		testCase.CreatedAt = now
+		testCase.UpdatedAt = now
 		
 		// 验证测试用例
 		if err := r.validateTestCase(testCase); err != nil {

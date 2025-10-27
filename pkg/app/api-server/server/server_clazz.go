@@ -57,7 +57,7 @@ func (s *Server) RegisterClazz(g *gin.RouterGroup) {
 // @Accept       json
 // @Produce      json
 // @Param        taskId path string true "任务ID"
-// @Success      200 {object} models.SuccessResponse "删除成功"
+// @Success      200 {object} utils.Response "删除成功"
 // @Failure      400 {object} models.ErrorResponse "请求参数错误"
 // @Security     BearerAuth
 // @Router       /clazzes/task/{taskId} [delete]
@@ -82,7 +82,7 @@ func (s *Server) DeleteTask(c *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Param        request body models.UpdateTaskRequest true "更新的任务信息"
-// @Success      200 {object} models.SuccessResponse "更新成功"
+// @Success      200 {object} utils.Response "更新成功"
 // @Failure      400 {object} models.ErrorResponse "请求参数错误"
 // @Security     BearerAuth
 // @Router       /clazzes/task [put]
@@ -107,7 +107,7 @@ func (s *Server) UpdateTask(c *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Param        request body models.AddTaskRequest true "任务信息"
-// @Success      200 {object} models.SuccessResponse "添加成功"
+// @Success      200 {object} utils.Response "添加成功"
 // @Failure      400 {object} models.ErrorResponse "请求参数错误"
 // @Security     BearerAuth
 // @Router       /clazzes/task [post]
@@ -134,7 +134,7 @@ func (s *Server) AddTask(c *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Param        request body models.FinishTaskRequest true "完成任务信息"
-// @Success      200 {object} models.SuccessResponse "完成成功"
+// @Success      200 {object} utils.Response "完成成功"
 // @Failure      400 {object} models.ErrorResponse "请求参数错误"
 // @Security     BearerAuth
 // @Router       /clazzes/finishTask [post]
@@ -159,7 +159,7 @@ func (s *Server) FinishTask(c *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Param        request body models.CreateClazzRequest true "班级信息"
-// @Success      200 {object} models.SuccessResponse "创建成功"
+// @Success      200 {object} utils.Response{data=models.GetClazzResponse} "创建成功"
 // @Failure      400 {object} models.ErrorResponse "请求参数错误"
 // @Security     BearerAuth
 // @Router       /clazzes [post]
@@ -186,7 +186,7 @@ func (s *Server) CreateClass(c *gin.Context) {
 // @Produce      json
 // @Param        clazzId query string true "班级ID"
 // @Param        invite_code query string true "邀请码"
-// @Success      200 {object} models.SuccessResponse "加入成功"
+// @Success      200 {object} utils.Response "加入成功"
 // @Failure      400 {object} models.ErrorResponse "请求参数错误"
 // @Security     BearerAuth
 // @Router       /clazzes/join [get]
@@ -216,7 +216,7 @@ func (s *Server) JoinClass(c *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Param        clazzId path string true "班级ID"
-// @Success      200 {object} models.Clazz "班级详情"
+// @Success      200 {object} utils.Response{data=models.Clazz} "班级详情"
 // @Failure      400 {object} models.ErrorResponse "请求参数错误"
 // @Security     BearerAuth
 // @Router       /clazzes/{clazzId} [get]
@@ -243,7 +243,7 @@ func (s *Server) GetClazzById(c *gin.Context) {
 // @Produce      json
 // @Param        clazzId path string true "班级ID"
 // @Param        request body models.UpdateClazzRequest true "更新的班级信息"
-// @Success      200 {object} models.SuccessResponse "更新成功"
+// @Success      200 {object} utils.Response "更新成功"
 // @Failure      400 {object} models.ErrorResponse "请求参数错误"
 // @Security     BearerAuth
 // @Router       /clazzes [put]
@@ -270,7 +270,7 @@ func (s *Server) UpdateClazzInfo(c *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Param        clazzId path string true "班级ID"
-// @Success      200 {object} models.SuccessResponse "删除成功"
+// @Success      200 {object} utils.Response "删除成功"
 // @Failure      400 {object} models.ErrorResponse "请求参数错误"
 // @Security     BearerAuth
 // @Router       /clazzes/{clazzId} [delete]
@@ -296,7 +296,7 @@ func (s *Server) DeleteClazz(c *gin.Context) {
 // @Produce      json
 // @Param        clazzId path string true "班级ID"
 // @Param        request body models.AddClazzMemberRequest true "成员ID"
-// @Success      200 {object} models.SuccessResponse "添加成功"
+// @Success      200 {object} utils.Response "添加成功"
 // @Failure      400 {object} models.ErrorResponse "请求参数错误"
 // @Security     BearerAuth
 // @Router       /clazzes/members [post]
@@ -328,7 +328,7 @@ func (s *Server) AddClazzMember(c *gin.Context) {
 // @Produce      json
 // @Param        clazzId path string true "班级ID"
 // @Param        request body models.RemoveClazzMembersRequest true "成员ID列表"
-// @Success      200 {object} models.SuccessResponse "移除成功"
+// @Success      200 {object} utils.Response "移除成功"
 // @Failure      400 {object} models.ErrorResponse "请求参数错误"
 // @Security     BearerAuth
 // @Router       /clazzes/members/remove [post]
@@ -352,7 +352,7 @@ func (s *Server) RemoveClazzMembers(c *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Param        request body models.AddClazzTeachersRequest true "添加教师请求"
-// @Success      200 {object} models.SuccessResponse "添加成功"
+// @Success      200 {object} utils.Response "添加成功"
 // @Failure      400 {object} models.ErrorResponse "请求参数错误"
 // @Security     BearerAuth
 // @Router       /clazzes/teachers [post]
@@ -383,7 +383,7 @@ func (s *Server) addClazzTeacher(c *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Param        request body models.RemoveClazzTeachersRequest true "移除教师请求"
-// @Success      200 {object} models.SuccessResponse "移除成功"
+// @Success      200 {object} utils.Response "移除成功"
 // @Failure      400 {object} models.ErrorResponse "请求参数错误"
 // @Security     BearerAuth
 // @Router       /clazzes/teachers [delete]
@@ -419,7 +419,7 @@ func (s *Server) removeClazzTeacher(c *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Param        courseId path string true "课程ID"
-// @Success      200 {object} models.SuccessResponse "班级列表"
+// @Success      200 {object} utils.Response{data=[]models.Clazz} "班级列表"
 // @Failure      400 {object} models.ErrorResponse "请求参数错误"
 // @Security     BearerAuth
 // @Router       /clazzes/course/{courseId} [get]
@@ -473,7 +473,7 @@ func (s *Server) GetTasksByClazzId(c *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Param        taskId path string true "任务ID"
-// @Success      200 {object} models.Task "任务详情"
+// @Success      200 {object} utils.Response{data=models.Task} "任务详情"
 // @Failure      400 {object} models.ErrorResponse "请求参数错误"
 // @Security     BearerAuth
 // @Router       /clazzes/task/{taskId} [get]
@@ -501,7 +501,7 @@ func (s *Server) GetTaskById(c *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Param        request body models.AddStudentToClassRequest true "添加学生到班级请求"
-// @Success      200 {object} models.SuccessResponse "添加成功"
+// @Success      200 {object} utils.Response "添加成功"
 // @Failure      400 {object} models.ErrorResponse "请求参数错误"
 // @Security     BearerAuth
 // @Router       /clazzes/student_classes [post]
@@ -527,7 +527,7 @@ func (s *Server) AddStudentToClass(c *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Param        request body models.RemoveStudentFromClassRequest true "从班级移除学生请求"
-// @Success      200 {object} models.SuccessResponse "移除成功"
+// @Success      200 {object} utils.Response "移除成功"
 // @Failure      400 {object} models.ErrorResponse "请求参数错误"
 // @Security     BearerAuth
 // @Router       /clazzes/student_classes [delete]

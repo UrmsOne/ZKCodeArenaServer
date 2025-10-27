@@ -78,6 +78,7 @@ type TestCase struct {
 	
 	Score       int                `bson:"score" json:"score" example:"10"`           // 用例分数（可选，用于部分分）
 	CreatedAt   time.Time          `bson:"created_at" json:"created_at" example:"2024-10-26T10:00:00Z"`
+	UpdatedAt   time.Time          `bson:"updated_at" json:"updated_at" example:"2024-10-26T10:00:00Z"`
 }
 
 // ProblemList 题目列表项
