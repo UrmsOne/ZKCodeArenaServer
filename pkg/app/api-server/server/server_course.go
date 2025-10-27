@@ -25,7 +25,6 @@ func (s *Server) RegisterCourse(g *gin.RouterGroup) {
 			jwtGroup.PUT("/:courseId", s.UpdateCourse)
 			jwtGroup.DELETE("/:courseId", s.RemoveCourse)
 			jwtGroup.PUT("/:courseId/avatar", s.UpdateCourseAvatar)
-			jwtGroup.GET("/:courseId/clazzes", s.GetClazzesByCourseId)
 			jwtGroup.POST("/teacher/query", s.PageQueryTeacherCourses)
 			jwtGroup.POST("/query", s.PageQueryCourse)
 			jwtGroup.POST("/teachers", s.addCourseTeacher)
