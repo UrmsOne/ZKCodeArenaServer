@@ -53,7 +53,7 @@ func (s *Server) RegisterClazz(g *gin.RouterGroup) {
 // DeleteTask godoc
 // @Summary      删除任务
 // @Description  删除指定任务
-// @Tags         课程
+// @Tags         班级
 // @Accept       json
 // @Produce      json
 // @Param        taskId path string true "任务ID"
@@ -78,7 +78,7 @@ func (s *Server) DeleteTask(c *gin.Context) {
 // UpdateTask godoc
 // @Summary      更新任务
 // @Description  更新任务信息
-// @Tags         课程
+// @Tags         班级
 // @Accept       json
 // @Produce      json
 // @Param        request body models.UpdateTaskRequest true "更新的任务信息"
@@ -103,7 +103,7 @@ func (s *Server) UpdateTask(c *gin.Context) {
 // AddTask godoc
 // @Summary      添加任务
 // @Description  为班级添加新任务
-// @Tags         课程
+// @Tags         班级
 // @Accept       json
 // @Produce      json
 // @Param        request body models.AddTaskRequest true "任务信息"
@@ -130,7 +130,7 @@ func (s *Server) AddTask(c *gin.Context) {
 // FinishTask godoc
 // @Summary      完成任务
 // @Description  标记任务为已完成
-// @Tags         课程
+// @Tags         班级
 // @Accept       json
 // @Produce      json
 // @Param        request body models.FinishTaskRequest true "完成任务信息"
@@ -346,8 +346,8 @@ func (s *Server) RemoveClazzMembers(c *gin.Context) {
 	utils.SuccessResponse(c, nil)
 }
 
-// @Description  班级添加老师（支持批量添加，只有课程创建者可以操作，且教师必须已加入课程）
 // @Summary      班级添加老师
+// @Description  班级添加老师（支持批量添加，只有课程创建者可以操作，且教师必须已加入课程）
 // @Tags         班级
 // @Accept       json
 // @Produce      json
@@ -377,8 +377,8 @@ func (s *Server) addClazzTeacher(c *gin.Context) {
 	utils.SuccessResponse(c, nil)
 }
 
-// @Description  班级删除老师（支持批量删除，只有课程创建者可以操作）
 // @Summary      班级删除老师
+// @Description  班级删除老师（支持批量删除，只有课程创建者可以操作）
 // @Tags         班级
 // @Accept       json
 // @Produce      json

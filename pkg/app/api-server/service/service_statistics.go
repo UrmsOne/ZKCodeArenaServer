@@ -391,8 +391,8 @@ func (s *StatisticsService) GetProblemDifficultyStats(ctx context.Context) (*Pro
 	pipeline := []bson.M{
 		// 只统计已发布且公开的题目
 		{"$match": bson.M{
-			"status":   models.StatusPublished,
-			"isPublic": true,
+			"status":    models.StatusPublished,
+			"is_public": true,
 		}},
 		// 按难度分组统计
 		{"$group": bson.M{

@@ -65,11 +65,11 @@ func (r *BaseRepository) BuildUpdateSetWithTime(obj interface{}) (bson.M, error)
 	
 	// 如果没有字段需要更新，只更新时间戳
 	if updateDoc == nil {
-		return bson.M{"$set": bson.M{"updatedAt": time.Now()}}, nil
+		return bson.M{"$set": bson.M{"updated_at": time.Now()}}, nil
 	}
 	
-	// 添加updatedAt字段
-	updateDoc["$set"].(bson.M)["updatedAt"] = time.Now()
+	// 添加updated_at字段
+	updateDoc["$set"].(bson.M)["updated_at"] = time.Now()
 	return updateDoc, nil
 }
 

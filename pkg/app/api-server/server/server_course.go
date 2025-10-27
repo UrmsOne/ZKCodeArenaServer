@@ -64,8 +64,8 @@ func (s *Server) PageQueryCourse(c *gin.Context) {
 	utils.SuccessResponse(c, res)
 }
 
-// @Description  课程创建者添加老师（支持批量添加，只有课程创建者可以操作）
 // @Summary      课程创建者添加老师
+// @Description  课程创建者添加老师（支持批量添加，只有课程创建者可以操作）
 // @Tags         课程
 // @Accept       json
 // @Produce      json
@@ -100,8 +100,8 @@ func (s *Server) addCourseTeacher(c *gin.Context) {
 	utils.SuccessResponse(c, nil)
 }
 
-// @Description  课程创建者删除课程老师（支持批量删除，只有课程创建者可以操作）
 // @Summary      课程创建者删除课程老师
+// @Description  课程创建者删除课程老师（支持批量删除，只有课程创建者可以操作）
 // @Tags         课程
 // @Accept       json
 // @Produce      json
