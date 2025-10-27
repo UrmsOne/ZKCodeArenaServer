@@ -346,8 +346,8 @@ func (s *Server) RemoveClazzMembers(c *gin.Context) {
 	utils.SuccessResponse(c, nil)
 }
 
-// @Description  班级添加老师（支持批量添加，只有课程创建者可以操作，且教师必须已加入课程）
 // @Summary      班级添加老师
+// @Description  班级添加老师（支持批量添加，只有课程创建者可以操作，且教师必须已加入课程）
 // @Tags         班级
 // @Accept       json
 // @Produce      json
@@ -377,8 +377,8 @@ func (s *Server) addClazzTeacher(c *gin.Context) {
 	utils.SuccessResponse(c, nil)
 }
 
-// @Description  班级删除老师（支持批量删除，只有课程创建者可以操作）
 // @Summary      班级删除老师
+// @Description  班级删除老师（支持批量删除，只有课程创建者可以操作）
 // @Tags         班级
 // @Accept       json
 // @Produce      json
