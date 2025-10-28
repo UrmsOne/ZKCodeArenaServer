@@ -9,12 +9,16 @@ package service
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
+	"fmt"
+	"math/rand/v2"
 	"time"
 	taskstrategy "zk-code-arena-server/pkg/app/api-server/service/task-servies"
 	"zk-code-arena-server/pkg/models"
 	"zk-code-arena-server/pkg/utils"
 
+	"github.com/skip2/go-qrcode"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -27,6 +31,37 @@ type ClazzService struct{}
 // NewClazzService 创建班级服务实例
 func NewClazzService() *ClazzService {
 	return &ClazzService{}
+}
+
+// 刷新二维码
+func (s2 *CourseService) RefreshQrcode(userId string, courseId string, clazzId string, ctx context.Context) (interface{}, error) {
+	userObjId, err := primitive.ObjectIDFromHex(userId)
+	if err != nil {
+		return nil, errors.New("用户错误")
+	}
+	courseObjId, err := primitive.ObjectIDFromHex(courseId)
+	if err != nil {
+		return nil, errors.New("课程错误")
+	}
+
+	if isSuccess, err := authorized(ctx, utils.GetCollection("courses"), courseObjId, userObjId); !isSuccess || err != nil {
+		if !isSuccess {
+			return nil, errors.New("权限不足")
+		}
+		return nil, err
+	}
+	ran := fmt.Sprintf("%d", rand.Int())
+	encode, err := qrcode.Encode(ran, qrcode.Medium, 256)
+	if err != nil {
+		return nil, err
+	}
+	// 将二维码字节切片编码为 Base64 字符串
+	base64QRCode := base64.StdEncoding.EncodeToString(encode)
+	err = utils.RedisClient.Set(ctx, "clazz_qrcode"+clazzId, base64QRCode, 30*time.Minute).Err()
+	if err != nil {
+		return nil, err
+	}
+	return base64QRCode, nil
 }
 
 // CreateClass 创建班级
@@ -84,9 +119,20 @@ func (s *ClazzService) CreateClass(ctx context.Context, req *models.CreateClazzR
 		MTime:         now,
 	}
 
-	_, err = utils.GetCollection("clazzes").InsertOne(ctx, clazz)
+	one, err := utils.GetCollection("clazzes").InsertOne(ctx, clazz)
 	if err != nil {
 		return nil, errors.New("创建班级失败")
+	}
+
+	if req.RequireInvite {
+		id := one.InsertedID.(primitive.ObjectID)
+		ran := fmt.Sprintf("%d", rand.Int())
+		encode, err := qrcode.Encode(ran, qrcode.Medium, 256)
+		if err != nil {
+			return nil, err
+		}
+		base64QRCode := base64.StdEncoding.EncodeToString(encode)
+		utils.RedisClient.HSet(ctx, "clazz_qrcode"+id.Hex(), base64QRCode, 30*time.Minute)
 	}
 
 	return &models.ClazzResponse{

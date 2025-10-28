@@ -31,6 +31,8 @@ func (s *Server) RegisterClazz(g *gin.RouterGroup) {
 			jwtGroup.POST("/members/remove", s.RemoveClazzMembers)
 			jwtGroup.POST("/teachers", s.addClazzTeacher)
 			jwtGroup.DELETE("/teachers", s.removeClazzTeacher)
+			jwtGroup.PUT("/qrcode/:clazzId", s.refreshQrcode)
+			jwtGroup.GET("/qrcode/:clazzId", s.GetQrcodeClazzById)
 			jwtGroup.GET("/course/:courseId", s.GetClazzesByCourseId)
 
 			//课程任务相关
@@ -44,10 +46,79 @@ func (s *Server) RegisterClazz(g *gin.RouterGroup) {
 			// 学生班级相关接口
 			jwtGroup.POST("/student_classes", s.AddStudentToClass)
 			jwtGroup.DELETE("/student_classes", s.RemoveStudentFromClass)
-			jwtGroup.GET("/student_classes/:studentId", s.GetStudentClasses)
+			jwtGroup.GET("/student_classes/:userId", s.GetStudentClasses)
 			jwtGroup.GET("/class_students/:classId", s.GetClassStudents)
 		}
 	}
+}
+
+// GetQrcodeClazzById godoc
+// @Summary      获得班级二维码
+// @Description  获得班级二维码
+// @Tags         班级
+// @Accept       json
+// @Produce      json
+// @Param        clazzId path string true "班级ID"
+// @Success      200 {object} models.SuccessResponse "获得成功"
+// @Failure      400 {object} models.ErrorResponse "请求参数错误"
+// @Failure      403 {object} models.ErrorResponse "权限不足"
+// @Failure      404 {object} models.ErrorResponse "二维码已过期"
+// @Security     BearerAuth
+// @Router       /clazzes/qrcode/{clazzId} [get]
+func (s *Server) GetQrcodeClazzById(c *gin.Context) {
+	clazzId := c.Param("clazzId")
+	if clazzId == "" {
+		utils.BadRequestResponse(c, "参数为空")
+		return
+	}
+
+	userID, _ := c.Get("user_id")
+	qrcodeBase64, err := s.svc.CourseService.GetQrcode(userID.(string), clazzId, c.Request.Context())
+	if err != nil {
+		// 根据错误类型返回不同的响应
+		if err.Error() == "权限不足" {
+			utils.ForbiddenResponse(c, err.Error())
+			return
+		} else if err.Error() == "二维码已过期" {
+			utils.NotFoundResponse(c, err.Error())
+			return
+		} else {
+			utils.BadRequestResponse(c, err.Error())
+			return
+		}
+	}
+	utils.SuccessResponse(c, qrcodeBase64)
+}
+
+// refreshQrcode godoc
+// @Summary      更新班级二维码
+// @Description  更新班级二维码
+// @Tags         班级
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} models.SuccessResponse "更新成功"
+// @Failure      400 {object} models.ErrorResponse "请求参数错误"
+// @Security     BearerAuth
+// @Router       /clazzes/qrcode/{courseId}/{clazzId} [put]
+func (s *Server) refreshQrcode(c *gin.Context) {
+	clazzId := c.Param("clazzId")
+	if clazzId == "" {
+		utils.BadRequestResponse(c, "参数为空")
+		return
+	}
+	courseId := c.Param("courseId")
+	if courseId == "" {
+		utils.BadRequestResponse(c, "参数为空")
+		return
+	}
+
+	userID, _ := c.Get("user_id")
+	qrcodeBase64, err := s.svc.CourseService.RefreshQrcode(userID.(string), courseId, clazzId, c.Request.Context())
+	if err != nil {
+		utils.BadRequestResponse(c, err.Error())
+		return
+	}
+	utils.SuccessResponse(c, qrcodeBase64)
 }
 
 // DeleteTask godoc

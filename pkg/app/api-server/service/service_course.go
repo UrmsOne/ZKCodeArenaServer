@@ -1375,3 +1375,57 @@ func (s *CourseService) RemoveCourse(ctx context.Context, userID string, courseI
 
 	return nil
 }
+
+func (s2 *CourseService) GetQrcode(userId string, clazzId string, ctx context.Context) (interface{}, error) {
+	// 验证用户ID和班级ID格式
+	userObjId, err := primitive.ObjectIDFromHex(userId)
+	if err != nil {
+		return nil, errors.New("用户ID格式错误")
+	}
+	clazzObjId, err := primitive.ObjectIDFromHex(clazzId)
+	if err != nil {
+		return nil, errors.New("班级ID格式错误")
+	}
+
+	// 获取班级信息
+	clazzColl := utils.GetCollection("clazzes")
+	var clazz models.Clazz
+	if err = clazzColl.FindOne(ctx, bson.M{"_id": clazzObjId}).Decode(&clazz); err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return nil, errors.New("班级不存在")
+		}
+		return nil, err
+	}
+
+	// 验证用户权限：必须是班级成员、课程创建者或课程教师
+	// 检查用户是否是班级成员（通过查询学生班级关联表）
+	count, err := utils.GetCollection("student_classes").CountDocuments(ctx, bson.M{
+		"student_id": userObjId,
+		"class_id":   clazzObjId,
+	})
+	if err != nil {
+		return nil, errors.New("检查班级成员失败: " + err.Error())
+	}
+	isMember := count > 0
+
+	// 检查用户是否是课程创建者或课程教师
+	collCourse := utils.GetCollection("courses")
+	isAuthorized, err := authorized(ctx, collCourse, clazz.CourseId, userObjId)
+	if err != nil {
+		return nil, err
+	}
+
+	// 如果既不是成员也不是授权用户，则无权限
+	if !isMember && !isAuthorized {
+		return nil, errors.New("权限不足")
+	}
+
+	// 从Redis获取二维码
+	qrcode, err := utils.RedisClient.Get(ctx, "clazz_qrcode"+clazzId).Result()
+	if err != nil {
+		// Redis中没有找到二维码，说明二维码已过期
+		return nil, errors.New("二维码已过期")
+	}
+
+	return qrcode, nil
+}
