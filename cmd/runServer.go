@@ -10,10 +10,6 @@ package main
 import (
 	"context"
 	"errors"
-	"github.com/fsnotify/fsnotify"
-	"github.com/sirupsen/logrus"
-	"github.com/spf13/cobra"
-	"golang.org/x/sync/errgroup"
 	"os"
 	"os/signal"
 	"syscall"
@@ -22,6 +18,11 @@ import (
 	"zk-code-arena-server/pkg/app/api-server/service"
 	"zk-code-arena-server/pkg/utils"
 	"zk-code-arena-server/pkg/utils/middleware"
+
+	"github.com/fsnotify/fsnotify"
+	"github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
+	"golang.org/x/sync/errgroup"
 )
 
 var runServerCfg = struct {
@@ -52,43 +53,50 @@ func runServe(cmd *cobra.Command, args []string) error {
 	if err := cmd.Flags().Parse(args); err != nil {
 		return err
 	}
-	
+
 	ctx := context.Background()
-	
+
 	// 初始化日志系统
 	lg := utils.GetLogger(ctx)
 	if lg == nil {
 		return errors.New("failed to initialize logger")
 	}
-	
+
 	lg.Info("Starting ZK Code Arena Server...")
-	
+
 	// 加载配置文件
 	conf.Init()
-	
+
 	// 使用配置文件重新初始化日志器
 	utils.InitLogger()
-	
+
 	conf.ConfigUtils().OnConfigChange(func(in fsnotify.Event) {
 		lg.Infof("配置文件已更改: %s, 操作: %s", in.Name, in.Op)
 		// TODO: 实现配置文件热加载和服务优雅重启
 	})
 	conf.ConfigUtils().WatchConfig()
-	
+
 	// 创建停止信号通道
 	stopCh := make(chan struct{})
 	signalCh := make(chan os.Signal, 1)
 	signal.Notify(signalCh, syscall.SIGQUIT, syscall.SIGTERM, syscall.SIGINT, syscall.SIGKILL)
-	
+
 	// 使用 errgroup 管理多个 goroutine
 	g := errgroup.Group{}
-	
+
 	// 初始化数据库连接
 	if err := utils.InitMongoDB(); err != nil {
 		lg.Errorf("数据库连接失败: %v", err)
 		return err
 	}
 	lg.Info("数据库连接成功")
+
+	// 初始化 Redis 连接
+	if err := utils.InitRedis(); err != nil {
+		lg.Errorf("Redis连接失败: %v", err)
+		return err
+	}
+	lg.Info("Redis连接成功")
 
 	// 初始化限流器
 	if err := middleware.InitRateLimiter(); err != nil {
