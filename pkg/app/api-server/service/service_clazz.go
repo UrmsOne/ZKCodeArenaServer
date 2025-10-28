@@ -286,19 +286,32 @@ func (s *ClazzService) DeleteClazz(ctx context.Context, clazzID string, userID s
 
 	coll := utils.GetCollection("clazzes")
 
-	// 先查询班级信息以验证权限
+	// 先查询班级信息
 	var clazz models.Clazz
 
 	filter := bson.M{
-		"_id":  clazzObjID,
-		"c_id": userObjID,
+		"_id": clazzObjID,
 	}
 
 	if err = coll.FindOne(ctx, filter).Decode(&clazz); err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
-			return errors.New("班级不存在或权限不够")
+			return errors.New("班级不存在")
 		}
 		return err
+	}
+
+	// 验证操作者是否有权限删除班级
+	// 只有课程创建者或课程教师可以删除班级
+	courseObjID := clazz.CourseId
+	courseColl := utils.GetCollection("courses")
+
+	isAuthorized, err := s.authorized(ctx, courseColl, courseObjID, userObjID)
+	if err != nil {
+		return err
+	}
+
+	if !isAuthorized {
+		return errors.New("权限不足，只有课程创建者或教师可以删除班级")
 	}
 
 	// 检查班级是否还有成员
