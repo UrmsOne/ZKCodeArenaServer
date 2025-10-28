@@ -18,11 +18,15 @@ func InitRedis() error {
 
 	// 创建Redis客户端
 	addr := fmt.Sprintf("%s:%d", conf.Config.Redis.Host, conf.Config.Redis.Port)
-	RedisClient = redis.NewClient(&redis.Options{
-		Addr:     addr,
-		Password: conf.Config.Redis.Password,
-		DB:       conf.Config.Redis.DB,
-	})
+	options := &redis.Options{
+		Addr: addr,
+		DB:   conf.Config.Redis.DB,
+	}
+	// 只有当密码非空时才设置密码
+	if conf.Config.Redis.Password != "" {
+		options.Password = conf.Config.Redis.Password
+	}
+	RedisClient = redis.NewClient(options)
 
 	// 测试连接
 	_, err := RedisClient.Ping(ctx).Result()

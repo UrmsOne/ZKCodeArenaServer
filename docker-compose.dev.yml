@@ -46,7 +46,7 @@ services:
       - "6379:6379"
     volumes:
       - ./data/redis:/data
-    command: redis-server --appendonly yes
+    command: redis-server --appendonly yes --requirepass redis123
     restart: unless-stopped
     networks:
       - zk-arena-dev-network
