@@ -60,7 +60,7 @@ func (s *Server) RegisterProblem(g *gin.RouterGroup) {
 // @Param        page_size query int false "每页数量" default(10)
 // @Param        difficulty query string false "难度" Enums(easy, medium, hard)
 // @Param        tags query []string false "标签列表"
-// @Success      200 {object} models.ProblemListResponse "题目列表"
+// @Success      200 {object} utils.Response{data=object{problems=[]models.Problem,total=int64,page=int,page_size=int,total_page=int64}} "题目列表"
 // @Failure      400 {object} models.ErrorResponse "请求参数错误"
 // @Failure      500 {object} models.ErrorResponse "获取失败"
 // @Router       /problem [get]
@@ -121,7 +121,7 @@ func (s *Server) GetProblems(c *gin.Context) {
 // @Param        page_size query int false "每页数量" default(10)
 // @Param        difficulty query string false "难度" Enums(easy, medium, hard)
 // @Param        tags query []string false "标签列表"
-// @Success      200 {object} models.ProblemListResponse "题目列表"
+// @Success      200 {object} utils.Response{data=object{problems=[]models.Problem,total=int64,page=int,page_size=int,total_page=int64}} "题目列表"
 // @Failure      400 {object} models.ErrorResponse "请求参数错误"
 // @Failure      401 {object} models.ErrorResponse "未授权访问"
 // @Failure      403 {object} models.ErrorResponse "权限不足"
@@ -173,7 +173,7 @@ func (s *Server) GetProblemsForAdmin(c *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Param        id path string true "题目ID"
-// @Success      200 {object} models.Problem "题目详情"
+// @Success      200 {object} utils.Response{data=models.Problem} "题目详情"
 // @Failure      400 {object} map[string]interface{} "无效的题目ID"
 // @Failure      401 {object} map[string]interface{} "需要登录"
 // @Failure      404 {object} map[string]interface{} "题目不存在"
@@ -264,7 +264,7 @@ func (s *Server) GetProblemDetail(c *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Param        request body models.CreateProblemRequest true "题目信息"
-// @Success      200 {object} models.Problem "创建成功"
+// @Success      200 {object} utils.Response{data=models.Problem} "创建成功"
 // @Failure      400 {object} map[string]interface{} "请求参数错误或业务规则错误"
 // @Failure      401 {object} map[string]interface{} "需要登录"
 // @Failure      403 {object} map[string]interface{} "权限不足"
@@ -351,7 +351,7 @@ func (s *Server) CreateProblem(c *gin.Context) {
 // @Produce      json
 // @Param        id path string true "题目ID"
 // @Param        request body models.UpdateProblemRequest true "更新的题目信息"
-// @Success      200 {object} models.Problem "更新成功"
+// @Success      200 {object} utils.Response{data=models.Problem} "更新成功"
 // @Failure      400 {object} map[string]interface{} "请求参数错误或业务规则错误"
 // @Failure      401 {object} map[string]interface{} "需要登录"
 // @Failure      403 {object} map[string]interface{} "权限不足"
@@ -436,7 +436,7 @@ func (s *Server) UpdateProblem(c *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Param        id path string true "题目ID"
-// @Success      200 {object} models.DeleteResponse "删除成功"
+// @Success      200 {object} utils.Response{data=object{message=string}} "删除成功"
 // @Failure      400 {object} models.ErrorResponse "无效的题目ID"
 // @Failure      403 {object} models.ErrorResponse "权限不足"
 // @Failure      500 {object} models.ErrorResponse "删除失败"
@@ -474,7 +474,7 @@ func (s *Server) DeleteProblem(c *gin.Context) {
 // @Produce      json
 // @Param        id path string true "题目ID"
 // @Param        request body service.RunCodeRequest true "代码和语言"
-// @Success      200 {object} models.RunCodeResponse "运行结果"
+// @Success      200 {object} utils.Response{data=models.RunCodeResponse} "运行结果"
 // @Failure      400 {object} models.ErrorResponse "请求参数错误"
 // @Failure      404 {object} models.ErrorResponse "题目不存在"
 // @Failure      500 {object} models.ErrorResponse "运行失败"
@@ -515,7 +515,7 @@ func (s *Server) RunCode(c *gin.Context) {
 // @Param        tags query []string false "标签列表"
 // @Param        page query int false "页码" default(1)
 // @Param        page_size query int false "每页数量" default(10)
-// @Success      200 {object} models.SearchProblemsResponse "搜索结果"
+// @Success      200 {object} utils.Response{data=object{problems=[]models.Problem,total=int64,page=int,page_size=int,total_page=int64}} "搜索结果"
 // @Failure      500 {object} models.ErrorResponse "搜索失败"
 // @Router       /problem/search [get]
 func (s *Server) SearchProblems(c *gin.Context) {
@@ -570,7 +570,7 @@ func (s *Server) SearchProblems(c *gin.Context) {
 // @Tags         题目
 // @Accept       json
 // @Produce      json
-// @Success      200 {object} models.DailyProblemResponse "每日推荐题目"
+// @Success      200 {object} utils.Response{data=object{daily_problem=models.Problem,message=string}} "每日推荐题目"
 // @Failure      500 {object} models.ErrorResponse "获取失败"
 // @Router       /daily-problem [get]
 func (s *Server) GetDailyProblem(c *gin.Context) {

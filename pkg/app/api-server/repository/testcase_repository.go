@@ -40,8 +40,10 @@ func NewTestCaseRepository() *TestCaseRepository {
 // CreateTestCase 创建测试用例
 func (r *TestCaseRepository) CreateTestCase(ctx context.Context, testCase *models.TestCase) error {
 	// 设置系统字段
+	now := time.Now()
 	testCase.ID = primitive.NewObjectID()
-	testCase.CreatedAt = time.Now()
+	testCase.CreatedAt = now
+	testCase.UpdatedAt = now
 	
 	// 验证测试用例
 	if err := r.validateTestCase(testCase); err != nil {
@@ -72,7 +74,7 @@ func (r *TestCaseRepository) GetByID(ctx context.Context, id primitive.ObjectID)
 // GetByProblemID 根据题目ID查询所有测试用例
 func (r *TestCaseRepository) GetByProblemID(ctx context.Context, problemID primitive.ObjectID) ([]*models.TestCase, error) {
 	filter := bson.M{"problem_id": problemID}
-	opts := options.Find().SetSort(bson.M{"order": 1, "created_at": 1})
+	opts := options.Find().SetSort(bson.D{{"order", 1}, {"created_at", 1}})
 	
 	cursor, err := r.Find(ctx, "test_cases", filter, opts)
 	if err != nil {
@@ -98,7 +100,7 @@ func (r *TestCaseRepository) GetSampleTestCases(ctx context.Context, problemID p
 		"problem_id": problemID,
 		"is_sample":  true,
 	}
-	opts := options.Find().SetSort(bson.M{"order": 1, "created_at": 1})
+	opts := options.Find().SetSort(bson.D{{"order", 1}, {"created_at", 1}})
 	
 	cursor, err := r.Find(ctx, "test_cases", filter, opts)
 	if err != nil {
@@ -191,8 +193,10 @@ func (r *TestCaseRepository) BatchCreateTestCases(ctx context.Context, testCases
 	
 	for i, testCase := range testCases {
 		// 设置系统字段
+		now := time.Now()
 		testCase.ID = primitive.NewObjectID()
-		testCase.CreatedAt = time.Now()
+		testCase.CreatedAt = now
+		testCase.UpdatedAt = now
 		
 		// 验证测试用例
 		if err := r.validateTestCase(testCase); err != nil {

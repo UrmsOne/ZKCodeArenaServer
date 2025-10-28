@@ -160,7 +160,7 @@ func (s *UserService) GetUsers(ctx context.Context, page, pageSize int, role mod
 	opts := options.Find().
 		SetSkip(int64((page - 1) * pageSize)).
 		SetLimit(int64(pageSize)).
-		SetSort(bson.M{"created_at": -1})
+		SetSort(bson.D{{"created_at", -1}})
 
 	cursor, err := collection.Find(ctx, filter, opts)
 	if err != nil {

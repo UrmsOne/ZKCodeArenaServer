@@ -52,10 +52,13 @@ db.test_cases.createIndex({ "created_at": -1 });
 */
 
 // 插入默认管理员用户
+// 默认密码：admin123 (bcrypt加密)
 db.users.insertOne({
     "username": "admin",
+    "password": "$2a$10$vI8aWBnW3fID.ZQ4/zo1G.q1lRps.9cGLcZEiGDMVr5yUP1KUOYTa",
     "email": "admin@zk.edu.cn",
     "real_name": "系统管理员",
+    "student_id": "ADMIN001",
     "role": "admin",
     "is_active": true,
     "created_at": new Date(),

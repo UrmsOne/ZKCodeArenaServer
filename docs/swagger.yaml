@@ -335,18 +335,6 @@ definitions:
     - difficulty
     - title
     type: object
-  zk-code-arena-server_pkg_models.CreateResponse:
-    properties:
-      id:
-        example: 507f1f77bcf86cd799439011
-        type: string
-      message:
-        example: 创建成功
-        type: string
-      success:
-        example: true
-        type: boolean
-    type: object
   zk-code-arena-server_pkg_models.CreateTestCaseRequest:
     properties:
       input:
@@ -370,29 +358,6 @@ definitions:
     - input
     - output
     - problem_id
-    type: object
-  zk-code-arena-server_pkg_models.DailyProblemResponse:
-    properties:
-      date:
-        example: "2024-10-26"
-        type: string
-      is_finished:
-        example: false
-        type: boolean
-      problem:
-        $ref: '#/definitions/zk-code-arena-server_pkg_models.Problem'
-      progress:
-        example: 今日已有15位同学完成
-        type: string
-    type: object
-  zk-code-arena-server_pkg_models.DeleteResponse:
-    properties:
-      message:
-        example: 删除成功
-        type: string
-      success:
-        example: true
-        type: boolean
     type: object
   zk-code-arena-server_pkg_models.DifficultyStatItem:
     properties:
@@ -436,6 +401,40 @@ definitions:
     - clazz_id
     - relation_id
     - task_id
+    type: object
+  zk-code-arena-server_pkg_models.GetClazzResponse:
+    properties:
+      add_nums:
+        type: integer
+      course_id:
+        type: string
+      ctime:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      max_members:
+        type: integer
+      member_ids:
+        items:
+          type: string
+        type: array
+      name:
+        type: string
+      require_invite:
+        type: boolean
+      schedule:
+        type: string
+      status:
+        $ref: '#/definitions/zk-code-arena-server_pkg_models.ClassStatus'
+      teacher_ids:
+        items:
+          type: string
+        type: array
+    required:
+    - course_id
+    - name
     type: object
   zk-code-arena-server_pkg_models.JudgeProgress:
     properties:
@@ -503,20 +502,6 @@ definitions:
     required:
     - password
     - student_id
-    type: object
-  zk-code-arena-server_pkg_models.LoginResponse:
-    properties:
-      message:
-        example: 登录成功
-        type: string
-      success:
-        example: true
-        type: boolean
-      token:
-        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-        type: string
-      user:
-        $ref: '#/definitions/zk-code-arena-server_pkg_models.UserProfile'
     type: object
   zk-code-arena-server_pkg_models.PageQueryCourseRequest:
     properties:
@@ -652,25 +637,6 @@ definitions:
     - DifficultyEasy
     - DifficultyMedium
     - DifficultyHard
-  zk-code-arena-server_pkg_models.ProblemListResponse:
-    properties:
-      page:
-        example: 1
-        type: integer
-      page_size:
-        example: 10
-        type: integer
-      problems:
-        items:
-          $ref: '#/definitions/zk-code-arena-server_pkg_models.Problem'
-        type: array
-      total:
-        example: 100
-        type: integer
-      total_pages:
-        example: 10
-        type: integer
-    type: object
   zk-code-arena-server_pkg_models.ProblemStatus:
     enum:
     - draft
@@ -689,18 +655,6 @@ definitions:
     - StatusDraft
     - StatusPublished
     - StatusArchived
-  zk-code-arena-server_pkg_models.RegisterResponse:
-    properties:
-      message:
-        example: 注册成功
-        type: string
-      success:
-        example: true
-        type: boolean
-      user_id:
-        example: 507f1f77bcf86cd799439011
-        type: string
-    type: object
   zk-code-arena-server_pkg_models.RemoveClazzMembersRequest:
     properties:
       clazz_id:
@@ -773,22 +727,6 @@ definitions:
         type: array
       time_used:
         example: 126
-        type: integer
-    type: object
-  zk-code-arena-server_pkg_models.SearchProblemsResponse:
-    properties:
-      problems:
-        items:
-          $ref: '#/definitions/zk-code-arena-server_pkg_models.Problem'
-        type: array
-      query:
-        example: 二分查找
-        type: string
-      search_time:
-        example: 0.05s
-        type: string
-      total:
-        example: 15
         type: integer
     type: object
   zk-code-arena-server_pkg_models.StudentClassResponse:
@@ -877,25 +815,6 @@ definitions:
     - language
     - problem_id
     type: object
-  zk-code-arena-server_pkg_models.SubmitListResponse:
-    properties:
-      page:
-        example: 1
-        type: integer
-      page_size:
-        example: 10
-        type: integer
-      submits:
-        items:
-          $ref: '#/definitions/zk-code-arena-server_pkg_models.Submit'
-        type: array
-      total:
-        example: 50
-        type: integer
-      total_pages:
-        example: 5
-        type: integer
-    type: object
   zk-code-arena-server_pkg_models.SubmitStatus:
     enum:
     - pending
@@ -969,16 +888,6 @@ definitions:
         description: 最后更新时间
         example: "2024-10-26T10:00:00Z"
         type: string
-    type: object
-  zk-code-arena-server_pkg_models.SuccessResponse:
-    properties:
-      data: {}
-      message:
-        example: 操作成功
-        type: string
-      success:
-        example: true
-        type: boolean
     type: object
   zk-code-arena-server_pkg_models.SystemStatsResponse:
     properties:
@@ -1136,16 +1045,9 @@ definitions:
         description: 可选的超时配置（优先级高于题目默认配置）
         example: 1000
         type: integer
-    type: object
-  zk-code-arena-server_pkg_models.TestCaseListResponse:
-    properties:
-      test_cases:
-        items:
-          $ref: '#/definitions/zk-code-arena-server_pkg_models.TestCase'
-        type: array
-      total:
-        example: 15
-        type: integer
+      updated_at:
+        example: "2024-10-26T10:00:00Z"
+        type: string
     type: object
   zk-code-arena-server_pkg_models.TestResult:
     properties:
@@ -1259,15 +1161,6 @@ definitions:
         maxLength: 200
         minLength: 1
         type: string
-    type: object
-  zk-code-arena-server_pkg_models.UpdateResponse:
-    properties:
-      message:
-        example: 更新成功
-        type: string
-      success:
-        example: true
-        type: boolean
     type: object
   zk-code-arena-server_pkg_models.UpdateTaskRequest:
     properties:
@@ -1547,7 +1440,27 @@ paths:
         "200":
           description: 题目列表
           schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_models.ProblemListResponse'
+            allOf:
+            - $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
+            - properties:
+                data:
+                  properties:
+                    page:
+                      type: integer
+                    page_size:
+                      type: integer
+                    problems:
+                      items:
+                        $ref: '#/definitions/zk-code-arena-server_pkg_models.Problem'
+                      type: array
+                    total:
+                      format: int64
+                      type: integer
+                    total_page:
+                      format: int64
+                      type: integer
+                  type: object
+              type: object
         "400":
           description: 请求参数错误
           schema:
@@ -1587,7 +1500,12 @@ paths:
         "200":
           description: 创建成功
           schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_models.SuccessResponse'
+            allOf:
+            - $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/zk-code-arena-server_pkg_models.GetClazzResponse'
+              type: object
         "400":
           description: 请求参数错误
           schema:
@@ -1619,7 +1537,7 @@ paths:
         "200":
           description: 更新成功
           schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_models.SuccessResponse'
+            $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
         "400":
           description: 请求参数错误
           schema:
@@ -1646,7 +1564,7 @@ paths:
         "200":
           description: 删除成功
           schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_models.SuccessResponse'
+            $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
         "400":
           description: 请求参数错误
           schema:
@@ -1672,7 +1590,12 @@ paths:
         "200":
           description: 班级详情
           schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_models.Clazz'
+            allOf:
+            - $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/zk-code-arena-server_pkg_models.Clazz'
+              type: object
         "400":
           description: 请求参数错误
           schema:
@@ -1728,7 +1651,14 @@ paths:
         "200":
           description: 班级列表
           schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_models.SuccessResponse'
+            allOf:
+            - $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/zk-code-arena-server_pkg_models.Clazz'
+                  type: array
+              type: object
         "400":
           description: 请求参数错误
           schema:
@@ -1756,7 +1686,7 @@ paths:
         "200":
           description: 完成成功
           schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_models.SuccessResponse'
+            $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
         "400":
           description: 请求参数错误
           schema:
@@ -1788,7 +1718,7 @@ paths:
         "200":
           description: 加入成功
           schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_models.SuccessResponse'
+            $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
         "400":
           description: 请求参数错误
           schema:
@@ -1821,7 +1751,7 @@ paths:
         "200":
           description: 添加成功
           schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_models.SuccessResponse'
+            $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
         "400":
           description: 请求参数错误
           schema:
@@ -1854,7 +1784,7 @@ paths:
         "200":
           description: 移除成功
           schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_models.SuccessResponse'
+            $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
         "400":
           description: 请求参数错误
           schema:
@@ -1882,7 +1812,7 @@ paths:
         "200":
           description: 移除成功
           schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_models.SuccessResponse'
+            $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
         "400":
           description: 请求参数错误
           schema:
@@ -1909,7 +1839,7 @@ paths:
         "200":
           description: 添加成功
           schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_models.SuccessResponse'
+            $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
         "400":
           description: 请求参数错误
           schema:
@@ -1966,7 +1896,7 @@ paths:
         "200":
           description: 添加成功
           schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_models.SuccessResponse'
+            $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
         "400":
           description: 请求参数错误
           schema:
@@ -1993,7 +1923,7 @@ paths:
         "200":
           description: 更新成功
           schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_models.SuccessResponse'
+            $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
         "400":
           description: 请求参数错误
           schema:
@@ -2020,7 +1950,7 @@ paths:
         "200":
           description: 删除成功
           schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_models.SuccessResponse'
+            $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
         "400":
           description: 请求参数错误
           schema:
@@ -2046,7 +1976,12 @@ paths:
         "200":
           description: 任务详情
           schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_models.Task'
+            allOf:
+            - $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/zk-code-arena-server_pkg_models.Task'
+              type: object
         "400":
           description: 请求参数错误
           schema:
@@ -2103,7 +2038,7 @@ paths:
         "200":
           description: 移除成功
           schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_models.SuccessResponse'
+            $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
         "400":
           description: 请求参数错误
           schema:
@@ -2130,7 +2065,7 @@ paths:
         "200":
           description: 添加成功
           schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_models.SuccessResponse'
+            $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
         "400":
           description: 请求参数错误
           schema:
@@ -2158,7 +2093,12 @@ paths:
         "200":
           description: 创建成功，返回课程ID
           schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_models.CreateResponse'
+            allOf:
+            - $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
+            - properties:
+                data:
+                  type: string
+              type: object
         "400":
           description: 请求参数错误
           schema:
@@ -2185,7 +2125,7 @@ paths:
         "200":
           description: 更新成功
           schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_models.UpdateResponse'
+            $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
         "400":
           description: 请求参数错误
           schema:
@@ -2212,7 +2152,7 @@ paths:
         "200":
           description: 删除成功
           schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_models.DeleteResponse'
+            $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
         "400":
           description: 请求参数错误
           schema:
@@ -2238,7 +2178,12 @@ paths:
         "200":
           description: 课程详情
           schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_models.Course'
+            allOf:
+            - $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/zk-code-arena-server_pkg_models.Course'
+              type: object
         "400":
           description: 请求参数错误
           schema:
@@ -2270,7 +2215,7 @@ paths:
         "200":
           description: 更新成功
           schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_models.UpdateResponse'
+            $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
         "400":
           description: 请求参数错误
           schema:
@@ -2354,7 +2299,7 @@ paths:
         "200":
           description: 删除成功
           schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_models.DeleteResponse'
+            $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
         "400":
           description: 请求参数错误
           schema:
@@ -2381,7 +2326,7 @@ paths:
         "200":
           description: 添加成功
           schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_models.SuccessResponse'
+            $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
         "400":
           description: 请求参数错误
           schema:
@@ -2402,7 +2347,17 @@ paths:
         "200":
           description: 每日推荐题目
           schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_models.DailyProblemResponse'
+            allOf:
+            - $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
+            - properties:
+                data:
+                  properties:
+                    daily_problem:
+                      $ref: '#/definitions/zk-code-arena-server_pkg_models.Problem'
+                    message:
+                      type: string
+                  type: object
+              type: object
         "500":
           description: 获取失败
           schema:
@@ -2447,7 +2402,27 @@ paths:
         "200":
           description: 题目列表
           schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_models.ProblemListResponse'
+            allOf:
+            - $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
+            - properties:
+                data:
+                  properties:
+                    page:
+                      type: integer
+                    page_size:
+                      type: integer
+                    problems:
+                      items:
+                        $ref: '#/definitions/zk-code-arena-server_pkg_models.Problem'
+                      type: array
+                    total:
+                      format: int64
+                      type: integer
+                    total_page:
+                      format: int64
+                      type: integer
+                  type: object
+              type: object
         "400":
           description: 请求参数错误
           schema:
@@ -2476,7 +2451,12 @@ paths:
         "200":
           description: 创建成功
           schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_models.Problem'
+            allOf:
+            - $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/zk-code-arena-server_pkg_models.Problem'
+              type: object
         "400":
           description: 请求参数错误或业务规则错误
           schema:
@@ -2519,7 +2499,15 @@ paths:
         "200":
           description: 删除成功
           schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_models.DeleteResponse'
+            allOf:
+            - $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
+            - properties:
+                data:
+                  properties:
+                    message:
+                      type: string
+                  type: object
+              type: object
         "400":
           description: 无效的题目ID
           schema:
@@ -2553,7 +2541,12 @@ paths:
         "200":
           description: 题目详情
           schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_models.Problem'
+            allOf:
+            - $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/zk-code-arena-server_pkg_models.Problem'
+              type: object
         "400":
           description: 无效的题目ID
           schema:
@@ -2594,7 +2587,12 @@ paths:
         "200":
           description: 更新成功
           schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_models.Problem'
+            allOf:
+            - $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/zk-code-arena-server_pkg_models.Problem'
+              type: object
         "400":
           description: 请求参数错误或业务规则错误
           schema:
@@ -2690,7 +2688,12 @@ paths:
         "200":
           description: 运行结果
           schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_models.RunCodeResponse'
+            allOf:
+            - $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/zk-code-arena-server_pkg_models.RunCodeResponse'
+              type: object
         "400":
           description: 请求参数错误
           schema:
@@ -2749,7 +2752,27 @@ paths:
         "200":
           description: 搜索结果
           schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_models.SearchProblemsResponse'
+            allOf:
+            - $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
+            - properties:
+                data:
+                  properties:
+                    page:
+                      type: integer
+                    page_size:
+                      type: integer
+                    problems:
+                      items:
+                        $ref: '#/definitions/zk-code-arena-server_pkg_models.Problem'
+                      type: array
+                    total:
+                      format: int64
+                      type: integer
+                    total_page:
+                      format: int64
+                      type: integer
+                  type: object
+              type: object
         "500":
           description: 搜索失败
           schema:
@@ -2768,7 +2791,12 @@ paths:
         "200":
           description: 难度统计
           schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_models.DifficultyStatsResponse'
+            allOf:
+            - $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/zk-code-arena-server_pkg_models.DifficultyStatsResponse'
+              type: object
         "500":
           description: 获取失败
           schema:
@@ -2787,7 +2815,12 @@ paths:
         "200":
           description: 系统统计信息
           schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_models.SystemStatsResponse'
+            allOf:
+            - $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/zk-code-arena-server_pkg_models.SystemStatsResponse'
+              type: object
         "403":
           description: 权限不足
           schema:
@@ -2812,7 +2845,12 @@ paths:
         "200":
           description: 用户统计信息
           schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_models.UserStatsResponse'
+            allOf:
+            - $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/zk-code-arena-server_pkg_models.UserStatsResponse'
+              type: object
         "400":
           description: 无效的用户ID
           schema:
@@ -2847,19 +2885,24 @@ paths:
         "200":
           description: 用户统计信息
           schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_models.UserStatsResponse'
+            allOf:
+            - $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/zk-code-arena-server_pkg_models.UserStatsResponse'
+              type: object
         "400":
           description: 无效的用户ID
           schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_models.UserStatsResponse'
+            $ref: '#/definitions/zk-code-arena-server_pkg_models.ErrorResponse'
         "403":
           description: 权限不足
           schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_models.UserStatsResponse'
+            $ref: '#/definitions/zk-code-arena-server_pkg_models.ErrorResponse'
         "500":
           description: 获取失败
           schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_models.UserStatsResponse'
+            $ref: '#/definitions/zk-code-arena-server_pkg_models.ErrorResponse'
       security:
       - BearerAuth: []
       summary: 获取指定用户统计（管理员）
@@ -2895,7 +2938,27 @@ paths:
         "200":
           description: 提交列表
           schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_models.SubmitListResponse'
+            allOf:
+            - $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
+            - properties:
+                data:
+                  properties:
+                    page:
+                      type: integer
+                    page_size:
+                      type: integer
+                    submits:
+                      items:
+                        $ref: '#/definitions/zk-code-arena-server_pkg_models.Submit'
+                      type: array
+                    total:
+                      format: int64
+                      type: integer
+                    total_page:
+                      format: int64
+                      type: integer
+                  type: object
+              type: object
         "400":
           description: 请求参数错误
           schema:
@@ -2930,7 +2993,12 @@ paths:
         "200":
           description: 提交记录
           schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_models.Submit'
+            allOf:
+            - $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/zk-code-arena-server_pkg_models.Submit'
+              type: object
         "400":
           description: 请求参数错误
           schema:
@@ -2973,7 +3041,12 @@ paths:
         "200":
           description: 提交详情
           schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_models.Submit'
+            allOf:
+            - $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/zk-code-arena-server_pkg_models.Submit'
+              type: object
         "400":
           description: 无效的提交ID
           schema:
@@ -3012,7 +3085,12 @@ paths:
         "200":
           description: 提交状态信息
           schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_models.SubmitStatusResponse'
+            allOf:
+            - $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/zk-code-arena-server_pkg_models.SubmitStatusResponse'
+              type: object
         "400":
           description: 无效的提交ID
           schema:
@@ -3056,7 +3134,12 @@ paths:
         "200":
           description: 创建成功
           schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_models.TestCase'
+            allOf:
+            - $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/zk-code-arena-server_pkg_models.TestCase'
+              type: object
         "400":
           description: 请求参数错误
           schema:
@@ -3087,7 +3170,15 @@ paths:
         "200":
           description: 删除成功
           schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_models.ErrorResponse'
+            allOf:
+            - $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
+            - properties:
+                data:
+                  properties:
+                    message:
+                      type: string
+                  type: object
+              type: object
         "400":
           description: 无效的测试用例ID
           schema:
@@ -3117,7 +3208,12 @@ paths:
         "200":
           description: 测试用例详情
           schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_models.TestCase'
+            allOf:
+            - $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/zk-code-arena-server_pkg_models.TestCase'
+              type: object
         "400":
           description: 无效的测试用例ID
           schema:
@@ -3153,7 +3249,12 @@ paths:
         "200":
           description: 更新成功
           schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_models.TestCase'
+            allOf:
+            - $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/zk-code-arena-server_pkg_models.TestCase'
+              type: object
         "400":
           description: 请求参数错误
           schema:
@@ -3189,7 +3290,21 @@ paths:
         "200":
           description: 创建成功
           schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_models.CreateResponse'
+            allOf:
+            - $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
+            - properties:
+                data:
+                  properties:
+                    errors:
+                      items:
+                        type: string
+                      type: array
+                    fail_count:
+                      type: integer
+                    success_count:
+                      type: integer
+                  type: object
+              type: object
         "400":
           description: 请求参数错误
           schema:
@@ -3232,7 +3347,20 @@ paths:
         "200":
           description: 测试用例列表
           schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_models.TestCaseListResponse'
+            allOf:
+            - $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
+            - properties:
+                data:
+                  properties:
+                    test_cases:
+                      items:
+                        $ref: '#/definitions/zk-code-arena-server_pkg_models.TestCase'
+                      type: array
+                    total:
+                      format: int64
+                      type: integer
+                  type: object
+              type: object
         "400":
           description: 无效的题目ID
           schema:
@@ -3276,7 +3404,27 @@ paths:
         "200":
           description: 用户列表
           schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_models.ErrorResponse'
+            allOf:
+            - $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
+            - properties:
+                data:
+                  properties:
+                    page:
+                      type: integer
+                    page_size:
+                      type: integer
+                    total:
+                      format: int64
+                      type: integer
+                    total_page:
+                      format: int64
+                      type: integer
+                    users:
+                      items:
+                        $ref: '#/definitions/zk-code-arena-server_pkg_models.UserProfile'
+                      type: array
+                  type: object
+              type: object
         "403":
           description: 权限不足
           schema:
@@ -3307,7 +3455,15 @@ paths:
         "200":
           description: 删除成功
           schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_models.ErrorResponse'
+            allOf:
+            - $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
+            - properties:
+                data:
+                  properties:
+                    message:
+                      type: string
+                  type: object
+              type: object
         "400":
           description: 无效的用户ID
           schema:
@@ -3341,7 +3497,12 @@ paths:
         "200":
           description: 用户信息
           schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_models.UserProfile'
+            allOf:
+            - $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/zk-code-arena-server_pkg_models.UserProfile'
+              type: object
         "400":
           description: 无效的用户ID
           schema:
@@ -3385,7 +3546,12 @@ paths:
         "200":
           description: 更新后的用户信息
           schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_models.UserProfile'
+            allOf:
+            - $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/zk-code-arena-server_pkg_models.UserProfile'
+              type: object
         "400":
           description: 请求参数错误
           schema:
@@ -3425,7 +3591,19 @@ paths:
         "200":
           description: 登录成功，返回token和用户信息
           schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_models.LoginResponse'
+            allOf:
+            - $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
+            - properties:
+                data:
+                  properties:
+                    message:
+                      type: string
+                    token:
+                      type: string
+                    user:
+                      $ref: '#/definitions/zk-code-arena-server_pkg_models.UserProfile'
+                  type: object
+              type: object
         "400":
           description: 请求参数错误
           schema:
@@ -3448,7 +3626,12 @@ paths:
         "200":
           description: 用户资料
           schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_models.UserProfile'
+            allOf:
+            - $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/zk-code-arena-server_pkg_models.UserProfile'
+              type: object
         "401":
           description: 未认证用户
           schema:
@@ -3496,7 +3679,12 @@ paths:
         "200":
           description: 更新后的用户资料
           schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_models.UserProfile'
+            allOf:
+            - $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/zk-code-arena-server_pkg_models.UserProfile'
+              type: object
         "400":
           description: 请求参数错误
           schema:
@@ -3536,7 +3724,17 @@ paths:
         "200":
           description: 注册成功
           schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_models.RegisterResponse'
+            allOf:
+            - $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
+            - properties:
+                data:
+                  properties:
+                    message:
+                      type: string
+                    user:
+                      $ref: '#/definitions/zk-code-arena-server_pkg_models.UserProfile'
+                  type: object
+              type: object
         "400":
           description: 请求参数错误
           schema:

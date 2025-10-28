@@ -38,7 +38,7 @@ func (s *Server) RegisterTestCase(g *gin.RouterGroup) {
 // @Accept       json
 // @Produce      json
 // @Param        problem_id path string true "题目ID"
-// @Success      200 {object} models.TestCaseListResponse "测试用例列表"
+// @Success      200 {object} utils.Response{data=object{test_cases=[]models.TestCase,total=int64}} "测试用例列表"
 // @Failure      400 {object} models.ErrorResponse "无效的题目ID"
 // @Failure      500 {object} models.ErrorResponse "获取失败"
 // @Security     BearerAuth
@@ -71,7 +71,7 @@ func (s *Server) GetTestCasesByProblemID(c *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Param        id path string true "测试用例ID"
-// @Success      200 {object} models.TestCase "测试用例详情"
+// @Success      200 {object} utils.Response{data=models.TestCase} "测试用例详情"
 // @Failure      400 {object} models.ErrorResponse "无效的测试用例ID"
 // @Failure      500 {object} models.ErrorResponse "获取失败"
 // @Security     BearerAuth
@@ -101,7 +101,7 @@ func (s *Server) GetTestCase(c *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Param        request body models.CreateTestCaseRequest true "测试用例信息"
-// @Success      200 {object} models.TestCase "创建成功"
+// @Success      200 {object} utils.Response{data=models.TestCase} "创建成功"
 // @Failure      400 {object} models.ErrorResponse "请求参数错误"
 // @Failure      500 {object} models.ErrorResponse "创建失败"
 // @Security     BearerAuth
@@ -154,7 +154,7 @@ func (s *Server) CreateTestCase(c *gin.Context) {
 // @Produce      json
 // @Param        id path string true "测试用例ID"
 // @Param        request body models.UpdateTestCaseRequest true "更新信息"
-// @Success      200 {object} models.TestCase "更新成功"
+// @Success      200 {object} utils.Response{data=models.TestCase} "更新成功"
 // @Failure      400 {object} models.ErrorResponse "请求参数错误"
 // @Failure      404 {object} models.ErrorResponse "测试用例不存在"
 // @Failure      500 {object} models.ErrorResponse "更新失败"
@@ -218,7 +218,7 @@ func (s *Server) UpdateTestCase(c *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Param        id path string true "测试用例ID"
-// @Success      200 {object} models.ErrorResponse "删除成功"
+// @Success      200 {object} utils.Response{data=object{message=string}} "删除成功"
 // @Failure      400 {object} models.ErrorResponse "无效的测试用例ID"
 // @Failure      500 {object} models.ErrorResponse "删除失败"
 // @Security     BearerAuth
@@ -249,7 +249,7 @@ func (s *Server) DeleteTestCase(c *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Param        request body models.BatchCreateTestCasesRequest true "批量测试用例"
-// @Success      200 {object} models.CreateResponse "创建成功"
+// @Success      200 {object} utils.Response{data=object{success_count=int,fail_count=int,errors=[]string}} "创建成功"
 // @Failure      400 {object} models.ErrorResponse "请求参数错误"
 // @Failure      401 {object} models.ErrorResponse "需要登录"
 // @Failure      403 {object} models.ErrorResponse "权限不足"

@@ -102,10 +102,10 @@ func (s *Server) RegisterRoutes() {
 		s.RegisterSubmit(v1)
 		// 测试用例相关路由
 		s.RegisterTestCase(v1)
-		//课程相关路由
-		s.RegisterCourse(v1)
 		// 班级相关路由
 		s.RegisterClazz(v1)
+		//课程相关路由
+		s.RegisterCourse(v1)
 		// 统计相关路由
 		s.RegisterStatistics(v1)
 		// 题目统计相关路由（公开）
