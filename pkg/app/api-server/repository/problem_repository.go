@@ -99,7 +99,7 @@ func (r *ProblemRepository) GetProblems(
 	opts := options.Find().
 		SetSkip(int64((page - 1) * pageSize)).
 		SetLimit(int64(pageSize)).
-		SetSort(bson.M{"created_at": -1})
+		SetSort(bson.D{{"created_at", -1}})
 	
 	cursor, err := r.Find(ctx, "problems", filter, opts)
 	if err != nil {
@@ -190,7 +190,7 @@ func (r *ProblemRepository) SearchProblems(
 	opts := options.Find().
 		SetSkip(int64((page - 1) * pageSize)).
 		SetLimit(int64(pageSize)).
-		SetSort(bson.M{"created_at": -1})
+		SetSort(bson.D{{"created_at", -1}})
 	
 	cursor, err := r.Find(ctx, "problems", filter, opts)
 	if err != nil {

@@ -74,7 +74,7 @@ func (r *TestCaseRepository) GetByID(ctx context.Context, id primitive.ObjectID)
 // GetByProblemID 根据题目ID查询所有测试用例
 func (r *TestCaseRepository) GetByProblemID(ctx context.Context, problemID primitive.ObjectID) ([]*models.TestCase, error) {
 	filter := bson.M{"problem_id": problemID}
-	opts := options.Find().SetSort(bson.M{"order": 1, "created_at": 1})
+	opts := options.Find().SetSort(bson.D{{"order", 1}, {"created_at", 1}})
 	
 	cursor, err := r.Find(ctx, "test_cases", filter, opts)
 	if err != nil {
@@ -100,7 +100,7 @@ func (r *TestCaseRepository) GetSampleTestCases(ctx context.Context, problemID p
 		"problem_id": problemID,
 		"is_sample":  true,
 	}
-	opts := options.Find().SetSort(bson.M{"order": 1, "created_at": 1})
+	opts := options.Find().SetSort(bson.D{{"order", 1}, {"created_at", 1}})
 	
 	cursor, err := r.Find(ctx, "test_cases", filter, opts)
 	if err != nil {

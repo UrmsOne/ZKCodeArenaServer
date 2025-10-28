@@ -150,7 +150,7 @@ func (r *SubmitRepository) GetSubmits(
 	opts := options.Find().
 		SetSkip(int64((page - 1) * pageSize)).
 		SetLimit(int64(pageSize)).
-		SetSort(bson.M{"created_at": -1})
+		SetSort(bson.D{{"created_at", -1}})
 	
 	cursor, err := r.Find(ctx, "submits", filter, opts)
 	if err != nil {
@@ -355,7 +355,7 @@ func (s *SubmitRepository) GetSubmitsList(ctx context.Context, page, pageSize in
 	opts := options.Find().
 		SetSkip(int64((page - 1) * pageSize)).
 		SetLimit(int64(pageSize)).
-		SetSort(bson.M{"created_at": -1})
+		SetSort(bson.D{{"created_at", -1}})
 
 	cursor, err := collection.Find(ctx, filter, opts)
 	if err != nil {

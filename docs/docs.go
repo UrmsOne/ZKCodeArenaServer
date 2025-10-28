@@ -83,7 +83,41 @@ const docTemplate = `{
                     "200": {
                         "description": "题目列表",
                         "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ProblemListResponse"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "page": {
+                                                    "type": "integer"
+                                                },
+                                                "page_size": {
+                                                    "type": "integer"
+                                                },
+                                                "problems": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "$ref": "#/definitions/zk-code-arena-server_pkg_models.Problem"
+                                                    }
+                                                },
+                                                "total": {
+                                                    "type": "integer",
+                                                    "format": "int64"
+                                                },
+                                                "total_page": {
+                                                    "type": "integer",
+                                                    "format": "int64"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "400": {
@@ -153,7 +187,7 @@ const docTemplate = `{
                     "200": {
                         "description": "更新成功",
                         "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.SuccessResponse"
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
                         }
                     },
                     "400": {
@@ -196,7 +230,19 @@ const docTemplate = `{
                     "200": {
                         "description": "创建成功",
                         "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.SuccessResponse"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.GetClazzResponse"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "400": {
@@ -285,7 +331,22 @@ const docTemplate = `{
                     "200": {
                         "description": "班级列表",
                         "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.SuccessResponse"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/zk-code-arena-server_pkg_models.Clazz"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "400": {
@@ -330,7 +391,7 @@ const docTemplate = `{
                     "200": {
                         "description": "完成成功",
                         "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.SuccessResponse"
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
                         }
                     },
                     "400": {
@@ -380,7 +441,7 @@ const docTemplate = `{
                     "200": {
                         "description": "加入成功",
                         "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.SuccessResponse"
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
                         }
                     },
                     "400": {
@@ -432,7 +493,7 @@ const docTemplate = `{
                     "200": {
                         "description": "添加成功",
                         "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.SuccessResponse"
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
                         }
                     },
                     "400": {
@@ -484,7 +545,7 @@ const docTemplate = `{
                     "200": {
                         "description": "移除成功",
                         "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.SuccessResponse"
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
                         }
                     },
                     "400": {
@@ -529,7 +590,7 @@ const docTemplate = `{
                     "200": {
                         "description": "添加成功",
                         "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.SuccessResponse"
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
                         }
                     },
                     "400": {
@@ -572,7 +633,7 @@ const docTemplate = `{
                     "200": {
                         "description": "移除成功",
                         "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.SuccessResponse"
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
                         }
                     },
                     "400": {
@@ -663,7 +724,7 @@ const docTemplate = `{
                     "200": {
                         "description": "更新成功",
                         "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.SuccessResponse"
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
                         }
                     },
                     "400": {
@@ -706,7 +767,7 @@ const docTemplate = `{
                     "200": {
                         "description": "添加成功",
                         "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.SuccessResponse"
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
                         }
                     },
                     "400": {
@@ -749,7 +810,19 @@ const docTemplate = `{
                     "200": {
                         "description": "任务详情",
                         "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.Task"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.Task"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "400": {
@@ -790,7 +863,7 @@ const docTemplate = `{
                     "200": {
                         "description": "删除成功",
                         "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.SuccessResponse"
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
                         }
                     },
                     "400": {
@@ -881,7 +954,7 @@ const docTemplate = `{
                     "200": {
                         "description": "添加成功",
                         "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.SuccessResponse"
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
                         }
                     },
                     "400": {
@@ -924,7 +997,7 @@ const docTemplate = `{
                     "200": {
                         "description": "移除成功",
                         "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.SuccessResponse"
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
                         }
                     },
                     "400": {
@@ -967,7 +1040,19 @@ const docTemplate = `{
                     "200": {
                         "description": "班级详情",
                         "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.Clazz"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.Clazz"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "400": {
@@ -1008,7 +1093,7 @@ const docTemplate = `{
                     "200": {
                         "description": "删除成功",
                         "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.SuccessResponse"
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
                         }
                     },
                     "400": {
@@ -1053,7 +1138,7 @@ const docTemplate = `{
                     "200": {
                         "description": "更新成功",
                         "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.UpdateResponse"
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
                         }
                     },
                     "400": {
@@ -1096,7 +1181,19 @@ const docTemplate = `{
                     "200": {
                         "description": "创建成功，返回课程ID",
                         "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.CreateResponse"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "400": {
@@ -1231,7 +1328,7 @@ const docTemplate = `{
                     "200": {
                         "description": "添加成功",
                         "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.SuccessResponse"
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
                         }
                     },
                     "400": {
@@ -1274,7 +1371,7 @@ const docTemplate = `{
                     "200": {
                         "description": "删除成功",
                         "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.DeleteResponse"
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
                         }
                     },
                     "400": {
@@ -1317,7 +1414,19 @@ const docTemplate = `{
                     "200": {
                         "description": "课程详情",
                         "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.Course"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.Course"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "400": {
@@ -1358,7 +1467,7 @@ const docTemplate = `{
                     "200": {
                         "description": "删除成功",
                         "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.DeleteResponse"
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
                         }
                     },
                     "400": {
@@ -1408,7 +1517,7 @@ const docTemplate = `{
                     "200": {
                         "description": "更新成功",
                         "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.UpdateResponse"
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
                         }
                     },
                     "400": {
@@ -1437,7 +1546,27 @@ const docTemplate = `{
                     "200": {
                         "description": "每日推荐题目",
                         "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.DailyProblemResponse"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "daily_problem": {
+                                                    "$ref": "#/definitions/zk-code-arena-server_pkg_models.Problem"
+                                                },
+                                                "message": {
+                                                    "type": "string"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "500": {
@@ -1503,7 +1632,41 @@ const docTemplate = `{
                     "200": {
                         "description": "题目列表",
                         "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ProblemListResponse"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "page": {
+                                                    "type": "integer"
+                                                },
+                                                "page_size": {
+                                                    "type": "integer"
+                                                },
+                                                "problems": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "$ref": "#/definitions/zk-code-arena-server_pkg_models.Problem"
+                                                    }
+                                                },
+                                                "total": {
+                                                    "type": "integer",
+                                                    "format": "int64"
+                                                },
+                                                "total_page": {
+                                                    "type": "integer",
+                                                    "format": "int64"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "400": {
@@ -1552,7 +1715,19 @@ const docTemplate = `{
                     "200": {
                         "description": "创建成功",
                         "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.Problem"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.Problem"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "400": {
@@ -1646,7 +1821,41 @@ const docTemplate = `{
                     "200": {
                         "description": "搜索结果",
                         "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.SearchProblemsResponse"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "page": {
+                                                    "type": "integer"
+                                                },
+                                                "page_size": {
+                                                    "type": "integer"
+                                                },
+                                                "problems": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "$ref": "#/definitions/zk-code-arena-server_pkg_models.Problem"
+                                                    }
+                                                },
+                                                "total": {
+                                                    "type": "integer",
+                                                    "format": "int64"
+                                                },
+                                                "total_page": {
+                                                    "type": "integer",
+                                                    "format": "int64"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "500": {
@@ -1684,7 +1893,19 @@ const docTemplate = `{
                     "200": {
                         "description": "题目详情",
                         "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.Problem"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.Problem"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "400": {
@@ -1749,7 +1970,19 @@ const docTemplate = `{
                     "200": {
                         "description": "更新成功",
                         "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.Problem"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.Problem"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "400": {
@@ -1819,7 +2052,24 @@ const docTemplate = `{
                     "200": {
                         "description": "删除成功",
                         "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.DeleteResponse"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "message": {
+                                                    "type": "string"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "400": {
@@ -1951,7 +2201,19 @@ const docTemplate = `{
                     "200": {
                         "description": "运行结果",
                         "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.RunCodeResponse"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.RunCodeResponse"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "400": {
@@ -1992,7 +2254,19 @@ const docTemplate = `{
                     "200": {
                         "description": "难度统计",
                         "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.DifficultyStatsResponse"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.DifficultyStatsResponse"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "500": {
@@ -2026,7 +2300,19 @@ const docTemplate = `{
                     "200": {
                         "description": "系统统计信息",
                         "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.SystemStatsResponse"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.SystemStatsResponse"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "403": {
@@ -2066,7 +2352,19 @@ const docTemplate = `{
                     "200": {
                         "description": "用户统计信息",
                         "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.UserStatsResponse"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.UserStatsResponse"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "400": {
@@ -2121,25 +2419,37 @@ const docTemplate = `{
                     "200": {
                         "description": "用户统计信息",
                         "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.UserStatsResponse"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.UserStatsResponse"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "400": {
                         "description": "无效的用户ID",
                         "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.UserStatsResponse"
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "权限不足",
                         "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.UserStatsResponse"
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "获取失败",
                         "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.UserStatsResponse"
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
                         }
                     }
                 }
@@ -2195,7 +2505,41 @@ const docTemplate = `{
                     "200": {
                         "description": "提交列表",
                         "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.SubmitListResponse"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "page": {
+                                                    "type": "integer"
+                                                },
+                                                "page_size": {
+                                                    "type": "integer"
+                                                },
+                                                "submits": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "$ref": "#/definitions/zk-code-arena-server_pkg_models.Submit"
+                                                    }
+                                                },
+                                                "total": {
+                                                    "type": "integer",
+                                                    "format": "int64"
+                                                },
+                                                "total_page": {
+                                                    "type": "integer",
+                                                    "format": "int64"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "400": {
@@ -2250,7 +2594,19 @@ const docTemplate = `{
                     "200": {
                         "description": "提交记录",
                         "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.Submit"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.Submit"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "400": {
@@ -2315,7 +2671,19 @@ const docTemplate = `{
                     "200": {
                         "description": "提交详情",
                         "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.Submit"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.Submit"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "400": {
@@ -2376,7 +2744,19 @@ const docTemplate = `{
                     "200": {
                         "description": "提交状态信息",
                         "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.SubmitStatusResponse"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.SubmitStatusResponse"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "400": {
@@ -2443,7 +2823,19 @@ const docTemplate = `{
                     "200": {
                         "description": "创建成功",
                         "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.TestCase"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.TestCase"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "400": {
@@ -2494,7 +2886,33 @@ const docTemplate = `{
                     "200": {
                         "description": "创建成功",
                         "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.CreateResponse"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "errors": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string"
+                                                    }
+                                                },
+                                                "fail_count": {
+                                                    "type": "integer"
+                                                },
+                                                "success_count": {
+                                                    "type": "integer"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "400": {
@@ -2561,7 +2979,31 @@ const docTemplate = `{
                     "200": {
                         "description": "测试用例列表",
                         "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.TestCaseListResponse"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "test_cases": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "$ref": "#/definitions/zk-code-arena-server_pkg_models.TestCase"
+                                                    }
+                                                },
+                                                "total": {
+                                                    "type": "integer",
+                                                    "format": "int64"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "400": {
@@ -2610,7 +3052,19 @@ const docTemplate = `{
                     "200": {
                         "description": "测试用例详情",
                         "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.TestCase"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.TestCase"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "400": {
@@ -2666,7 +3120,19 @@ const docTemplate = `{
                     "200": {
                         "description": "更新成功",
                         "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.TestCase"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.TestCase"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "400": {
@@ -2719,7 +3185,24 @@ const docTemplate = `{
                     "200": {
                         "description": "删除成功",
                         "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "message": {
+                                                    "type": "string"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "400": {
@@ -2786,7 +3269,41 @@ const docTemplate = `{
                     "200": {
                         "description": "用户列表",
                         "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "page": {
+                                                    "type": "integer"
+                                                },
+                                                "page_size": {
+                                                    "type": "integer"
+                                                },
+                                                "total": {
+                                                    "type": "integer",
+                                                    "format": "int64"
+                                                },
+                                                "total_page": {
+                                                    "type": "integer",
+                                                    "format": "int64"
+                                                },
+                                                "users": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "$ref": "#/definitions/zk-code-arena-server_pkg_models.UserProfile"
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "403": {
@@ -2832,7 +3349,30 @@ const docTemplate = `{
                     "200": {
                         "description": "登录成功，返回token和用户信息",
                         "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.LoginResponse"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "message": {
+                                                    "type": "string"
+                                                },
+                                                "token": {
+                                                    "type": "string"
+                                                },
+                                                "user": {
+                                                    "$ref": "#/definitions/zk-code-arena-server_pkg_models.UserProfile"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "400": {
@@ -2872,7 +3412,19 @@ const docTemplate = `{
                     "200": {
                         "description": "用户资料",
                         "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.UserProfile"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.UserProfile"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "401": {
@@ -2947,7 +3499,19 @@ const docTemplate = `{
                     "200": {
                         "description": "更新后的用户资料",
                         "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.UserProfile"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.UserProfile"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "400": {
@@ -3005,7 +3569,27 @@ const docTemplate = `{
                     "200": {
                         "description": "注册成功",
                         "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.RegisterResponse"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "message": {
+                                                    "type": "string"
+                                                },
+                                                "user": {
+                                                    "$ref": "#/definitions/zk-code-arena-server_pkg_models.UserProfile"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "400": {
@@ -3054,7 +3638,19 @@ const docTemplate = `{
                     "200": {
                         "description": "用户信息",
                         "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.UserProfile"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.UserProfile"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "400": {
@@ -3122,7 +3718,19 @@ const docTemplate = `{
                     "200": {
                         "description": "更新后的用户信息",
                         "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.UserProfile"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.UserProfile"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "400": {
@@ -3181,7 +3789,24 @@ const docTemplate = `{
                     "200": {
                         "description": "删除成功",
                         "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "message": {
+                                                    "type": "string"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "400": {
@@ -3753,23 +4378,6 @@ const docTemplate = `{
                 }
             }
         },
-        "zk-code-arena-server_pkg_models.CreateResponse": {
-            "type": "object",
-            "properties": {
-                "id": {
-                    "type": "string",
-                    "example": "507f1f77bcf86cd799439011"
-                },
-                "message": {
-                    "type": "string",
-                    "example": "创建成功"
-                },
-                "success": {
-                    "type": "boolean",
-                    "example": true
-                }
-            }
-        },
         "zk-code-arena-server_pkg_models.CreateTestCaseRequest": {
             "type": "object",
             "required": [
@@ -3801,39 +4409,6 @@ const docTemplate = `{
                 "time_limit": {
                     "description": "可选的超时配置（ms）",
                     "type": "integer"
-                }
-            }
-        },
-        "zk-code-arena-server_pkg_models.DailyProblemResponse": {
-            "type": "object",
-            "properties": {
-                "date": {
-                    "type": "string",
-                    "example": "2024-10-26"
-                },
-                "is_finished": {
-                    "type": "boolean",
-                    "example": false
-                },
-                "problem": {
-                    "$ref": "#/definitions/zk-code-arena-server_pkg_models.Problem"
-                },
-                "progress": {
-                    "type": "string",
-                    "example": "今日已有15位同学完成"
-                }
-            }
-        },
-        "zk-code-arena-server_pkg_models.DeleteResponse": {
-            "type": "object",
-            "properties": {
-                "message": {
-                    "type": "string",
-                    "example": "删除成功"
-                },
-                "success": {
-                    "type": "boolean",
-                    "example": true
                 }
             }
         },
@@ -3897,6 +4472,57 @@ const docTemplate = `{
                 },
                 "task_id": {
                     "type": "string"
+                }
+            }
+        },
+        "zk-code-arena-server_pkg_models.GetClazzResponse": {
+            "type": "object",
+            "required": [
+                "course_id",
+                "name"
+            ],
+            "properties": {
+                "add_nums": {
+                    "type": "integer"
+                },
+                "course_id": {
+                    "type": "string"
+                },
+                "ctime": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "max_members": {
+                    "type": "integer"
+                },
+                "member_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "name": {
+                    "type": "string"
+                },
+                "require_invite": {
+                    "type": "boolean"
+                },
+                "schedule": {
+                    "type": "string"
+                },
+                "status": {
+                    "$ref": "#/definitions/zk-code-arena-server_pkg_models.ClassStatus"
+                },
+                "teacher_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },
@@ -3989,26 +4615,6 @@ const docTemplate = `{
                 },
                 "student_id": {
                     "type": "string"
-                }
-            }
-        },
-        "zk-code-arena-server_pkg_models.LoginResponse": {
-            "type": "object",
-            "properties": {
-                "message": {
-                    "type": "string",
-                    "example": "登录成功"
-                },
-                "success": {
-                    "type": "boolean",
-                    "example": true
-                },
-                "token": {
-                    "type": "string",
-                    "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-                },
-                "user": {
-                    "$ref": "#/definitions/zk-code-arena-server_pkg_models.UserProfile"
                 }
             }
         },
@@ -4200,33 +4806,6 @@ const docTemplate = `{
                 "DifficultyHard"
             ]
         },
-        "zk-code-arena-server_pkg_models.ProblemListResponse": {
-            "type": "object",
-            "properties": {
-                "page": {
-                    "type": "integer",
-                    "example": 1
-                },
-                "page_size": {
-                    "type": "integer",
-                    "example": 10
-                },
-                "problems": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/zk-code-arena-server_pkg_models.Problem"
-                    }
-                },
-                "total": {
-                    "type": "integer",
-                    "example": 100
-                },
-                "total_pages": {
-                    "type": "integer",
-                    "example": 10
-                }
-            }
-        },
         "zk-code-arena-server_pkg_models.ProblemStatus": {
             "type": "string",
             "enum": [
@@ -4249,23 +4828,6 @@ const docTemplate = `{
                 "StatusPublished",
                 "StatusArchived"
             ]
-        },
-        "zk-code-arena-server_pkg_models.RegisterResponse": {
-            "type": "object",
-            "properties": {
-                "message": {
-                    "type": "string",
-                    "example": "注册成功"
-                },
-                "success": {
-                    "type": "boolean",
-                    "example": true
-                },
-                "user_id": {
-                    "type": "string",
-                    "example": "507f1f77bcf86cd799439011"
-                }
-            }
         },
         "zk-code-arena-server_pkg_models.RemoveClazzMembersRequest": {
             "type": "object",
@@ -4372,29 +4934,6 @@ const docTemplate = `{
                 "time_used": {
                     "type": "integer",
                     "example": 126
-                }
-            }
-        },
-        "zk-code-arena-server_pkg_models.SearchProblemsResponse": {
-            "type": "object",
-            "properties": {
-                "problems": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/zk-code-arena-server_pkg_models.Problem"
-                    }
-                },
-                "query": {
-                    "type": "string",
-                    "example": "二分查找"
-                },
-                "search_time": {
-                    "type": "string",
-                    "example": "0.05s"
-                },
-                "total": {
-                    "type": "integer",
-                    "example": 15
                 }
             }
         },
@@ -4524,33 +5063,6 @@ const docTemplate = `{
                 }
             }
         },
-        "zk-code-arena-server_pkg_models.SubmitListResponse": {
-            "type": "object",
-            "properties": {
-                "page": {
-                    "type": "integer",
-                    "example": 1
-                },
-                "page_size": {
-                    "type": "integer",
-                    "example": 10
-                },
-                "submits": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/zk-code-arena-server_pkg_models.Submit"
-                    }
-                },
-                "total": {
-                    "type": "integer",
-                    "example": 50
-                },
-                "total_pages": {
-                    "type": "integer",
-                    "example": 5
-                }
-            }
-        },
         "zk-code-arena-server_pkg_models.SubmitStatus": {
             "type": "string",
             "enum": [
@@ -4642,20 +5154,6 @@ const docTemplate = `{
                     "description": "最后更新时间",
                     "type": "string",
                     "example": "2024-10-26T10:00:00Z"
-                }
-            }
-        },
-        "zk-code-arena-server_pkg_models.SuccessResponse": {
-            "type": "object",
-            "properties": {
-                "data": {},
-                "message": {
-                    "type": "string",
-                    "example": "操作成功"
-                },
-                "success": {
-                    "type": "boolean",
-                    "example": true
                 }
             }
         },
@@ -4868,21 +5366,10 @@ const docTemplate = `{
                     "description": "可选的超时配置（优先级高于题目默认配置）",
                     "type": "integer",
                     "example": 1000
-                }
-            }
-        },
-        "zk-code-arena-server_pkg_models.TestCaseListResponse": {
-            "type": "object",
-            "properties": {
-                "test_cases": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/zk-code-arena-server_pkg_models.TestCase"
-                    }
                 },
-                "total": {
-                    "type": "integer",
-                    "example": 15
+                "updated_at": {
+                    "type": "string",
+                    "example": "2024-10-26T10:00:00Z"
                 }
             }
         },
@@ -5048,19 +5535,6 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 200,
                     "minLength": 1
-                }
-            }
-        },
-        "zk-code-arena-server_pkg_models.UpdateResponse": {
-            "type": "object",
-            "properties": {
-                "message": {
-                    "type": "string",
-                    "example": "更新成功"
-                },
-                "success": {
-                    "type": "boolean",
-                    "example": true
                 }
             }
         },
