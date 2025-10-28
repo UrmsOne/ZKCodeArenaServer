@@ -213,8 +213,8 @@ type UpdateClazzRequest struct {
 
 // JoinClazzRequest 加入班级请求
 type JoinClazzRequest struct {
-	ClazzID    string  `json:"clazz_id" form:"clazzId" binding:"required"`
-	InviteCode *string `json:"invite_code,omitempty" form:"invite_code,omitempty"`
+	ClazzID string  `json:"clazz_id" form:"clazzId" binding:"required"`
+	RanCode *string `json:"ran_code,omitempty" form:"ran_code,omitempty"`
 }
 
 // AddClazzMemberRequest 添加班级成员请求
@@ -255,12 +255,6 @@ type AddClazzTeachersRequest struct {
 type RemoveClazzTeachersRequest struct {
 	ClazzId    string   `json:"clazz_id" binding:"required"`
 	TeacherIds []string `json:"teacher_ids" binding:"required"`
-}
-
-// UseQrcodeRequest 通过二维码加入班级请求
-type UseQrcodeRequest struct {
-	Ran     string `json:"ran" form:"ran" binding:"required"`
-	ClazzID string `json:"clazz_id" form:"clazzId" binding:"required"`
 }
 
 // ==================== 任务模块请求 ====================

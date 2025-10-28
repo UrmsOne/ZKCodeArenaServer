@@ -23,7 +23,7 @@ func (s *Server) RegisterClazz(g *gin.RouterGroup) {
 		jwtGroup := clazzGroup.Use(middleware.JWTMiddleware())
 		{
 			jwtGroup.POST("", s.CreateClass)
-			jwtGroup.GET("/join", s.JoinClass)
+			jwtGroup.POST("/join", s.JoinClass)
 			jwtGroup.GET("/:clazzId", s.GetClazzById)
 			jwtGroup.PUT("", s.UpdateClazzInfo)
 			jwtGroup.DELETE("/:clazzId", s.DeleteClazz)
@@ -34,7 +34,6 @@ func (s *Server) RegisterClazz(g *gin.RouterGroup) {
 			jwtGroup.GET("/course/:courseId", s.GetClazzesByCourseId)
 			//二维码
 			jwtGroup.PUT("/qrcode/:clazzId", s.refreshQrcode)
-			jwtGroup.POST("/qrcode", s.useQrcode)
 			jwtGroup.GET("/qrcode/:clazzId", s.GetQrcodeClazzById)
 			//课程任务相关
 			jwtGroup.POST("/finishTask", s.FinishTask)
@@ -122,7 +121,7 @@ func (s *Server) refreshQrcode(c *gin.Context) {
 	utils.SuccessResponse(c, qrcodeBase64)
 }
 
-// UseQrcode godoc
+// JoinClass godoc
 // @Summary      通过二维码加入班级
 // @Description  学生通过扫描二维码加入班级
 // @Tags         班级
@@ -133,16 +132,16 @@ func (s *Server) refreshQrcode(c *gin.Context) {
 // @Success      200 {object} utils.Response "加入成功"
 // @Failure      400 {object} models.ErrorResponse "请求参数错误"
 // @Security     BearerAuth
-// @Router       /clazzes/qrcode [post]
-func (s *Server) useQrcode(c *gin.Context) {
-	var req models.UseQrcodeRequest
+// @Router       /clazzes/join [post]
+func (s *Server) JoinClass(c *gin.Context) {
+	var req models.JoinClazzRequest
 	if err := c.ShouldBindQuery(&req); err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
 	}
 
 	userID, _ := c.Get("user_id")
-	if err := s.svc.ClazzService.UseQrcode(c.Request.Context(), req.Ran, req.ClazzID, userID.(string)); err != nil {
+	if err := s.svc.ClazzService.JoinClazz(c.Request.Context(), req, userID.(string)); err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
 	}
@@ -278,36 +277,36 @@ func (s *Server) CreateClass(c *gin.Context) {
 	utils.SuccessResponse(c, response)
 }
 
-// JoinClass godoc
-// @Summary      加入班级
-// @Description  学生通过邀请码加入班级
-// @Tags         班级
-// @Accept       json
-// @Produce      json
-// @Param        clazzId query string true "班级ID"
-// @Param        invite_code query string true "邀请码"
-// @Success      200 {object} utils.Response "加入成功"
-// @Failure      400 {object} models.ErrorResponse "请求参数错误"
-// @Security     BearerAuth
-// @Router       /clazzes/join [get]
-func (s *Server) JoinClass(c *gin.Context) {
-	var req models.JoinClazzRequest
-	if err := c.ShouldBindQuery(&req); err != nil {
-		utils.BadRequestResponse(c, err.Error())
-		return
-	}
-
-	if req.ClazzID == "" {
-		utils.BadRequestResponse(c, "班级id为空")
-		return
-	}
-	userID, _ := c.Get("user_id")
-	if err := s.svc.ClazzService.JoinClazz(c.Request.Context(), &req, userID.(string)); err != nil {
-		utils.BadRequestResponse(c, err.Error())
-		return
-	}
-	utils.SuccessResponse(c, nil)
-}
+//// JoinClass godoc
+//// @Summary      加入班级
+//// @Description  学生通过邀请码加入班级
+//// @Tags         班级
+//// @Accept       json
+//// @Produce      json
+//// @Param        clazzId query string true "班级ID"
+//// @Param        invite_code query string true "邀请码"
+//// @Success      200 {object} utils.Response "加入成功"
+//// @Failure      400 {object} models.ErrorResponse "请求参数错误"
+//// @Security     BearerAuth
+//// @Router       /clazzes/join [get]
+//func (s *Server) JoinClass(c *gin.Context) {
+//	var req models.JoinClazzRequest
+//	if err := c.ShouldBindQuery(&req); err != nil {
+//		utils.BadRequestResponse(c, err.Error())
+//		return
+//	}
+//
+//	if req.ClazzID == "" {
+//		utils.BadRequestResponse(c, "班级id为空")
+//		return
+//	}
+//	userID, _ := c.Get("user_id")
+//	if err := s.svc.ClazzService.joinClazz(c.Request.Context(), &req, userID.(string)); err != nil {
+//		utils.BadRequestResponse(c, err.Error())
+//		return
+//	}
+//	utils.SuccessResponse(c, nil)
+//}
 
 // GetClazzById godoc
 // @Summary      获取班级详情

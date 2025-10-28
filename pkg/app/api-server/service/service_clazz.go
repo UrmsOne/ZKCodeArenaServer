@@ -144,92 +144,6 @@ func (s *ClazzService) CreateClass(ctx context.Context, req *models.CreateClazzR
 	}, nil
 }
 
-// JoinClazz 加入班级
-func (s *ClazzService) JoinClazz(ctx context.Context, req *models.JoinClazzRequest, userID string) error {
-	c := utils.GetCollection("clazzes")
-	classObjID, err := primitive.ObjectIDFromHex(req.ClazzID)
-	if err != nil {
-		return errors.New("无效的班级ID")
-	}
-
-	filter := bson.M{"_id": classObjID}
-	var clazz models.Clazz
-	if err = c.FindOne(ctx, filter).Decode(&clazz); err != nil {
-		return errors.New("班级不存在")
-	}
-
-	// 检查是否可以加入
-	if !clazz.CanJoin() {
-		return errors.New("班级已满或已结束")
-	}
-
-	memberId, _ := primitive.ObjectIDFromHex(userID)
-	// 检查是否已是成员（通过查询学生班级关联表）
-	count, err := utils.GetCollection("student_classes").CountDocuments(ctx, bson.M{
-		"student_id": memberId,
-		"class_id":   classObjID,
-	})
-	if err != nil {
-		return errors.New("检查班级成员失败: " + err.Error())
-	}
-
-	if count > 0 {
-		return errors.New("您已经是该班级成员")
-	}
-
-	// 验证邀请码（如果需要）
-	if clazz.RequireInvite {
-		if req.InviteCode == nil {
-			return errors.New("加入该班级需要邀请码")
-		}
-		// 这里应该验证邀请码，暂时省略
-	}
-
-	filter = bson.M{
-		"_id":   clazz.ID,
-		"$expr": bson.M{"$lt": []interface{}{"$add_nums", "$max_members"}}, //乐观锁
-	}
-
-	update := bson.M{
-		"$inc": bson.M{
-			"add_nums": 1,
-		},
-		"$set": bson.M{
-			"mtime": time.Now(),
-		},
-	}
-
-	result, err := c.UpdateOne(ctx, filter, update)
-	if err != nil {
-		return errors.New("加入班级失败: " + err.Error())
-	}
-
-	if result.MatchedCount == 0 {
-		return errors.New("班级不存在")
-	}
-
-	// 同时创建学生班级关联记录
-	studentClass := &models.StudentClass{
-		ID:        primitive.NewObjectID(),
-		StudentID: memberId,
-		ClassID:   clazz.ID,
-		CourseID:  clazz.CourseId,
-		JoinTime:  time.Now(),
-		Status:    "active",
-		CTime:     time.Now(),
-		MTime:     time.Now(),
-	}
-
-	_, err = utils.GetCollection("student_classes").InsertOne(ctx, studentClass)
-	if err != nil {
-		// 如果创建关联记录失败，应该回滚之前的班级成员添加操作
-		// 这里简化处理，实际应该使用事务
-		_, _ = c.UpdateOne(ctx, bson.M{"_id": clazz.ID}, bson.M{"$inc": bson.M{"add_nums": -1}})
-	}
-
-	return nil
-}
-
 // GetClazzByID 获取班级详情
 func (s *ClazzService) GetClazzByID(ctx context.Context, clazzID string, userID string) (*models.GetClazzResponse, error) {
 	clazzObjID, err := primitive.ObjectIDFromHex(clazzID)
@@ -1186,28 +1100,17 @@ func (s *ClazzService) cheekIsMember(ids []primitive.ObjectID, userID primitive.
 	return false
 }
 
-// UseQrcode 通过二维码扫描加入班级
-func (s *ClazzService) UseQrcode(ctx context.Context, ran, clazzID, userID string) error {
+// JoinClazz 通过二维码扫描加入班级
+func (s *ClazzService) JoinClazz(ctx context.Context, req models.JoinClazzRequest, userID string) error {
 	// 验证用户ID和班级ID格式
 	userObjID, err := primitive.ObjectIDFromHex(userID)
 	if err != nil {
 		return errors.New("无效的用户ID")
 	}
 
-	clazzObjID, err := primitive.ObjectIDFromHex(clazzID)
+	clazzObjID, err := primitive.ObjectIDFromHex(req.ClazzID)
 	if err != nil {
 		return errors.New("无效的班级ID")
-	}
-
-	key := "clazz_qrcode" + clazzID
-	storedRan, err := utils.RedisClient.HGet(ctx, key, "ran").Result()
-	if err != nil {
-		return errors.New("二维码已过期或不存在")
-	}
-
-	// 验证ran值是否匹配
-	if storedRan != ran {
-		return errors.New("二维码无效")
 	}
 
 	// 获取班级信息
@@ -1238,6 +1141,31 @@ func (s *ClazzService) UseQrcode(ctx context.Context, ran, clazzID, userID strin
 		return errors.New("您已经是该班级成员")
 	}
 
+	// 如果班级不需要邀请，则直接加入
+	if !clazz.RequireInvite {
+		return s.joinClazzDirectly(ctx, &clazz, userObjID)
+	}
+
+	// 如果班级需要邀请，则验证二维码
+	key := "clazz_qrcode" + req.ClazzID
+	storedRan, err := utils.RedisClient.HGet(ctx, key, "ran").Result()
+	if err != nil {
+		return errors.New("二维码已过期或不存在")
+	}
+
+	// 验证ran值是否匹配
+	if req.RanCode == nil || storedRan != *req.RanCode {
+		return errors.New("二维码无效")
+	}
+
+	// 执行加入班级的逻辑
+	return s.joinClazzDirectly(ctx, &clazz, userObjID)
+}
+
+// joinClazzDirectly 直接加入班级
+func (s *ClazzService) joinClazzDirectly(ctx context.Context, clazz *models.Clazz, userObjID primitive.ObjectID) error {
+	clazzObjID := clazz.ID
+
 	// 更新班级成员数量
 	filter := bson.M{
 		"_id":   clazzObjID,
@@ -1253,7 +1181,7 @@ func (s *ClazzService) UseQrcode(ctx context.Context, ran, clazzID, userID strin
 		},
 	}
 
-	result, err := clazzColl.UpdateOne(ctx, filter, update)
+	result, err := utils.GetCollection("clazzes").UpdateOne(ctx, filter, update)
 	if err != nil {
 		return errors.New("加入班级失败: " + err.Error())
 	}
@@ -1276,7 +1204,7 @@ func (s *ClazzService) UseQrcode(ctx context.Context, ran, clazzID, userID strin
 	_, err = utils.GetCollection("student_classes").InsertOne(ctx, studentClass)
 	if err != nil {
 		// 如果创建关联记录失败，回滚班级成员数量
-		_, _ = clazzColl.UpdateOne(ctx, bson.M{"_id": clazzObjID}, bson.M{"$inc": bson.M{"add_nums": -1}})
+		_, _ = utils.GetCollection("clazzes").UpdateOne(ctx, bson.M{"_id": clazzObjID}, bson.M{"$inc": bson.M{"add_nums": -1}})
 		return errors.New("加入班级失败: " + err.Error())
 	}
 

@@ -18,11 +18,9 @@ import (
 	"mime/multipart"
 	"strings"
 	"time"
-	"zk-code-arena-server/conf"
 	"zk-code-arena-server/pkg/models"
 	"zk-code-arena-server/pkg/utils"
 
-	"github.com/skip2/go-qrcode"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -71,12 +69,6 @@ func (s *CourseService) CreateCourse(ctx context.Context, req *models.CreateCour
 func (s *CourseService) CreateClass(ctx context.Context, req *models.CreateClazzRequest, userId string) (*models.ClazzResponse, error) {
 	// 此方法已迁移到 clazz 服务中
 	return nil, errors.New("此方法已迁移到 clazz 服务中")
-}
-
-// JoinClazz 加入班级
-func (s *CourseService) JoinClazz(ctx context.Context, req *models.JoinClazzRequest, userID string) error {
-	// 此方法已迁移到 clazz 服务中
-	return errors.New("此方法已迁移到 clazz 服务中")
 }
 
 // GetCourseByID 根据ID获取课程详情
@@ -539,18 +531,6 @@ func (s *CourseService) generateInviteCode() string {
 	}
 
 	return string(bytes)
-}
-
-// generateQRCode 生成二维码
-func (s *CourseService) generateQRCode(clazzID, inviteCode string) ([]byte, error) {
-	url := fmt.Sprintf("http://%s/api/v1/clazzes/join?clazzId=%s&invite_code=%s",
-		conf.Config.Server.Domain, clazzID, inviteCode)
-	qr, err := qrcode.Encode(url, qrcode.Medium, 256)
-	if err != nil {
-		return nil, err
-	}
-
-	return qr, nil
 }
 
 // cacheInviteCode 缓存邀请码
