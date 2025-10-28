@@ -257,6 +257,12 @@ type RemoveClazzTeachersRequest struct {
 	TeacherIds []string `json:"teacher_ids" binding:"required"`
 }
 
+// UseQrcodeRequest 通过二维码加入班级请求
+type UseQrcodeRequest struct {
+	Ran     string `json:"ran" form:"ran" binding:"required"`
+	ClazzID string `json:"clazz_id" form:"clazzId" binding:"required"`
+}
+
 // ==================== 任务模块请求 ====================
 
 // CreateTaskRequest 创建任务请求
@@ -329,14 +335,14 @@ type ProblemQueryCondition struct {
 
 // SubmitStatusResponse 轻量级提交状态响应
 type SubmitStatusResponse struct {
-	ID        primitive.ObjectID `json:"id" swaggertype:"string" example:"507f1f77bcf86cd799439011"`         // 提交ID
-	Status    SubmitStatus       `json:"status" example:"accepted"`     // 当前状态
-	Progress  *JudgeProgress     `json:"progress"`   // 判题进度（可选）
-	Message   string             `json:"message" example:"判题完成"`    // 状态描述信息
-	UpdatedAt time.Time          `json:"updated_at" example:"2024-10-26T10:00:00Z"` // 最后更新时间
+	ID        primitive.ObjectID `json:"id" swaggertype:"string" example:"507f1f77bcf86cd799439011"` // 提交ID
+	Status    SubmitStatus       `json:"status" example:"accepted"`                                  // 当前状态
+	Progress  *JudgeProgress     `json:"progress"`                                                   // 判题进度（可选）
+	Message   string             `json:"message" example:"判题完成"`                                     // 状态描述信息
+	UpdatedAt time.Time          `json:"updated_at" example:"2024-10-26T10:00:00Z"`                  // 最后更新时间
 
 	// 完成后的基本结果信息（避免返回完整详细结果）
-	TimeUsed   *int `json:"time_used,omitempty" example:"150"`   // 时间使用(ms)
+	TimeUsed   *int `json:"time_used,omitempty" example:"150"`    // 时间使用(ms)
 	MemoryUsed *int `json:"memory_used,omitempty" example:"1024"` // 内存使用(KB)
 }
 
@@ -344,7 +350,7 @@ type SubmitStatusResponse struct {
 type JudgeProgress struct {
 	CurrentTestCase int `json:"current_test_case" example:"3"` // 当前测试用例索引（从1开始）
 	TotalTestCases  int `json:"total_test_cases" example:"5"`  // 总测试用例数
-	Percentage      int `json:"percentage" example:"60"`        // 完成百分比 (0-100)
+	Percentage      int `json:"percentage" example:"60"`       // 完成百分比 (0-100)
 }
 
 // ==================== WebSocket消息模型 ====================
@@ -480,7 +486,7 @@ type LoginResponse struct {
 	User    UserProfile `json:"user"`
 }
 
-// RegisterResponse 注册响应  
+// RegisterResponse 注册响应
 type RegisterResponse struct {
 	Success bool   `json:"success" example:"true"`
 	Message string `json:"message" example:"注册成功"`
@@ -502,14 +508,14 @@ type UserStatsResponse struct {
 
 // SystemStatsResponse 系统统计响应
 type SystemStatsResponse struct {
-	TotalUsers       int `json:"total_users" example:"150"`
-	TotalProblems    int `json:"total_problems" example:"80"`
-	TotalSubmits     int `json:"total_submits" example:"2500"`
-	TotalCourses     int `json:"total_courses" example:"12"`
-	TotalClasses     int `json:"total_classes" example:"25"`
-	ActiveUsers24h   int `json:"active_users_24h" example:"35"`
-	NewUsersToday    int `json:"new_users_today" example:"3"`
-	SubmitsToday     int `json:"submits_today" example:"120"`
+	TotalUsers     int `json:"total_users" example:"150"`
+	TotalProblems  int `json:"total_problems" example:"80"`
+	TotalSubmits   int `json:"total_submits" example:"2500"`
+	TotalCourses   int `json:"total_courses" example:"12"`
+	TotalClasses   int `json:"total_classes" example:"25"`
+	ActiveUsers24h int `json:"active_users_24h" example:"35"`
+	NewUsersToday  int `json:"new_users_today" example:"3"`
+	SubmitsToday   int `json:"submits_today" example:"120"`
 }
 
 // DifficultyStatsResponse 难度统计响应
@@ -548,8 +554,8 @@ type SearchProblemsResponse struct {
 
 // DailyProblemResponse 每日一题响应
 type DailyProblemResponse struct {
-	Problem    Problem   `json:"problem"`
-	Date       string    `json:"date" example:"2024-10-26"`
-	IsFinished bool      `json:"is_finished" example:"false"`
-	Progress   string    `json:"progress" example:"今日已有15位同学完成"`
+	Problem    Problem `json:"problem"`
+	Date       string  `json:"date" example:"2024-10-26"`
+	IsFinished bool    `json:"is_finished" example:"false"`
+	Progress   string  `json:"progress" example:"今日已有15位同学完成"`
 }

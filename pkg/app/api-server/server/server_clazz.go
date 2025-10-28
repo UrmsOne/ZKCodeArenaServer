@@ -31,10 +31,11 @@ func (s *Server) RegisterClazz(g *gin.RouterGroup) {
 			jwtGroup.POST("/members/remove", s.RemoveClazzMembers)
 			jwtGroup.POST("/teachers", s.addClazzTeacher)
 			jwtGroup.DELETE("/teachers", s.removeClazzTeacher)
-			jwtGroup.PUT("/qrcode/:clazzId", s.refreshQrcode)
-			jwtGroup.GET("/qrcode/:clazzId", s.GetQrcodeClazzById)
 			jwtGroup.GET("/course/:courseId", s.GetClazzesByCourseId)
-
+			//二维码
+			jwtGroup.PUT("/qrcode/:clazzId", s.refreshQrcode)
+			jwtGroup.POST("/qrcode", s.useQrcode)
+			jwtGroup.GET("/qrcode/:clazzId", s.GetQrcodeClazzById)
 			//课程任务相关
 			jwtGroup.POST("/finishTask", s.FinishTask)
 			jwtGroup.POST("/task", s.AddTask)
@@ -119,6 +120,34 @@ func (s *Server) refreshQrcode(c *gin.Context) {
 		return
 	}
 	utils.SuccessResponse(c, qrcodeBase64)
+}
+
+// UseQrcode godoc
+// @Summary      通过二维码加入班级
+// @Description  学生通过扫描二维码加入班级
+// @Tags         班级
+// @Accept       json
+// @Produce      json
+// @Param        ran query string true "随机值"
+// @Param        clazzId query string true "班级ID"
+// @Success      200 {object} utils.Response "加入成功"
+// @Failure      400 {object} models.ErrorResponse "请求参数错误"
+// @Security     BearerAuth
+// @Router       /clazzes/qrcode [post]
+func (s *Server) useQrcode(c *gin.Context) {
+	var req models.UseQrcodeRequest
+	if err := c.ShouldBindQuery(&req); err != nil {
+		utils.BadRequestResponse(c, err.Error())
+		return
+	}
+
+	userID, _ := c.Get("user_id")
+	if err := s.svc.ClazzService.UseQrcode(c.Request.Context(), req.Ran, req.ClazzID, userID.(string)); err != nil {
+		utils.BadRequestResponse(c, err.Error())
+		return
+	}
+
+	utils.SuccessResponse(c, nil)
 }
 
 // DeleteTask godoc

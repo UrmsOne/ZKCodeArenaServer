@@ -50,14 +50,17 @@ func (s2 *CourseService) RefreshQrcode(userId string, courseId string, clazzId s
 		}
 		return nil, err
 	}
-	ran := fmt.Sprintf("%d", rand.Int())
+	ran := fmt.Sprintf("%d,%s", rand.Int(), clazzId)
 	encode, err := qrcode.Encode(ran, qrcode.Medium, 256)
 	if err != nil {
 		return nil, err
 	}
 	// 将二维码字节切片编码为 Base64 字符串
 	base64QRCode := base64.StdEncoding.EncodeToString(encode)
-	err = utils.RedisClient.Set(ctx, "clazz_qrcode"+clazzId, base64QRCode, 30*time.Minute).Err()
+
+	err = utils.RedisClient.HSet(ctx, "clazz_qrcode"+clazzId, "qrcode", base64QRCode, "ran", ran).Err()
+	utils.RedisClient.Expire(ctx, "clazz_qrcode"+clazzId, 30*time.Minute)
+
 	if err != nil {
 		return nil, err
 	}
@@ -126,13 +129,14 @@ func (s *ClazzService) CreateClass(ctx context.Context, req *models.CreateClazzR
 
 	if req.RequireInvite {
 		id := one.InsertedID.(primitive.ObjectID)
-		ran := fmt.Sprintf("%d", rand.Int())
+		ran := fmt.Sprintf("%d,%s", rand.Int(), id.Hex())
 		encode, err := qrcode.Encode(ran, qrcode.Medium, 256)
 		if err != nil {
 			return nil, err
 		}
 		base64QRCode := base64.StdEncoding.EncodeToString(encode)
-		utils.RedisClient.HSet(ctx, "clazz_qrcode"+id.Hex(), base64QRCode, 30*time.Minute)
+		err = utils.RedisClient.HSet(ctx, "clazz_qrcode"+id.Hex(), "qrcode", base64QRCode, "ran", ran).Err()
+		utils.RedisClient.Expire(ctx, "clazz_qrcode"+ran, 30*time.Minute)
 	}
 
 	return &models.ClazzResponse{
@@ -1180,6 +1184,103 @@ func (s *ClazzService) cheekIsMember(ids []primitive.ObjectID, userID primitive.
 		}
 	}
 	return false
+}
+
+// UseQrcode 通过二维码扫描加入班级
+func (s *ClazzService) UseQrcode(ctx context.Context, ran, clazzID, userID string) error {
+	// 验证用户ID和班级ID格式
+	userObjID, err := primitive.ObjectIDFromHex(userID)
+	if err != nil {
+		return errors.New("无效的用户ID")
+	}
+
+	clazzObjID, err := primitive.ObjectIDFromHex(clazzID)
+	if err != nil {
+		return errors.New("无效的班级ID")
+	}
+
+	key := "clazz_qrcode" + clazzID
+	storedRan, err := utils.RedisClient.HGet(ctx, key, "ran").Result()
+	if err != nil {
+		return errors.New("二维码已过期或不存在")
+	}
+
+	// 验证ran值是否匹配
+	if storedRan != ran {
+		return errors.New("二维码无效")
+	}
+
+	// 获取班级信息
+	clazzColl := utils.GetCollection("clazzes")
+	var clazz models.Clazz
+	if err = clazzColl.FindOne(ctx, bson.M{"_id": clazzObjID}).Decode(&clazz); err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return errors.New("班级不存在")
+		}
+		return err
+	}
+
+	// 检查是否可以加入
+	if !clazz.CanJoin() {
+		return errors.New("班级已满或已结束")
+	}
+
+	// 检查用户是否已经是班级成员
+	count, err := utils.GetCollection("student_classes").CountDocuments(ctx, bson.M{
+		"student_id": userObjID,
+		"class_id":   clazzObjID,
+	})
+	if err != nil {
+		return errors.New("检查班级成员失败: " + err.Error())
+	}
+
+	if count > 0 {
+		return errors.New("您已经是该班级成员")
+	}
+
+	// 更新班级成员数量
+	filter := bson.M{
+		"_id":   clazzObjID,
+		"$expr": bson.M{"$lt": []interface{}{"$add_nums", "$max_members"}}, // 乐观锁
+	}
+
+	update := bson.M{
+		"$inc": bson.M{
+			"add_nums": 1,
+		},
+		"$set": bson.M{
+			"mtime": time.Now(),
+		},
+	}
+
+	result, err := clazzColl.UpdateOne(ctx, filter, update)
+	if err != nil {
+		return errors.New("加入班级失败: " + err.Error())
+	}
+
+	if result.MatchedCount == 0 {
+		return errors.New("班级不存在或已满")
+	}
+
+	// 创建学生班级关联记录
+	studentClass := &models.StudentClass{
+		ID:        primitive.NewObjectID(),
+		StudentID: userObjID,
+		ClassID:   clazzObjID,
+		CourseID:  clazz.CourseId,
+		JoinTime:  time.Now(),
+		CTime:     time.Now(),
+		MTime:     time.Now(),
+	}
+
+	_, err = utils.GetCollection("student_classes").InsertOne(ctx, studentClass)
+	if err != nil {
+		// 如果创建关联记录失败，回滚班级成员数量
+		_, _ = clazzColl.UpdateOne(ctx, bson.M{"_id": clazzObjID}, bson.M{"$inc": bson.M{"add_nums": -1}})
+		return errors.New("加入班级失败: " + err.Error())
+	}
+
+	return nil
 }
 
 // DeleteClazz 删除班级

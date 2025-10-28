@@ -1421,7 +1421,7 @@ func (s2 *CourseService) GetQrcode(userId string, clazzId string, ctx context.Co
 	}
 
 	// 从Redis获取二维码
-	qrcode, err := utils.RedisClient.Get(ctx, "clazz_qrcode"+clazzId).Result()
+	qrcode, err := utils.RedisClient.HGet(ctx, "clazz_qrcode"+clazzId, "qrcode").Result()
 	if err != nil {
 		// Redis中没有找到二维码，说明二维码已过期
 		return nil, errors.New("二维码已过期")
