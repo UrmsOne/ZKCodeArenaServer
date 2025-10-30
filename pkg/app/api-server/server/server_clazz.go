@@ -655,9 +655,9 @@ func (s *Server) RemoveStudentFromClass(c *gin.Context) {
 // @Success      200 {object} []models.StudentClassResponse "学生班级列表"
 // @Failure      400 {object} models.ErrorResponse "请求参数错误"
 // @Security     BearerAuth
-// @Router       /clazzes/student_classes/{studentId} [get]
+// @Router       /clazzes/student_classes/{userId} [get]
 func (s *Server) GetStudentClasses(c *gin.Context) {
-	studentId := c.Param("studentId")
+	studentId := c.Param("userId")
 	if studentId == "" {
 		utils.BadRequestResponse(c, "学生ID不能为空")
 		return
