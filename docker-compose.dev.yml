@@ -51,7 +51,7 @@ services:
     networks:
       - zk-arena-dev-network
 
-judge:
+  judge:
     image: crpi-n330h2d2rz94g7d2.cn-hangzhou.personal.cr.aliyuncs.com/zhku-oj/zhku-oj-java:1.0
     container_name: zk-arena-judge-dev
     ports:
