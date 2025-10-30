@@ -33,7 +33,7 @@ func (s *Server) RegisterClazz(g *gin.RouterGroup) {
 			jwtGroup.DELETE("/teachers", s.removeClazzTeacher)
 			jwtGroup.GET("/course/:courseId", s.GetClazzesByCourseId)
 			//二维码
-			jwtGroup.PUT("/qrcode/:clazzId", s.refreshQrcode)
+			jwtGroup.PUT("/qrcode/:courseId/:clazzId", s.refreshQrcode)
 			jwtGroup.GET("/qrcode/:clazzId", s.GetQrcodeClazzById)
 			//课程任务相关
 			jwtGroup.POST("/finishTask", s.FinishTask)
