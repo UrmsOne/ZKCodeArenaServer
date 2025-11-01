@@ -1533,3 +1533,102 @@ func (s *ClazzService) RemoveTaskRelationIds(ctx context.Context, userId string,
 
 	return nil
 }
+
+// CopyTaskToClass 将一个班级的任务复制到另一个班级
+func (s *ClazzService) CopyTaskToClass(ctx context.Context, userID string, req models.CopyTaskToClassRequest) error {
+	// 验证用户ID格式
+	userObjID, err := primitive.ObjectIDFromHex(userID)
+	if err != nil {
+		return errors.New("无效的用户ID")
+	}
+
+	// 验证源班级ID格式
+	sourceClassObjID, err := primitive.ObjectIDFromHex(req.SourceClassID)
+	if err != nil {
+		return errors.New("无效的源班级ID")
+	}
+
+	// 验证目标班级ID格式
+	targetClassObjID, err := primitive.ObjectIDFromHex(req.TargetClassID)
+	if err != nil {
+		return errors.New("无效的目标班级ID")
+	}
+
+	// 验证任务ID格式
+	taskObjID, err := primitive.ObjectIDFromHex(req.TaskID)
+	if err != nil {
+		return errors.New("无效的任务ID")
+	}
+
+	// 获取源班级信息
+	sourceClassColl := utils.GetCollection("clazzes")
+	var sourceClass models.Clazz
+	if err = sourceClassColl.FindOne(ctx, bson.M{"_id": sourceClassObjID}).Decode(&sourceClass); err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return errors.New("源班级不存在")
+		}
+		return err
+	}
+
+	// 获取目标班级信息
+	targetClassColl := utils.GetCollection("clazzes")
+	var targetClass models.Clazz
+	if err = targetClassColl.FindOne(ctx, bson.M{"_id": targetClassObjID}).Decode(&targetClass); err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return errors.New("目标班级不存在")
+		}
+		return err
+	}
+
+	// 验证源班级和目标班级属于同一课程
+	if sourceClass.CourseId != targetClass.CourseId {
+		return errors.New("源班级和目标班级必须属于同一课程")
+	}
+
+	// 验证用户权限：只有课程创建者或课程教师可以复制任务
+	courseColl := utils.GetCollection("courses")
+	isAuthorized, err := authorized(ctx, courseColl, sourceClass.CourseId, userObjID)
+	if err != nil {
+		return err
+	}
+
+	if !isAuthorized {
+		return errors.New("权限不足，只有课程创建者或课程教师可以复制任务")
+	}
+
+	// 获取源任务信息
+	taskColl := utils.GetCollection("tasks")
+	var sourceTask models.Task
+	if err = taskColl.FindOne(ctx, bson.M{"_id": taskObjID, "clazz_id": sourceClassObjID}).Decode(&sourceTask); err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return errors.New("源任务不存在或不属于源班级")
+		}
+		return err
+	}
+
+	// 创建新任务（复制源任务的信息，但关联到目标班级）
+	now := time.Now()
+	newTask := &models.Task{
+		ID:          primitive.NewObjectID(),
+		Title:       sourceTask.Title,
+		Description: sourceTask.Description,
+		Type:        sourceTask.Type,
+		StartTime:   sourceTask.StartTime,
+		EndTime:     sourceTask.EndTime,
+		RelationIDs: sourceTask.RelationIDs,
+		Status:      sourceTask.Status,
+		CourseId:    sourceTask.CourseId,
+		ClazzId:     targetClassObjID, // 关联到目标班级
+		CTime:       now,
+		MTime:       now,
+		CID:         userObjID,
+	}
+
+	// 插入新任务到数据库
+	_, err = taskColl.InsertOne(ctx, newTask)
+	if err != nil {
+		return errors.New("复制任务失败: " + err.Error())
+	}
+
+	return nil
+}

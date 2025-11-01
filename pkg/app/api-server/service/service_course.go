@@ -512,6 +512,49 @@ func authorized(ctx context.Context, coll *mongo.Collection, courseId primitive.
 	return isTeacher || isCreator, nil
 }
 
+// courseMemberAuthorized 检查用户是否是课程成员（创建者、教师或学生）
+func courseMemberAuthorized(ctx context.Context, coll *mongo.Collection, courseId primitive.ObjectID, userId primitive.ObjectID) (bool, error) {
+	// 先检查是否是课程创建者或教师
+	isAuthorized, err := authorized(ctx, coll, courseId, userId)
+	if err != nil || isAuthorized {
+		return isAuthorized, err
+	}
+
+	// 如果不是创建者或教师，检查是否是学生
+	// 查询该课程下的所有班级
+	clazzColl := utils.GetCollection("clazzes")
+	cursor, err := clazzColl.Find(ctx, bson.M{"course_id": courseId})
+	if err != nil {
+		return false, errors.New("查询班级失败: " + err.Error())
+	}
+	defer cursor.Close(ctx)
+
+	var clazzes []models.Clazz
+	if err = cursor.All(ctx, &clazzes); err != nil {
+		return false, errors.New("解析班级数据失败: " + err.Error())
+	}
+
+	// 收集所有班级ID
+	clazzIDs := make([]primitive.ObjectID, len(clazzes))
+	for i, clazz := range clazzes {
+		clazzIDs[i] = clazz.ID
+	}
+
+	// 查询学生是否在这些班级中
+	studentClassColl := utils.GetCollection("student_classes")
+	count, err := studentClassColl.CountDocuments(ctx, bson.M{
+		"student_id": userId,
+		"class_id":   bson.M{"$in": clazzIDs},
+		"status":     "active",
+	})
+	if err != nil {
+		return false, errors.New("查询学生班级关联失败: " + err.Error())
+	}
+
+	// 如果学生在至少一个班级中，则认为是课程成员
+	return count > 0, nil
+}
+
 // UpdateClazzTeachers 更新班级的教师信息
 func (s *CourseService) UpdateClazzTeachers(ctx context.Context, courseID primitive.ObjectID, teacherIds []primitive.ObjectID) error {
 	// 更新所有属于该课程的班级的教师信息
@@ -1191,15 +1234,15 @@ func (s *CourseService) GetCourseStudents(ctx context.Context, courseID string, 
 		return nil, errors.New("无效的教师ID")
 	}
 
-	// 验证权限：只有课程创建者或课程教师可以查询学生信息
+	// 验证权限：课程成员（创建者、教师、学生）都可以查询学生信息
 	coll := utils.GetCollection("courses")
-	isAuthorized, err := authorized(ctx, coll, courseObjID, teacherObjID)
+	isAuthorized, err := courseMemberAuthorized(ctx, coll, courseObjID, teacherObjID)
 	if err != nil {
 		return nil, err
 	}
 
 	if !isAuthorized {
-		return nil, errors.New("权限不足，只有课程创建者或课程教师可以查询学生信息")
+		return nil, errors.New("权限不足，只有课程成员可以查询学生信息")
 	}
 
 	// 设置默认分页参数
@@ -1304,6 +1347,111 @@ func (s *CourseService) GetCourseStudents(ctx context.Context, courseID string, 
 	// 转换学生信息
 	for i, student := range students {
 		res.Students[i] = *student
+	}
+
+	return res, nil
+}
+
+// GetCourseTeachers 分页查询课程下的教师
+func (s *CourseService) GetCourseTeachers(ctx context.Context, courseID string, teacherID string, req *models.PageQueryCourseTeachersRequest) (*models.PageQueryCourseTeachersResponse, error) {
+	// 验证课程ID格式
+	courseObjID, err := primitive.ObjectIDFromHex(courseID)
+	if err != nil {
+		return nil, errors.New("无效的课程ID")
+	}
+
+	// 验证教师ID格式
+	teacherObjID, err := primitive.ObjectIDFromHex(teacherID)
+	if err != nil {
+		return nil, errors.New("无效的教师ID")
+	}
+
+	// 验证权限：课程成员（创建者、教师、学生）都可以查询教师信息
+	coll := utils.GetCollection("courses")
+	isAuthorized, err := courseMemberAuthorized(ctx, coll, courseObjID, teacherObjID)
+	if err != nil {
+		return nil, err
+	}
+
+	if !isAuthorized {
+		return nil, errors.New("权限不足，只有课程成员可以查询教师信息")
+	}
+
+	// 设置默认分页参数
+	pageNum := int64(1)
+	pageSize := int64(10)
+	if req.PageNum != nil {
+		pageNum = *req.PageNum
+	}
+	if req.PageSize != nil {
+		pageSize = *req.PageSize
+	}
+	// 设置合理的限制
+	if pageSize > 100 {
+		pageSize = 100
+	}
+
+	// 查询课程信息以获取教师ID列表
+	var course models.Course
+	if err = coll.FindOne(ctx, bson.M{"_id": courseObjID}).Decode(&course); err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return nil, errors.New("课程不存在")
+		}
+		return nil, err
+	}
+
+	// 构建教师查询条件
+	teacherIDs := course.TeacherIds
+	userFilter := bson.M{"_id": bson.M{"$in": teacherIDs}}
+
+	// 如果指定了教师ID进行精确查询
+	if req.TeacherId != nil && *req.TeacherId != "" {
+		teacherObjID, err := primitive.ObjectIDFromHex(*req.TeacherId)
+		if err != nil {
+			return nil, errors.New("无效的教师ID")
+		}
+		userFilter = bson.M{"_id": teacherObjID}
+	}
+
+	// 如果指定了教师姓名进行模糊查询
+	if req.RealName != nil && *req.RealName != "" {
+		userFilter["real_name"] = bson.M{"$regex": *req.RealName, "$options": "i"}
+	}
+
+	// 查询教师总数
+	total, err := utils.GetCollection("users").CountDocuments(ctx, userFilter)
+	if err != nil {
+		return nil, errors.New("查询教师总数失败: " + err.Error())
+	}
+
+	// 分页查询教师信息
+	findOptions := options.Find().
+		SetSkip((pageNum - 1) * pageSize).
+		SetLimit(pageSize).
+		SetSort(bson.D{{"created_at", -1}})
+
+	cursor, err := utils.GetCollection("users").Find(ctx, userFilter, findOptions)
+	if err != nil {
+		return nil, errors.New("查询教师信息失败: " + err.Error())
+	}
+	defer cursor.Close(ctx)
+
+	var teachers []*models.UserProfile
+	if err = cursor.All(ctx, &teachers); err != nil {
+		return nil, errors.New("解析教师信息失败: " + err.Error())
+	}
+
+	// 构造分页响应
+	res := &models.PageQueryCourseTeachersResponse{
+		Total:    total,
+		PageNum:  pageNum,
+		PageSize: pageSize,
+		Teachers: make([]models.UserProfile, len(teachers)),
+	}
+
+	// 转换教师信息
+	for i, teacher := range teachers {
+		res.Teachers[i] = *teacher
 	}
 
 	return res, nil

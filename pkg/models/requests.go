@@ -168,12 +168,28 @@ type PageQueryCourseStudentsRequest struct {
 	RealName *string `json:"real_name,omitempty"`
 }
 
+// PageQueryCourseTeachersRequest 分页查询课程教师请求
+type PageQueryCourseTeachersRequest struct {
+	PageNum   *int64  `json:"page_num,omitempty"`
+	PageSize  *int64  `json:"page_size,omitempty"`
+	RealName  *string `json:"real_name,omitempty"`
+	TeacherId *string `json:"teacher_id,omitempty"`
+}
+
 // PageQueryCourseStudentsResponse 分页查询课程学生响应
 type PageQueryCourseStudentsResponse struct {
 	Total    int64         `json:"total" example:"100"`
 	PageNum  int64         `json:"page_num" example:"1"`
 	PageSize int64         `json:"page_size" example:"10"`
 	Students []UserProfile `json:"students"`
+}
+
+// PageQueryCourseTeachersResponse 分页查询课程教师响应
+type PageQueryCourseTeachersResponse struct {
+	Total    int64         `json:"total" example:"100"`
+	PageNum  int64         `json:"page_num" example:"1"`
+	PageSize int64         `json:"page_size" example:"10"`
+	Teachers []UserProfile `json:"teachers"`
 }
 
 // PageQueryTeacherCoursesRequest 分页查询老师加入的课程请求
@@ -327,6 +343,13 @@ type AddTaskRelationIdsRequest struct {
 type RemoveTaskRelationIdsRequest struct {
 	TaskID      string   `json:"task_id" binding:"required"`
 	RelationIDs []string `json:"relation_ids" binding:"required"`
+}
+
+// CopyTaskToClassRequest 复制任务到班级请求
+type CopyTaskToClassRequest struct {
+	TaskID        string `json:"task_id" binding:"required"`
+	SourceClassID string `json:"source_class_id" binding:"required"`
+	TargetClassID string `json:"target_class_id" binding:"required"`
 }
 
 // ==================== 题目详情响应模型 ====================

@@ -45,6 +45,8 @@ func (s *Server) RegisterClazz(g *gin.RouterGroup) {
 			// 任务关系ID相关接口
 			jwtGroup.POST("/task/relationIds", s.AddTaskRelationIds)
 			jwtGroup.DELETE("/task/relationIds", s.RemoveTaskRelationIds)
+			// 复制任务接口
+			jwtGroup.POST("/task/copy", s.CopyTaskToClass)
 
 			// 学生班级相关接口
 			jwtGroup.POST("/student_classes", s.AddStudentToClass)
@@ -764,4 +766,31 @@ func (s *Server) GetClassStudents(c *gin.Context) {
 	}
 
 	utils.SuccessResponse(c, students)
+}
+
+// CopyTaskToClass godoc
+// @Summary      复制任务到班级
+// @Description  将一个班级的任务复制到另一个班级
+// @Tags         班级
+// @Accept       json
+// @Produce      json
+// @Param        request body models.CopyTaskToClassRequest true "复制任务请求"
+// @Success      200 {object} utils.Response "复制成功"
+// @Failure      400 {object} models.ErrorResponse "请求参数错误"
+// @Security     BearerAuth
+// @Router       /clazzes/task/copy [post]
+func (s *Server) CopyTaskToClass(c *gin.Context) {
+	var req models.CopyTaskToClassRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.BadRequestResponse(c, err.Error())
+		return
+	}
+
+	userID, _ := c.Get("user_id")
+	if err := s.svc.ClazzService.CopyTaskToClass(c.Request.Context(), userID.(string), req); err != nil {
+		utils.BadRequestResponse(c, err.Error())
+		return
+	}
+
+	utils.SuccessResponse(c, nil)
 }
