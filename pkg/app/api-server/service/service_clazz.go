@@ -34,7 +34,7 @@ func NewClazzService() *ClazzService {
 }
 
 // 刷新二维码
-func (s2 *CourseService) RefreshQrcode(userId string, courseId string, clazzId string, ctx context.Context) (interface{}, error) {
+func (s2 *ClazzService) RefreshQrcode(userId string, courseId string, clazzId string, ctx context.Context) (interface{}, error) {
 	userObjId, err := primitive.ObjectIDFromHex(userId)
 	if err != nil {
 		return nil, errors.New("用户错误")
@@ -1243,7 +1243,7 @@ func (s *CourseService) RemoveClazzMembers(ctx context.Context, req models.Remov
 }
 
 // FinishTask 完成任务
-func (s *CourseService) FinishTask(ctx context.Context, req models.FinishTaskRequest, userID string) error {
+func (s *ClazzService) FinishTask(ctx context.Context, req models.FinishTaskRequest, userID string) error {
 	// 解析ID
 	taskObjId, err := primitive.ObjectIDFromHex(req.TaskID)
 	if err != nil {
@@ -1324,60 +1324,183 @@ func (s *CourseService) FinishTask(ctx context.Context, req models.FinishTaskReq
 	return nil
 }
 
-// GetTasksByClazzID 根据班级ID获取任务列表
-func (s *CourseService) GetTasksByClazzID(ctx context.Context, clazzID string, userID string) ([]models.Task, error) {
-	clazzObjID, err := primitive.ObjectIDFromHex(clazzID)
+func (s *ClazzService) UpdateTask(ctx context.Context, userId string, req models.UpdateTaskRequest) error {
+	userObjId, err := primitive.ObjectIDFromHex(userId)
 	if err != nil {
-		return nil, errors.New("无效的班级ID")
+		return err
 	}
-
-	userObjID, err := primitive.ObjectIDFromHex(userID)
+	courseObjId, err := primitive.ObjectIDFromHex(req.CourseId)
 	if err != nil {
-		return nil, errors.New("无效的用户ID")
+		return err
 	}
-
-	// 先验证用户是否有权限查看该班级的任务
-	// 获取班级信息
-	collClazz := utils.GetCollection("clazzes")
-	var clazz models.Clazz
-	if err = collClazz.FindOne(ctx, bson.M{"_id": clazzObjID}).Decode(&clazz); err != nil {
-		if errors.Is(err, mongo.ErrNoDocuments) {
-			return nil, errors.New("班级不存在")
+	taskObjId, err := primitive.ObjectIDFromHex(req.ID)
+	if err != nil {
+		return err
+	}
+	if flag, err := authorized(ctx, utils.GetCollection("courses"), courseObjId, userObjId); err != nil || !flag {
+		if err != nil {
+			return err
 		}
-		return nil, err
+		return errors.New("权限不足")
 	}
 
-	// 验证用户权限：必须是班级成员、课程创建者或课程教师
-	// 检查用户是否是班级成员（通过查询学生班级关联表）
-	count, err := utils.GetCollection("student_classes").CountDocuments(ctx, bson.M{
-		"student_id": userObjID,
-		"class_id":   clazzObjID,
-	})
-	if err != nil {
-		return nil, errors.New("检查班级成员失败: " + err.Error())
+	// 构建更新字段
+	updateFields := bson.M{}
+	// 检查每个字段，如果字段非空，则加入更新内容
+	if req.Title != nil {
+		updateFields["title"] = *req.Title
 	}
-	isMember := count > 0
-
-	collCourse := utils.GetCollection("courses")
-	isAuthorized, err := authorized(ctx, collCourse, clazz.CourseId, userObjID)
-
-	if !isMember && !isAuthorized {
-		return nil, errors.New("权限不足")
+	if req.Description != nil {
+		updateFields["description"] = *req.Description
+	}
+	if req.Type != nil {
+		updateFields["type"] = *req.Type
+	}
+	if req.StartTime != nil {
+		updateFields["start_time"] = *req.StartTime
+	}
+	if req.EndTime != nil {
+		updateFields["end_time"] = *req.EndTime
 	}
 
-	// 从独立的tasks集合中查询任务
+	updateFields["c_id"] = userObjId
+	updateFields["mtime"] = time.Now()
+
 	collTasks := utils.GetCollection("tasks")
-	filter := bson.M{"clazz_id": clazzObjID}
-	cursor, err := collTasks.Find(ctx, filter)
+	filter := bson.M{"_id": taskObjId}
+	update := bson.M{"$set": updateFields}
+	result, err := collTasks.UpdateOne(ctx, filter, update)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	defer cursor.Close(ctx)
+	if result.MatchedCount == 0 {
+		return errors.New("找不到该任务")
+	}
+	return nil
+}
 
-	var tasks []models.Task
-	if err = cursor.All(ctx, &tasks); err != nil {
-		return nil, err
+// AddTaskRelationIds 为任务添加关系ID
+func (s *ClazzService) AddTaskRelationIds(ctx context.Context, userId string, req models.AddTaskRelationIdsRequest) error {
+	userObjId, err := primitive.ObjectIDFromHex(userId)
+	if err != nil {
+		return err
 	}
 
-	return tasks, nil
+	taskObjId, err := primitive.ObjectIDFromHex(req.TaskID)
+	if err != nil {
+		return err
+	}
+
+	// 获取任务信息以验证权限
+	collTasks := utils.GetCollection("tasks")
+	var task models.Task
+	if err = collTasks.FindOne(ctx, bson.M{"_id": taskObjId}).Decode(&task); err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return errors.New("任务不存在")
+		}
+		return err
+	}
+
+	// 验证权限（只有课程创建者或班级教师可以修改任务）
+	if flag, err := authorized(ctx, utils.GetCollection("courses"), task.CourseId, userObjId); err != nil || !flag {
+		if err != nil {
+			return err
+		}
+		return errors.New("权限不足")
+	}
+
+	// 转换RelationIDs
+	relationObjIds := make([]primitive.ObjectID, len(req.RelationIDs))
+	for i, id := range req.RelationIDs {
+		hex, err := primitive.ObjectIDFromHex(id)
+		if err != nil {
+			return err
+		}
+		relationObjIds[i] = hex
+	}
+
+	// 使用$addToSet添加关系ID，避免重复
+	filter := bson.M{"_id": taskObjId}
+	update := bson.M{
+		"$addToSet": bson.M{
+			"relation_ids": bson.M{"$each": relationObjIds},
+		},
+		"$set": bson.M{
+			"c_id":  userObjId,
+			"mtime": time.Now(),
+		},
+	}
+
+	result, err := collTasks.UpdateOne(ctx, filter, update)
+	if err != nil {
+		return err
+	}
+	if result.MatchedCount == 0 {
+		return errors.New("找不到该任务")
+	}
+
+	return nil
+}
+
+// RemoveTaskRelationIds 从任务中删除关系ID
+func (s *ClazzService) RemoveTaskRelationIds(ctx context.Context, userId string, req models.RemoveTaskRelationIdsRequest) error {
+	userObjId, err := primitive.ObjectIDFromHex(userId)
+	if err != nil {
+		return err
+	}
+
+	taskObjId, err := primitive.ObjectIDFromHex(req.TaskID)
+	if err != nil {
+		return err
+	}
+
+	// 获取任务信息以验证权限
+	collTasks := utils.GetCollection("tasks")
+	var task models.Task
+	if err = collTasks.FindOne(ctx, bson.M{"_id": taskObjId}).Decode(&task); err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return errors.New("任务不存在")
+		}
+		return err
+	}
+
+	// 验证权限（只有课程创建者或班级教师可以修改任务）
+	if flag, err := authorized(ctx, utils.GetCollection("courses"), task.CourseId, userObjId); err != nil || !flag {
+		if err != nil {
+			return err
+		}
+		return errors.New("权限不足")
+	}
+
+	// 转换RelationIDs
+	relationObjIds := make([]primitive.ObjectID, len(req.RelationIDs))
+	for i, id := range req.RelationIDs {
+		hex, err := primitive.ObjectIDFromHex(id)
+		if err != nil {
+			return err
+		}
+		relationObjIds[i] = hex
+	}
+
+	// 使用$pull删除关系ID
+	filter := bson.M{"_id": taskObjId}
+	update := bson.M{
+		"$pullAll": bson.M{
+			"relation_ids": relationObjIds,
+		},
+		"$set": bson.M{
+			"c_id":  userObjId,
+			"mtime": time.Now(),
+		},
+	}
+
+	result, err := collTasks.UpdateOne(ctx, filter, update)
+	if err != nil {
+		return err
+	}
+	if result.MatchedCount == 0 {
+		return errors.New("找不到该任务")
+	}
+
+	return nil
 }

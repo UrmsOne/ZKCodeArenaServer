@@ -419,7 +419,8 @@ const courses = [
         description: "本课程主要介绍常用的数据结构和算法，包括线性表、栈、队列、树、图等数据结构，以及排序、查找、动态规划等算法。",
         teacher_ids: [teacher1._id],
         created_by: teacher1._id,
-        status: "active",
+        // 修复：使用整数类型而不是字符串
+        status: 1,  // 1: CourseStatusActive
         ctime: new Date(Date.now() - 86400000 * 30),
         mtime: new Date()
     },
@@ -430,7 +431,8 @@ const courses = [
         description: "程序设计基础课程，主要学习C++编程语言的基本语法、面向对象编程思想，以及基本的程序设计方法。",
         teacher_ids: [teacher2._id],
         created_by: teacher2._id,
-        status: "active",
+        // 修复：使用整数类型而不是字符串
+        status: 1,  // 1: CourseStatusActive
         ctime: new Date(Date.now() - 86400000 * 25),
         mtime: new Date()
     },
@@ -441,7 +443,8 @@ const courses = [
         description: "高级算法设计与分析，包括贪心算法、分治算法、动态规划、网络流、字符串算法等高级主题。",
         teacher_ids: [teacher1._id, teacher2._id],
         created_by: teacher1._id,
-        status: "active",
+        // 修复：使用整数类型而不是字符串
+        status: 1,  // 1: CourseStatusActive
         ctime: new Date(Date.now() - 86400000 * 20),
         mtime: new Date()
     }
@@ -474,7 +477,8 @@ coursesArray.forEach((course, index) => {
             require_invite: false,
             max_members: 50,
             add_nums: memberIds.length,
-            status: "active",
+            // 修复：使用整数类型而不是字符串
+            status: 1,  // 1: ClassStatusActive
             ctime: course.ctime,
             c_id: course.created_by,
             mtime: new Date()
@@ -512,11 +516,12 @@ clazzesArray.forEach((clazz, clazzIndex) => {
             _id: ObjectId(),
             title: `第${i + 1}周编程作业`,
             description: `本周需要完成${taskProblems.length}道编程题目，请认真阅读题目要求并提交代码。`,
-            type: "homework",
+            type: 1,  
             start_time: startTime,
             end_time: endTime,
             relation_ids: taskProblems,
-            status: Date.now() > endTime.getTime() ? "finished" : "active",
+            // 修复：使用整数类型而不是字符串
+            status: Date.now() > endTime.getTime() ? 2 : 1,  // 2: TaskStatusEnded, 1: TaskStatusActive
             finish_ids: finishIds,
             course_id: course._id,
             clazz_id: clazz._id,

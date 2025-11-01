@@ -286,8 +286,8 @@ type UpdateTaskRequest struct {
 	ID          string     `bson:"_id,omitempty" json:"task_id" binding:"required"`
 	CourseId    string     `bson:"course_id" json:"course_id,omitempty" binding:"required"`
 	ClazzId     string     `bson:"clazz_id" json:"clazz_id,omitempty" binding:"required"`
-	Title       string     `json:"title,omitempty"`
-	Description string     `json:"description,omitempty"`
+	Title       *string    `json:"title,omitempty"`
+	Description *string    `json:"description,omitempty"`
 	Type        *TaskType  `json:"type,omitempty"`
 	StartTime   *time.Time `json:"start_time,omitempty"`
 	EndTime     *time.Time `json:"end_time,omitempty"`
@@ -299,6 +299,18 @@ type FinishTaskRequest struct {
 	RelationID string `bson:"relation_id" json:"relation_id" binding:"required"`
 	TaskID     string `bson:"task_id" json:"task_id" binding:"required"`
 	ClazzID    string `bson:"clazz_id" json:"clazz_id" binding:"required"`
+}
+
+// AddTaskRelationIdsRequest 添加任务关系ID请求
+type AddTaskRelationIdsRequest struct {
+	TaskID      string   `json:"task_id" binding:"required"`
+	RelationIDs []string `json:"relation_ids" binding:"required"`
+}
+
+// RemoveTaskRelationIdsRequest 删除任务关系ID请求
+type RemoveTaskRelationIdsRequest struct {
+	TaskID      string   `json:"task_id" binding:"required"`
+	RelationIDs []string `json:"relation_ids" binding:"required"`
 }
 
 // ==================== 题目详情响应模型 ====================

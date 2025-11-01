@@ -42,6 +42,9 @@ func (s *Server) RegisterClazz(g *gin.RouterGroup) {
 			jwtGroup.DELETE("/task/:taskId", s.DeleteTask)
 			jwtGroup.GET("/tasks/:clazzId", s.GetTasksByClazzId)
 			jwtGroup.GET("/task/:taskId", s.GetTaskById)
+			// 任务关系ID相关接口
+			jwtGroup.POST("/task/relationIds", s.AddTaskRelationIds)
+			jwtGroup.DELETE("/task/relationIds", s.RemoveTaskRelationIds)
 
 			// 学生班级相关接口
 			jwtGroup.POST("/student_classes", s.AddStudentToClass)
@@ -113,7 +116,7 @@ func (s *Server) refreshQrcode(c *gin.Context) {
 	}
 
 	userID, _ := c.Get("user_id")
-	qrcodeBase64, err := s.svc.CourseService.RefreshQrcode(userID.(string), courseId, clazzId, c.Request.Context())
+	qrcodeBase64, err := s.svc.ClazzService.RefreshQrcode(userID.(string), courseId, clazzId, c.Request.Context())
 	if err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
@@ -192,7 +195,57 @@ func (s *Server) UpdateTask(c *gin.Context) {
 		return
 	}
 	userID, _ := c.Get("user_id")
-	if err := s.svc.CourseService.UpdateTask(c.Request.Context(), userID.(string), req); err != nil {
+	if err := s.svc.ClazzService.UpdateTask(c.Request.Context(), userID.(string), req); err != nil {
+		utils.BadRequestResponse(c, err.Error())
+		return
+	}
+	utils.SuccessResponse(c, nil)
+}
+
+// AddTaskRelationIds godoc
+// @Summary      添加任务关系ID
+// @Description  为任务添加关系ID
+// @Tags         班级
+// @Accept       json
+// @Produce      json
+// @Param        request body models.AddTaskRelationIdsRequest true "添加的关系ID信息"
+// @Success      200 {object} utils.Response "添加成功"
+// @Failure      400 {object} models.ErrorResponse "请求参数错误"
+// @Security     BearerAuth
+// @Router       /clazzes/task/relationIds [post]
+func (s *Server) AddTaskRelationIds(c *gin.Context) {
+	var req models.AddTaskRelationIdsRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.BadRequestResponse(c, err.Error())
+		return
+	}
+	userID, _ := c.Get("user_id")
+	if err := s.svc.ClazzService.AddTaskRelationIds(c.Request.Context(), userID.(string), req); err != nil {
+		utils.BadRequestResponse(c, err.Error())
+		return
+	}
+	utils.SuccessResponse(c, nil)
+}
+
+// RemoveTaskRelationIds godoc
+// @Summary      删除任务关系ID
+// @Description  从任务中删除关系ID
+// @Tags         班级
+// @Accept       json
+// @Produce      json
+// @Param        request body models.RemoveTaskRelationIdsRequest true "删除的关系ID信息"
+// @Success      200 {object} utils.Response "删除成功"
+// @Failure      400 {object} models.ErrorResponse "请求参数错误"
+// @Security     BearerAuth
+// @Router       /clazzes/task/relationIds [delete]
+func (s *Server) RemoveTaskRelationIds(c *gin.Context) {
+	var req models.RemoveTaskRelationIdsRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.BadRequestResponse(c, err.Error())
+		return
+	}
+	userID, _ := c.Get("user_id")
+	if err := s.svc.ClazzService.RemoveTaskRelationIds(c.Request.Context(), userID.(string), req); err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
 	}
@@ -244,7 +297,7 @@ func (s *Server) FinishTask(c *gin.Context) {
 		return
 	}
 	userID, _ := c.Get("user_id")
-	if err := s.svc.CourseService.FinishTask(c.Request.Context(), req, userID.(string)); err != nil {
+	if err := s.svc.ClazzService.FinishTask(c.Request.Context(), req, userID.(string)); err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
 	}
