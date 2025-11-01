@@ -808,7 +808,7 @@ func (s *Server) CopyTaskToClass(c *gin.Context) {
 // @Success      200 {object} utils.Response{data=models.CheckTaskCompletionResponse} "任务完成情况"
 // @Failure      400 {object} models.ErrorResponse "请求参数错误"
 // @Security     BearerAuth
-// @Router       /clazzes/task/completion [post]
+// @Router       /clazzes/task/completion [POST]
 func (s *Server) CheckTaskCompletion(c *gin.Context) {
 	var req models.CheckTaskCompletionRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
