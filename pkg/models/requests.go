@@ -163,13 +163,16 @@ type PageQueryCourseRequest struct {
 
 // PageQueryCourseStudentsRequest 分页查询课程学生请求
 type PageQueryCourseStudentsRequest struct {
-	PageNum  *int64  `json:"page_num,omitempty"`
-	PageSize *int64  `json:"page_size,omitempty"`
-	RealName *string `json:"real_name,omitempty"`
+	CourseId  string  `json:"course_id" binding:"required"`
+	PageNum   *int64  `json:"page_num,omitempty"`
+	PageSize  *int64  `json:"page_size,omitempty"`
+	RealName  *string `json:"real_name,omitempty"`
+	StudentId *string `json:"student_id,omitempty"`
 }
 
 // PageQueryCourseTeachersRequest 分页查询课程教师请求
 type PageQueryCourseTeachersRequest struct {
+	CourseId  string  `json:"course_id" binding:"required"`
 	PageNum   *int64  `json:"page_num,omitempty"`
 	PageSize  *int64  `json:"page_size,omitempty"`
 	RealName  *string `json:"real_name,omitempty"`
@@ -350,6 +353,20 @@ type CopyTaskToClassRequest struct {
 	TaskID        string `json:"task_id" binding:"required"`
 	SourceClassID string `json:"source_class_id" binding:"required"`
 	TargetClassID string `json:"target_class_id" binding:"required"`
+}
+
+// CheckTaskCompletionRequest 检查任务完成情况请求
+type CheckTaskCompletionRequest struct {
+	TaskID string `json:"task_id" binding:"required"`
+	UserID string `json:"user_id" binding:"required"`
+}
+
+// CheckTaskCompletionResponse 检查任务完成情况响应
+type CheckTaskCompletionResponse struct {
+	Completed         bool       `json:"completed"`              // 是否已完成
+	CompletedAt       *time.Time `json:"completed_at,omitempty"` // 完成时间（如果已完成）
+	TotalQuestions    int        `json:"total_questions"`        // 总题目数
+	FinishedQuestions int        `json:"finished_questions"`     // 已完成题目数
 }
 
 // ==================== 题目详情响应模型 ====================

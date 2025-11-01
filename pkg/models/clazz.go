@@ -70,12 +70,14 @@ type Task struct {
 
 // UserTask 用户任务状态模型
 type UserTask struct {
-	ID     primitive.ObjectID `bson:"_id,omitempty" json:"id"`
-	TaskID primitive.ObjectID `bson:"task_id" json:"task_id"`
-	UserID primitive.ObjectID `bson:"user_id" json:"user_id"`
-	State  int                `bson:"state" json:"state"` // 0: 未完成, 1: 已完成
-	CTime  time.Time          `bson:"ctime" json:"ctime"`
-	MTime  time.Time          `bson:"mtime" json:"mtime"`
+	ID            primitive.ObjectID `bson:"_id,omitempty" json:"id"`
+	TaskID        primitive.ObjectID `bson:"task_id" json:"task_id"`
+	UserID        primitive.ObjectID `bson:"user_id" json:"user_id"`
+	State         int                `bson:"state" json:"state"`                                   // 0: 未完成, 1: 已完成
+	FinishedCount int                `bson:"finished_count" json:"finished_count"`                 // 完成题目数
+	CompletedAt   *time.Time         `bson:"completed_at,omitempty" json:"completed_at,omitempty"` // 完成时间
+	CTime         time.Time          `bson:"ctime" json:"ctime"`
+	MTime         time.Time          `bson:"mtime" json:"mtime"`
 }
 
 // UserRelationQuestion 用户关联题目状态模型

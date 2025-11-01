@@ -12,9 +12,9 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"log"
 	"math/rand/v2"
 	"time"
-	taskstrategy "zk-code-arena-server/pkg/app/api-server/service/task-servies"
 	"zk-code-arena-server/pkg/models"
 	"zk-code-arena-server/pkg/utils"
 
@@ -661,7 +661,7 @@ func (s *ClazzService) RemoveClazzTeacher(ctx context.Context, clazzId string, t
 	}
 
 	if !isAuthorized {
-		return errors.New("权限不足，只有课程创建者或课程教师可以移除班级教师")
+		return errors.New("权限不足，只有课程创建者或教师可以移除班级教师")
 	}
 
 	// 检查教师是否是班级的教师
@@ -1335,16 +1335,128 @@ func (s *ClazzService) FinishTask(ctx context.Context, req models.FinishTaskRequ
 		}
 	}
 
-	// 使用策略模式处理不同类型的任务
-	factory := taskstrategy.NewTaskHandlerFactory()
-	handler, err := factory.GetHandler(task.Type)
+	// 检查 user_relation_question 表中是否已经有完成记录
+	userRelationColl := utils.GetCollection("user_relation_question")
+	count, err = userRelationColl.CountDocuments(ctx, bson.M{
+		"task_id":     taskObjId,
+		"user_id":     userObjId,
+		"relation_id": relationObjId,
+		"state":       1, // 1 表示已完成
+	})
 	if err != nil {
-		return err
+		return errors.New("检查题目完成状态失败: " + err.Error())
 	}
 
-	// 处理任务完成逻辑
-	if err := handler.HandleTask(ctx, &task, relationObjId, userObjId); err != nil {
-		return errors.New("处理任务失败: " + err.Error())
+	// 如果已经有完成记录，直接返回
+	if count > 0 {
+		return errors.New("您已经完成过该题目")
+	}
+
+	// 在 user_relation_question 表中添加完成记录
+	now := time.Now()
+	userRelation := &models.UserRelationQuestion{
+		ID:         primitive.NewObjectID(),
+		RelationID: relationObjId,
+		TaskID:     taskObjId,
+		UserID:     userObjId,
+		State:      1, // 已完成
+		CTime:      now,
+		MTime:      now,
+	}
+
+	_, err = userRelationColl.InsertOne(ctx, userRelation)
+	if err != nil {
+		return errors.New("记录题目完成状态失败: " + err.Error())
+	}
+
+	// 检查是否所有题目都已完成，如果是，则更新任务完成状态
+	finishedCount, err := userRelationColl.CountDocuments(ctx, bson.M{
+		"task_id": taskObjId,
+		"user_id": userObjId,
+		"state":   1, // 1 表示已完成
+	})
+	if err != nil {
+		// 记录错误但不中断响应
+		log.Printf("查询用户完成题目数量失败: %v", err)
+	}
+
+	// 如果已完成题目数等于总题目数，表示任务已完成
+	totalQuestions := len(task.RelationIDs)
+	isTaskCompleted := int(finishedCount) == totalQuestions && totalQuestions > 0
+
+	// 更新 user_task 表中的状态
+	userTaskColl := utils.GetCollection("user_task")
+
+	// 查找是否已存在记录
+	var existingUserTask models.UserTask
+	err = userTaskColl.FindOne(ctx, bson.M{
+		"task_id": taskObjId,
+		"user_id": userObjId,
+	}).Decode(&existingUserTask)
+
+	if err == nil {
+		// 更新现有记录
+		updateFields := bson.M{
+			"finished_count": int(finishedCount),
+			"mtime":          now,
+		}
+
+		// 如果任务已完成，更新完成状态和完成时间
+		if isTaskCompleted {
+			completedAt := now
+			updateFields["state"] = 1
+			updateFields["completed_at"] = &completedAt
+		}
+
+		_, err = userTaskColl.UpdateOne(ctx, bson.M{
+			"_id": existingUserTask.ID,
+		}, bson.M{
+			"$set": updateFields,
+		})
+	} else if errors.Is(err, mongo.ErrNoDocuments) {
+		// 创建新记录
+		newUserTask := &models.UserTask{
+			ID:            primitive.NewObjectID(),
+			TaskID:        taskObjId,
+			UserID:        userObjId,
+			State:         0, // 默认未完成
+			FinishedCount: int(finishedCount),
+			CTime:         now,
+			MTime:         now,
+		}
+
+		// 如果任务已完成，更新完成状态和完成时间
+		if isTaskCompleted {
+			completedAt := now
+			newUserTask.State = 1
+			newUserTask.CompletedAt = &completedAt
+		}
+
+		_, err = userTaskColl.InsertOne(ctx, newUserTask)
+	}
+
+	if err != nil {
+		// 记录错误但不中断响应
+		log.Printf("更新 user_task 集合失败: %v", err)
+	}
+
+	// 如果任务已完成，更新任务的完成用户列表
+	if isTaskCompleted {
+		filter := bson.M{"_id": taskObjId}
+		update := bson.M{
+			"$addToSet": bson.M{
+				"finish_ids": userObjId,
+			},
+			"$set": bson.M{
+				"mtime": time.Now(),
+			},
+		}
+
+		_, err = collTasks.UpdateOne(ctx, filter, update)
+		if err != nil {
+			// 记录错误但不中断响应
+			log.Printf("更新任务完成状态失败: %v", err)
+		}
 	}
 
 	return nil
@@ -1631,4 +1743,66 @@ func (s *ClazzService) CopyTaskToClass(ctx context.Context, userID string, req m
 	}
 
 	return nil
+}
+
+// CheckTaskCompletion 检查学生是否已完成任务
+func (s *ClazzService) CheckTaskCompletion(ctx context.Context, req *models.CheckTaskCompletionRequest) (*models.CheckTaskCompletionResponse, error) {
+	// 解析任务ID
+	taskObjID, err := primitive.ObjectIDFromHex(req.TaskID)
+	if err != nil {
+		return nil, errors.New("无效的任务ID")
+	}
+
+	// 解析用户ID
+	userObjID, err := primitive.ObjectIDFromHex(req.UserID)
+	if err != nil {
+		return nil, errors.New("无效的用户ID")
+	}
+
+	// 直接从 user_task 集合中获取任务完成状态
+	userTaskColl := utils.GetCollection("user_task")
+	var userTask models.UserTask
+	err = userTaskColl.FindOne(ctx, bson.M{
+		"task_id": taskObjID,
+		"user_id": userObjID,
+	}).Decode(&userTask)
+
+	// 如果在 user_task 中找到了记录，直接返回状态
+	if err == nil {
+		response := &models.CheckTaskCompletionResponse{
+			Completed:         userTask.State == 1,
+			CompletedAt:       userTask.CompletedAt,
+			FinishedQuestions: userTask.FinishedCount,
+		}
+
+		// 获取任务信息以获取题目总数
+		taskColl := utils.GetCollection("tasks")
+		var task models.Task
+		if err = taskColl.FindOne(ctx, bson.M{"_id": taskObjID}).Decode(&task); err != nil {
+			return nil, errors.New("获取任务信息失败: " + err.Error())
+		}
+
+		response.TotalQuestions = len(task.RelationIDs)
+
+		return response, nil
+	}
+
+	// 如果在 user_task 中没有找到记录，返回默认未完成状态
+	// 获取任务信息以获取题目总数
+	taskColl := utils.GetCollection("tasks")
+	var task models.Task
+	if err = taskColl.FindOne(ctx, bson.M{"_id": taskObjID}).Decode(&task); err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return nil, errors.New("任务不存在")
+		}
+		return nil, errors.New("获取任务信息失败: " + err.Error())
+	}
+
+	response := &models.CheckTaskCompletionResponse{
+		Completed:         false,
+		TotalQuestions:    len(task.RelationIDs),
+		FinishedQuestions: 0,
+	}
+
+	return response, nil
 }

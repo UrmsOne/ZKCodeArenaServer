@@ -45,6 +45,9 @@ func (s *Server) RegisterClazz(g *gin.RouterGroup) {
 			// 任务关系ID相关接口
 			jwtGroup.POST("/task/relationIds", s.AddTaskRelationIds)
 			jwtGroup.DELETE("/task/relationIds", s.RemoveTaskRelationIds)
+			// 检查任务完成情况接口
+			jwtGroup.POST("/task/completion", s.CheckTaskCompletion)
+
 			// 复制任务接口
 			jwtGroup.POST("/task/copy", s.CopyTaskToClass)
 
@@ -793,4 +796,31 @@ func (s *Server) CopyTaskToClass(c *gin.Context) {
 	}
 
 	utils.SuccessResponse(c, nil)
+}
+
+// CheckTaskCompletion godoc
+// @Summary      检查任务完成情况
+// @Description  检查学生是否已完成指定任务
+// @Tags         班级
+// @Accept       json
+// @Produce      json
+// @Param        request body models.CheckTaskCompletionRequest true "检查任务完成情况请求"
+// @Success      200 {object} utils.Response{data=models.CheckTaskCompletionResponse} "任务完成情况"
+// @Failure      400 {object} models.ErrorResponse "请求参数错误"
+// @Security     BearerAuth
+// @Router       /clazzes/task/completion [post]
+func (s *Server) CheckTaskCompletion(c *gin.Context) {
+	var req models.CheckTaskCompletionRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.BadRequestResponse(c, err.Error())
+		return
+	}
+
+	response, err := s.svc.ClazzService.CheckTaskCompletion(c.Request.Context(), &req)
+	if err != nil {
+		utils.BadRequestResponse(c, err.Error())
+		return
+	}
+
+	utils.SuccessResponse(c, response)
 }

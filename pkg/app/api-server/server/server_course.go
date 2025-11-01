@@ -25,8 +25,8 @@ func (s *Server) RegisterCourse(g *gin.RouterGroup) {
 			jwtGroup.PUT("/:courseId", s.UpdateCourse)
 			jwtGroup.DELETE("/:courseId", s.RemoveCourse)
 			jwtGroup.PUT("/:courseId/avatar", s.UpdateCourseAvatar)
-			jwtGroup.GET("/:courseId/students", s.GetCourseStudents) // 添加获取课程学生列表
-			jwtGroup.GET("/:courseId/teachers", s.GetCourseTeachers) // 添加获取课程教师列表
+			jwtGroup.POST("/students", s.GetCourseStudents) // 添加获取课程学生列表
+			jwtGroup.POST("/teachers", s.GetCourseTeachers) // 添加获取课程教师列表
 			jwtGroup.POST("/teacher/query", s.PageQueryTeacherCourses)
 			jwtGroup.POST("/query", s.PageQueryCourse)
 			jwtGroup.POST("/teachers", s.addCourseTeacher)
@@ -291,13 +291,8 @@ func (s *Server) RemoveCourse(c *gin.Context) {
 // @Failure      400 {object} models.ErrorResponse "请求参数错误"
 // @Failure      403 {object} models.ErrorResponse "权限不足"
 // @Security     BearerAuth
-// @Router       /courses/{courseId}/students [post]
+// @Router       /courses/students [POST]
 func (s *Server) GetCourseStudents(c *gin.Context) {
-	courseId := c.Param("courseId")
-	if courseId == "" {
-		utils.BadRequestResponse(c, "课程ID不能为空")
-		return
-	}
 
 	var req models.PageQueryCourseStudentsRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -306,7 +301,7 @@ func (s *Server) GetCourseStudents(c *gin.Context) {
 	}
 
 	userID, _ := c.Get("user_id")
-	students, err := s.svc.CourseService.GetCourseStudents(c.Request.Context(), courseId, userID.(string), &req)
+	students, err := s.svc.CourseService.GetCourseStudents(c.Request.Context(), userID.(string), &req)
 	if err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
@@ -321,20 +316,13 @@ func (s *Server) GetCourseStudents(c *gin.Context) {
 // @Tags         课程
 // @Accept       json
 // @Produce      json
-// @Param        courseId path string true "课程ID"
 // @Param        request body models.PageQueryCourseTeachersRequest true "分页查询参数"
 // @Success      200 {object} models.PageQueryCourseTeachersResponse "教师列表"
 // @Failure      400 {object} models.ErrorResponse "请求参数错误"
 // @Failure      403 {object} models.ErrorResponse "权限不足"
 // @Security     BearerAuth
-// @Router       /courses/{courseId}/teachers [post]
+// @Router       /courses/teachers [POST]
 func (s *Server) GetCourseTeachers(c *gin.Context) {
-	courseId := c.Param("courseId")
-	if courseId == "" {
-		utils.BadRequestResponse(c, "课程ID不能为空")
-		return
-	}
-
 	var req models.PageQueryCourseTeachersRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.BadRequestResponse(c, err.Error())
@@ -342,7 +330,7 @@ func (s *Server) GetCourseTeachers(c *gin.Context) {
 	}
 
 	userID, _ := c.Get("user_id")
-	teachers, err := s.svc.CourseService.GetCourseTeachers(c.Request.Context(), courseId, userID.(string), &req)
+	teachers, err := s.svc.CourseService.GetCourseTeachers(c.Request.Context(), userID.(string), &req)
 	if err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return

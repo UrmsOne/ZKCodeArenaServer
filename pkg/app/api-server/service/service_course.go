@@ -1221,22 +1221,22 @@ func (s *CourseService) GetClassStudents(ctx context.Context, classID string) ([
 }
 
 // GetCourseStudents 分页查询课程下的学生
-func (s *CourseService) GetCourseStudents(ctx context.Context, courseID string, teacherID string, req *models.PageQueryCourseStudentsRequest) (*models.PageQueryCourseStudentsResponse, error) {
+func (s *CourseService) GetCourseStudents(ctx context.Context, userId string, req *models.PageQueryCourseStudentsRequest) (*models.PageQueryCourseStudentsResponse, error) {
 	// 验证课程ID格式
-	courseObjID, err := primitive.ObjectIDFromHex(courseID)
+	courseObjID, err := primitive.ObjectIDFromHex(req.CourseId)
 	if err != nil {
 		return nil, errors.New("无效的课程ID")
 	}
 
-	// 验证教师ID格式
-	teacherObjID, err := primitive.ObjectIDFromHex(teacherID)
+	// 验证userID格式
+	userObjId, err := primitive.ObjectIDFromHex(userId)
 	if err != nil {
-		return nil, errors.New("无效的教师ID")
+		return nil, errors.New("无效的userId")
 	}
 
 	// 验证权限：课程成员（创建者、教师、学生）都可以查询学生信息
 	coll := utils.GetCollection("courses")
-	isAuthorized, err := courseMemberAuthorized(ctx, coll, courseObjID, teacherObjID)
+	isAuthorized, err := courseMemberAuthorized(ctx, coll, courseObjID, userObjId)
 	if err != nil {
 		return nil, err
 	}
@@ -1309,6 +1309,17 @@ func (s *CourseService) GetCourseStudents(ctx context.Context, courseID string, 
 
 	// 构建学生查询条件
 	userFilter := bson.M{"_id": bson.M{"$in": studentIDs}}
+
+	// 如果指定了学生ID进行精确查询
+	if req.StudentId != nil && *req.StudentId != "" {
+		studentObjID, err := primitive.ObjectIDFromHex(*req.StudentId)
+		if err != nil {
+			return nil, errors.New("无效的学生ID")
+		}
+		userFilter = bson.M{"_id": studentObjID}
+	}
+
+	// 如果指定了学生姓名进行模糊查询
 	if req.RealName != nil && *req.RealName != "" {
 		userFilter["real_name"] = bson.M{"$regex": *req.RealName, "$options": "i"}
 	}
@@ -1353,22 +1364,22 @@ func (s *CourseService) GetCourseStudents(ctx context.Context, courseID string, 
 }
 
 // GetCourseTeachers 分页查询课程下的教师
-func (s *CourseService) GetCourseTeachers(ctx context.Context, courseID string, teacherID string, req *models.PageQueryCourseTeachersRequest) (*models.PageQueryCourseTeachersResponse, error) {
+func (s *CourseService) GetCourseTeachers(ctx context.Context, userId string, req *models.PageQueryCourseTeachersRequest) (*models.PageQueryCourseTeachersResponse, error) {
 	// 验证课程ID格式
-	courseObjID, err := primitive.ObjectIDFromHex(courseID)
+	courseObjID, err := primitive.ObjectIDFromHex(req.CourseId)
 	if err != nil {
 		return nil, errors.New("无效的课程ID")
 	}
 
-	// 验证教师ID格式
-	teacherObjID, err := primitive.ObjectIDFromHex(teacherID)
+	// 验证userID格式
+	userObjId, err := primitive.ObjectIDFromHex(userId)
 	if err != nil {
-		return nil, errors.New("无效的教师ID")
+		return nil, errors.New("无效的userId")
 	}
 
 	// 验证权限：课程成员（创建者、教师、学生）都可以查询教师信息
 	coll := utils.GetCollection("courses")
-	isAuthorized, err := courseMemberAuthorized(ctx, coll, courseObjID, teacherObjID)
+	isAuthorized, err := courseMemberAuthorized(ctx, coll, courseObjID, userObjId)
 	if err != nil {
 		return nil, err
 	}
