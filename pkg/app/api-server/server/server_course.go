@@ -29,7 +29,7 @@ func (s *Server) RegisterCourse(g *gin.RouterGroup) {
 			jwtGroup.POST("/teachers", s.GetCourseTeachers) // 添加获取课程教师列表
 			jwtGroup.POST("/teacher/query", s.PageQueryTeacherCourses)
 			jwtGroup.POST("/query", s.PageQueryCourse)
-			jwtGroup.POST("/teachers", s.addCourseTeacher)
+			jwtGroup.POST("/query/teachers", s.addCourseTeacher)
 			jwtGroup.DELETE("/teachers", s.removeCourseTeacher)
 			// 需要老师权限的路由
 			teacherGroup := jwtGroup.Use(middleware.RequireRole(models.RoleTeacher))
