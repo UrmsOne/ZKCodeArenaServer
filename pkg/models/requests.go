@@ -161,6 +161,21 @@ type PageQueryCourseRequest struct {
 	Name     *string `json:"name,omitempty"`
 }
 
+// PageQueryCourseStudentsRequest 分页查询课程学生请求
+type PageQueryCourseStudentsRequest struct {
+	PageNum  *int64  `json:"page_num,omitempty"`
+	PageSize *int64  `json:"page_size,omitempty"`
+	RealName *string `json:"real_name,omitempty"`
+}
+
+// PageQueryCourseStudentsResponse 分页查询课程学生响应
+type PageQueryCourseStudentsResponse struct {
+	Total    int64         `json:"total" example:"100"`
+	PageNum  int64         `json:"page_num" example:"1"`
+	PageSize int64         `json:"page_size" example:"10"`
+	Students []UserProfile `json:"students"`
+}
+
 // PageQueryTeacherCoursesRequest 分页查询老师加入的课程请求
 type PageQueryTeacherCoursesRequest struct {
 	PageNum  *int64  `json:"page_num,omitempty"`
@@ -193,12 +208,13 @@ type RemoveCourseTeachersRequest struct {
 
 // CreateClazzRequest 创建班级请求
 type CreateClazzRequest struct {
-	Name          string `json:"name" binding:"required"`
-	CourseId      string `json:"course_id" binding:"required"`
-	Description   string `json:"description,omitempty"`
-	Schedule      string `json:"schedule,omitempty"`
-	RequireInvite bool   `json:"require_invite" binding:"required"`
-	MaxMembers    *int   `json:"max_members,omitempty"`
+	Name          string   `json:"name" binding:"required"`
+	CourseId      string   `json:"course_id" binding:"required"`
+	Description   string   `json:"description,omitempty"`
+	TeacherIds    []string `json:"teacher_ids" binding:"required"`
+	Schedule      string   `json:"schedule,omitempty"`
+	RequireInvite bool     `json:"require_invite" binding:"required"`
+	MaxMembers    *int     `json:"max_members,omitempty"`
 }
 
 // UpdateClazzRequest 更新班级请求

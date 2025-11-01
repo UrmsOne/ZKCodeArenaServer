@@ -96,6 +96,32 @@ func (s *ClazzService) CreateClass(ctx context.Context, req *models.CreateClazzR
 		return nil, errors.New("权限不足")
 	}
 
+	// 处理教师ID列表 - 现在是必须字段
+	teacherIds := make([]primitive.ObjectID, 0, len(req.TeacherIds))
+
+	// 验证请求中的教师ID是否有效
+	for _, teacherId := range req.TeacherIds {
+		teacherObjId, err := primitive.ObjectIDFromHex(teacherId)
+		if err != nil {
+			return nil, errors.New("无效的教师ID: " + teacherId)
+		}
+		teacherIds = append(teacherIds, teacherObjId)
+	}
+
+	// 验证这些教师是否属于该课程
+	for _, reqTeacherId := range teacherIds {
+		found := false
+		for _, courseTeacherId := range result.TeacherIds {
+			if reqTeacherId == courseTeacherId {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return nil, errors.New("教师 " + reqTeacherId.Hex() + " 不属于该课程")
+		}
+	}
+
 	var maxMembers int
 	if req.MaxMembers == nil {
 		maxMembers = 60
@@ -105,7 +131,7 @@ func (s *ClazzService) CreateClass(ctx context.Context, req *models.CreateClazzR
 		maxMembers = *req.MaxMembers
 	}
 
-	// 创建班级对象，包含从课程中获取的教师信息
+	// 创建班级对象，使用请求中指定的教师信息
 	now := time.Now()
 	clazz := &models.Clazz{
 		ID:            primitive.NewObjectID(),
@@ -113,7 +139,7 @@ func (s *ClazzService) CreateClass(ctx context.Context, req *models.CreateClazzR
 		CourseId:      courseID,
 		Description:   req.Description,
 		Schedule:      req.Schedule,
-		TeacherIds:    result.TeacherIds,
+		TeacherIds:    teacherIds,
 		RequireInvite: req.RequireInvite,
 		MaxMembers:    maxMembers,
 		AddNums:       0,
@@ -1333,6 +1359,10 @@ func (s *ClazzService) UpdateTask(ctx context.Context, userId string, req models
 	if err != nil {
 		return err
 	}
+	_, err = primitive.ObjectIDFromHex(req.ClazzId)
+	if err != nil {
+		return err
+	}
 	taskObjId, err := primitive.ObjectIDFromHex(req.ID)
 	if err != nil {
 		return err
@@ -1362,7 +1392,6 @@ func (s *ClazzService) UpdateTask(ctx context.Context, userId string, req models
 	if req.EndTime != nil {
 		updateFields["end_time"] = *req.EndTime
 	}
-
 	updateFields["c_id"] = userObjId
 	updateFields["mtime"] = time.Now()
 

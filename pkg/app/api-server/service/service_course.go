@@ -1177,6 +1177,138 @@ func (s *CourseService) GetClassStudents(ctx context.Context, classID string) ([
 	return students, nil
 }
 
+// GetCourseStudents 分页查询课程下的学生
+func (s *CourseService) GetCourseStudents(ctx context.Context, courseID string, teacherID string, req *models.PageQueryCourseStudentsRequest) (*models.PageQueryCourseStudentsResponse, error) {
+	// 验证课程ID格式
+	courseObjID, err := primitive.ObjectIDFromHex(courseID)
+	if err != nil {
+		return nil, errors.New("无效的课程ID")
+	}
+
+	// 验证教师ID格式
+	teacherObjID, err := primitive.ObjectIDFromHex(teacherID)
+	if err != nil {
+		return nil, errors.New("无效的教师ID")
+	}
+
+	// 验证权限：只有课程创建者或课程教师可以查询学生信息
+	coll := utils.GetCollection("courses")
+	isAuthorized, err := authorized(ctx, coll, courseObjID, teacherObjID)
+	if err != nil {
+		return nil, err
+	}
+
+	if !isAuthorized {
+		return nil, errors.New("权限不足，只有课程创建者或课程教师可以查询学生信息")
+	}
+
+	// 设置默认分页参数
+	pageNum := int64(1)
+	pageSize := int64(10)
+	if req.PageNum != nil {
+		pageNum = *req.PageNum
+	}
+	if req.PageSize != nil {
+		pageSize = *req.PageSize
+	}
+	// 设置合理的限制
+	if pageSize > 100 {
+		pageSize = 100
+	}
+
+	// 查询该课程下的所有班级
+	clazzColl := utils.GetCollection("clazzes")
+	cursor, err := clazzColl.Find(ctx, bson.M{"course_id": courseObjID})
+	if err != nil {
+		return nil, errors.New("查询班级失败: " + err.Error())
+	}
+	defer cursor.Close(ctx)
+
+	var clazzes []models.Clazz
+	if err = cursor.All(ctx, &clazzes); err != nil {
+		return nil, errors.New("解析班级数据失败: " + err.Error())
+	}
+
+	// 收集所有班级ID
+	clazzIDs := make([]primitive.ObjectID, len(clazzes))
+	for i, clazz := range clazzes {
+		clazzIDs[i] = clazz.ID
+	}
+
+	// 查询所有班级的学生关联记录
+	studentClassColl := utils.GetCollection("student_classes")
+	filter := bson.M{
+		"class_id": bson.M{"$in": clazzIDs},
+		"status":   "active",
+	}
+	cursor, err = studentClassColl.Find(ctx, filter)
+	if err != nil {
+		return nil, errors.New("查询学生班级关联失败: " + err.Error())
+	}
+	defer cursor.Close(ctx)
+
+	var studentClasses []models.StudentClass
+	if err = cursor.All(ctx, &studentClasses); err != nil {
+		return nil, errors.New("解析学生班级关联数据失败: " + err.Error())
+	}
+
+	// 收集所有唯一的学生ID
+	studentIDMap := make(map[primitive.ObjectID]bool)
+	for _, sc := range studentClasses {
+		studentIDMap[sc.StudentID] = true
+	}
+
+	// 转换为切片
+	studentIDs := make([]primitive.ObjectID, 0, len(studentIDMap))
+	for studentID := range studentIDMap {
+		studentIDs = append(studentIDs, studentID)
+	}
+
+	// 构建学生查询条件
+	userFilter := bson.M{"_id": bson.M{"$in": studentIDs}}
+	if req.RealName != nil && *req.RealName != "" {
+		userFilter["real_name"] = bson.M{"$regex": *req.RealName, "$options": "i"}
+	}
+
+	// 查询学生总数
+	total, err := utils.GetCollection("users").CountDocuments(ctx, userFilter)
+	if err != nil {
+		return nil, errors.New("查询学生总数失败: " + err.Error())
+	}
+
+	// 分页查询学生信息
+	findOptions := options.Find().
+		SetSkip((pageNum - 1) * pageSize).
+		SetLimit(pageSize).
+		SetSort(bson.D{{"created_at", -1}})
+
+	cursor, err = utils.GetCollection("users").Find(ctx, userFilter, findOptions)
+	if err != nil {
+		return nil, errors.New("查询学生信息失败: " + err.Error())
+	}
+	defer cursor.Close(ctx)
+
+	var students []*models.UserProfile
+	if err = cursor.All(ctx, &students); err != nil {
+		return nil, errors.New("解析学生信息失败: " + err.Error())
+	}
+
+	// 构造分页响应
+	res := &models.PageQueryCourseStudentsResponse{
+		Total:    total,
+		PageNum:  pageNum,
+		PageSize: pageSize,
+		Students: make([]models.UserProfile, len(students)),
+	}
+
+	// 转换学生信息
+	for i, student := range students {
+		res.Students[i] = *student
+	}
+
+	return res, nil
+}
+
 // DeleteTask 删除任务
 func (s *CourseService) DeleteTask(ctx context.Context, userID string, taskID string) error {
 	// 验证用户权限
