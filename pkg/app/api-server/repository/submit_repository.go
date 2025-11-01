@@ -125,7 +125,7 @@ func (r *SubmitRepository) UpdateSubmitResult(ctx context.Context, submitID prim
 	return nil
 }
 
-// GetSubmits 查询提交列表（带分页）
+// GetSubmits 查询提交列表
 func (r *SubmitRepository) GetSubmits(
 	ctx context.Context,
 	page, pageSize int,
