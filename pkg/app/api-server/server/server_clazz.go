@@ -46,7 +46,8 @@ func (s *Server) RegisterClazz(g *gin.RouterGroup) {
 			jwtGroup.POST("/task/relationIds", s.AddTaskRelationIds)
 			jwtGroup.DELETE("/task/relationIds", s.RemoveTaskRelationIds)
 			// 检查任务完成情况接口
-			jwtGroup.POST("/task/completion", s.CheckTaskCompletion)
+			jwtGroup.POST("/task/completion", s.PageQueryTaskCompletion)
+			// 分页查询任务完成情况接口
 
 			// 复制任务接口
 			jwtGroup.POST("/task/copy", s.CopyTaskToClass)
@@ -798,25 +799,26 @@ func (s *Server) CopyTaskToClass(c *gin.Context) {
 	utils.SuccessResponse(c, nil)
 }
 
-// CheckTaskCompletion godoc
-// @Summary      检查任务完成情况
-// @Description  检查学生是否已完成指定任务
+// PageQueryTaskCompletion godoc
+// @Summary      分页查询班级任务完成情况
+// @Description  分页查询指定班级下所有学生的任务完成情况，支持按学生姓名和学号搜索
 // @Tags         班级
 // @Accept       json
 // @Produce      json
-// @Param        request body models.CheckTaskCompletionRequest true "检查任务完成情况请求"
-// @Success      200 {object} utils.Response{data=models.CheckTaskCompletionResponse} "任务完成情况"
+// @Param        request body models.PageQueryTaskCompletionRequest true "分页查询参数"
+// @Success      200 {object} utils.Response{data=models.PageQueryTaskCompletionResponse} "任务完成情况列表"
 // @Failure      400 {object} models.ErrorResponse "请求参数错误"
+// @Failure      403 {object} models.ErrorResponse "权限不足"
 // @Security     BearerAuth
 // @Router       /clazzes/task/completion [POST]
-func (s *Server) CheckTaskCompletion(c *gin.Context) {
-	var req models.CheckTaskCompletionRequest
+func (s *Server) PageQueryTaskCompletion(c *gin.Context) {
+	var req models.PageQueryTaskCompletionRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
 	}
 
-	response, err := s.svc.ClazzService.CheckTaskCompletion(c.Request.Context(), &req)
+	response, err := s.svc.ClazzService.PageQueryTaskCompletion(c.Request.Context(), &req)
 	if err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return

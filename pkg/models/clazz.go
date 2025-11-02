@@ -60,12 +60,37 @@ type Task struct {
 	EndTime     *time.Time           `bson:"end_time" json:"end_time" example:"2024-11-02T23:59:59Z"`
 	RelationIDs []primitive.ObjectID `bson:"relation_ids,omitempty" json:"relation_ids,omitempty" swaggertype:"array,string" example:"507f1f77bcf86cd799439011,507f1f77bcf86cd799439012"`
 	Status      TaskStatus           `bson:"status" json:"status" example:"1"`
-	FinishIds   []primitive.ObjectID `bson:"finish_ids" json:"finish_ids" swaggertype:"array,string" example:"507f1f77bcf86cd799439013,507f1f77bcf86cd799439014"` // 完成任务的成员ID集合
 	CourseId    primitive.ObjectID   `bson:"course_id" json:"course_id" swaggertype:"string" example:"507f1f77bcf86cd799439015"`
 	ClazzId     primitive.ObjectID   `bson:"clazz_id" json:"clazz_id" swaggertype:"string" example:"507f1f77bcf86cd799439016"`
 	CTime       time.Time            `bson:"ctime" json:"ctime" example:"2024-10-26T10:00:00Z"`
 	CID         primitive.ObjectID   `bson:"c_id" json:"c_id" swaggertype:"string" example:"507f1f77bcf86cd799439017"`
 	MTime       time.Time            `bson:"mtime" json:"mtime" example:"2024-10-26T10:00:00Z"`
+}
+
+// TaskResponse 任务响应模型
+type TaskResponse struct {
+	ID          primitive.ObjectID `bson:"_id,omitempty" json:"id" swaggertype:"string" example:"507f1f77bcf86cd799439011"`
+	Title       string             `bson:"title" json:"title" binding:"required" example:"第1周编程作业"`
+	Description string             `bson:"description,omitempty" json:"description,omitempty" example:"本周需要完成2道编程题目，请认真阅读题目要求并提交代码。"`
+	Type        TaskType           `bson:"type" json:"type" binding:"required" example:"1"`
+	StartTime   time.Time          `bson:"start_time" json:"start_time" binding:"required" example:"2024-10-26T10:00:00Z"`
+	EndTime     *time.Time         `bson:"end_time" json:"end_time" example:"2024-11-02T23:59:59Z"`
+	Status      TaskStatus         `bson:"status" json:"status" example:"1"`
+	CourseId    primitive.ObjectID `bson:"course_id" json:"course_id" swaggertype:"string" example:"507f1f77bcf86cd799439015"`
+	ClazzId     primitive.ObjectID `bson:"clazz_id" json:"clazz_id" swaggertype:"string" example:"507f1f77bcf86cd799439016"`
+	CTime       time.Time          `bson:"ctime" json:"ctime" example:"2024-10-26T10:00:00Z"`
+	CID         primitive.ObjectID `bson:"c_id" json:"c_id" swaggertype:"string" example:"507f1f77bcf86cd799439017"`
+	MTime       time.Time          `bson:"mtime" json:"mtime" example:"2024-10-26T10:00:00Z"`
+	State       int                `json:"state" example:"0"` // 0: 未完成, 1: 已完成
+	Questions   []QuestionDetail   `json:"questions"`         // 题目详情列表
+}
+
+// QuestionDetail 题目详情
+type QuestionDetail struct {
+	ID         primitive.ObjectID `json:"id" swaggertype:"string"`
+	Title      string             `json:"title"`
+	Difficulty string             `json:"difficulty"`
+	Completed  bool               `json:"completed"` // 是否已完成
 }
 
 // UserTask 用户任务状态模型

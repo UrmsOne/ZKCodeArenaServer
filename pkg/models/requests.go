@@ -355,18 +355,41 @@ type CopyTaskToClassRequest struct {
 	TargetClassID string `json:"target_class_id" binding:"required"`
 }
 
-// CheckTaskCompletionRequest 检查任务完成情况请求
-type CheckTaskCompletionRequest struct {
-	TaskID string `json:"task_id" binding:"required"`
-	UserID string `json:"user_id" binding:"required"`
-}
-
 // CheckTaskCompletionResponse 检查任务完成情况响应
 type CheckTaskCompletionResponse struct {
 	Completed         bool       `json:"completed"`              // 是否已完成
 	CompletedAt       *time.Time `json:"completed_at,omitempty"` // 完成时间（如果已完成）
 	TotalQuestions    int        `json:"total_questions"`        // 总题目数
 	FinishedQuestions int        `json:"finished_questions"`     // 已完成题目数
+}
+
+// PageQueryTaskCompletionRequest 分页查询任务完成情况请求
+type PageQueryTaskCompletionRequest struct {
+	TaskID   string  `json:"task_id" binding:"required"`
+	ClassID  string  `json:"class_id" binding:"required"`
+	PageNum  *int64  `json:"page_num,omitempty"`
+	PageSize *int64  `json:"page_size,omitempty"`
+	RealName *string `json:"real_name,omitempty"`
+	UserID   *string `json:"user_id,omitempty"`
+}
+
+// PageQueryTaskCompletionResponse 分页查询任务完成情况响应
+type PageQueryTaskCompletionResponse struct {
+	Total      int64                    `json:"total" example:"100"`
+	PageNum    int64                    `json:"page_num" example:"1"`
+	PageSize   int64                    `json:"page_size" example:"10"`
+	Completion []TaskCompletionResponse `json:"completion"`
+}
+
+// TaskCompletionResponse 任务完成情况响应
+type TaskCompletionResponse struct {
+	UserID            primitive.ObjectID `json:"user_id" swaggertype:"string"`
+	RealName          string             `json:"real_name"`
+	StudentID         string             `json:"student_id"`
+	Completed         bool               `json:"completed"`              // 是否已完成
+	CompletedAt       *time.Time         `json:"completed_at,omitempty"` // 完成时间（如果已完成）
+	TotalQuestions    int                `json:"total_questions"`        // 总题目数
+	FinishedQuestions int                `json:"finished_questions"`     // 已完成题目数
 }
 
 // ==================== 题目详情响应模型 ====================

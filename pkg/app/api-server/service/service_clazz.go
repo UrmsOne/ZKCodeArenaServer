@@ -1024,7 +1024,7 @@ func (s *ClazzService) GetTasksByClazzID(ctx context.Context, clazzID string, us
 }
 
 // GetTaskByID 根据任务ID获取任务详情
-func (s *ClazzService) GetTaskByID(ctx context.Context, taskID string, userID string) (*models.Task, error) {
+func (s *ClazzService) GetTaskByID(ctx context.Context, taskID string, userID string) (*models.TaskResponse, error) {
 	taskObjID, err := primitive.ObjectIDFromHex(taskID)
 	if err != nil {
 		return nil, errors.New("无效的任务ID")
@@ -1076,7 +1076,99 @@ func (s *ClazzService) GetTaskByID(ctx context.Context, taskID string, userID st
 		return nil, errors.New("权限不足")
 	}
 
-	return &task, nil
+	// 查询用户的任务完成状态
+	state := 0
+
+	// 通过查询user_task表来判断任务是否已完成
+	userTaskColl := utils.GetCollection("user_task")
+	var userTask models.UserTask
+	err = userTaskColl.FindOne(ctx, bson.M{
+		"task_id": taskObjID,
+		"user_id": userObjID,
+	}).Decode(&userTask)
+
+	if err == nil && userTask.State == 1 {
+		state = 1
+	}
+
+	// 查询用户在每道题上的完成情况
+	completedQuestions := make(map[primitive.ObjectID]bool)
+	userRelationColl := utils.GetCollection("user_relation_question")
+	cursor, err := userRelationColl.Find(ctx, bson.M{
+		"task_id": taskObjID,
+		"user_id": userObjID,
+		"state":   1, // 已完成的题目
+	})
+	if err != nil {
+		return nil, errors.New("查询用户题目完成情况失败: " + err.Error())
+	}
+	defer cursor.Close(ctx)
+
+	var userRelations []models.UserRelationQuestion
+	if err = cursor.All(ctx, &userRelations); err != nil {
+		return nil, errors.New("解析用户题目完成情况失败: " + err.Error())
+	}
+
+	for _, ur := range userRelations {
+		completedQuestions[ur.RelationID] = true
+	}
+
+	// 查询题目详情
+	questions := make([]models.QuestionDetail, 0, len(task.RelationIDs))
+	if len(task.RelationIDs) > 0 {
+		problemColl := utils.GetCollection("problems")
+		problemCursor, err := problemColl.Find(ctx, bson.M{
+			"_id": bson.M{"$in": task.RelationIDs},
+		})
+		if err != nil {
+			return nil, errors.New("查询题目详情失败: " + err.Error())
+		}
+		defer problemCursor.Close(ctx)
+
+		var problems []models.Problem
+		if err = problemCursor.All(ctx, &problems); err != nil {
+			return nil, errors.New("解析题目详情失败: " + err.Error())
+		}
+
+		// 创建题目ID到题目的映射
+		problemMap := make(map[primitive.ObjectID]models.Problem)
+		for _, p := range problems {
+			problemMap[p.ID] = p
+		}
+
+		// 按照RelationIDs的顺序构建题目详情列表
+		for _, relationID := range task.RelationIDs {
+			if problem, exists := problemMap[relationID]; exists {
+				question := models.QuestionDetail{
+					ID:         problem.ID,
+					Title:      problem.Title,
+					Difficulty: string(problem.Difficulty),
+					Completed:  completedQuestions[relationID],
+				}
+				questions = append(questions, question)
+			}
+		}
+	}
+
+	// 构建 TaskResponse
+	taskResponse := &models.TaskResponse{
+		ID:          task.ID,
+		Title:       task.Title,
+		Description: task.Description,
+		Type:        task.Type,
+		StartTime:   task.StartTime,
+		EndTime:     task.EndTime,
+		Status:      task.Status,
+		CourseId:    task.CourseId,
+		ClazzId:     task.ClazzId,
+		CTime:       task.CTime,
+		CID:         task.CID,
+		MTime:       task.MTime,
+		State:       state,
+		Questions:   questions,
+	}
+
+	return taskResponse, nil
 }
 
 // 私有方法
@@ -1326,13 +1418,6 @@ func (s *ClazzService) FinishTask(ctx context.Context, req models.FinishTaskRequ
 
 	if task.EndTime != nil && task.EndTime.Before(time.Now()) {
 		return errors.New("任务已经结束")
-	}
-
-	// 检查是否已经完成过该任务
-	for _, id := range task.FinishIds {
-		if id == userObjId {
-			return errors.New("您已经完成过该任务")
-		}
 	}
 
 	// 检查 user_relation_question 表中是否已经有完成记录
@@ -1745,50 +1830,123 @@ func (s *ClazzService) CopyTaskToClass(ctx context.Context, userID string, req m
 	return nil
 }
 
-// CheckTaskCompletion 检查学生是否已完成任务
-func (s *ClazzService) CheckTaskCompletion(ctx context.Context, req *models.CheckTaskCompletionRequest) (*models.CheckTaskCompletionResponse, error) {
+// PageQueryTaskCompletion 分页查询班级任务完成情况
+func (s *ClazzService) PageQueryTaskCompletion(ctx context.Context, req *models.PageQueryTaskCompletionRequest) (*models.PageQueryTaskCompletionResponse, error) {
 	// 解析任务ID
 	taskObjID, err := primitive.ObjectIDFromHex(req.TaskID)
 	if err != nil {
 		return nil, errors.New("无效的任务ID")
 	}
 
-	// 解析用户ID
-	userObjID, err := primitive.ObjectIDFromHex(req.UserID)
+	// 解析班级ID
+	classObjID, err := primitive.ObjectIDFromHex(req.ClassID)
 	if err != nil {
-		return nil, errors.New("无效的用户ID")
+		return nil, errors.New("无效的班级ID")
 	}
 
-	// 直接从 user_task 集合中获取任务完成状态
-	userTaskColl := utils.GetCollection("user_task")
-	var userTask models.UserTask
-	err = userTaskColl.FindOne(ctx, bson.M{
-		"task_id": taskObjID,
-		"user_id": userObjID,
-	}).Decode(&userTask)
-
-	// 如果在 user_task 中找到了记录，直接返回状态
-	if err == nil {
-		response := &models.CheckTaskCompletionResponse{
-			Completed:         userTask.State == 1,
-			CompletedAt:       userTask.CompletedAt,
-			FinishedQuestions: userTask.FinishedCount,
-		}
-
-		// 获取任务信息以获取题目总数
-		taskColl := utils.GetCollection("tasks")
-		var task models.Task
-		if err = taskColl.FindOne(ctx, bson.M{"_id": taskObjID}).Decode(&task); err != nil {
-			return nil, errors.New("获取任务信息失败: " + err.Error())
-		}
-
-		response.TotalQuestions = len(task.RelationIDs)
-
-		return response, nil
+	// 设置默认分页参数
+	pageNum := int64(1)
+	pageSize := int64(10)
+	if req.PageNum != nil {
+		pageNum = *req.PageNum
+	}
+	if req.PageSize != nil {
+		pageSize = *req.PageSize
+	}
+	// 设置合理的限制
+	if pageSize > 50 {
+		pageSize = 50
+	}
+	if pageSize < 1 {
+		pageSize = 10
+	}
+	if pageNum < 1 {
+		pageNum = 1
 	}
 
-	// 如果在 user_task 中没有找到记录，返回默认未完成状态
-	// 获取任务信息以获取题目总数
+	// 验证班级是否存在
+	clazzColl := utils.GetCollection("clazzes")
+	var clazz models.Clazz
+	if err = clazzColl.FindOne(ctx, bson.M{"_id": classObjID}).Decode(&clazz); err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return nil, errors.New("班级不存在")
+		}
+		return nil, errors.New("查询班级信息失败: " + err.Error())
+	}
+
+	// 查询班级的所有学生关联记录
+	studentClassColl := utils.GetCollection("student_classes")
+	studentClassFilter := bson.M{
+		"class_id": classObjID,
+		"status":   "active",
+	}
+
+	// 查询班级学生总数
+	total, err := studentClassColl.CountDocuments(ctx, studentClassFilter)
+	if err != nil {
+		return nil, errors.New("查询班级学生总数失败: " + err.Error())
+	}
+
+	// 分页查询班级学生关联记录
+	findOptions := options.Find().
+		SetSkip((pageNum - 1) * pageSize).
+		SetLimit(pageSize).
+		SetSort(bson.D{{"join_time", -1}})
+
+	cursor, err := studentClassColl.Find(ctx, studentClassFilter, findOptions)
+	if err != nil {
+		return nil, errors.New("查询班级学生关联记录失败: " + err.Error())
+	}
+	defer cursor.Close(ctx)
+
+	var studentClasses []models.StudentClass
+	if err = cursor.All(ctx, &studentClasses); err != nil {
+		return nil, errors.New("解析班级学生关联数据失败: " + err.Error())
+	}
+
+	// 收集学生ID
+	studentIDs := make([]primitive.ObjectID, len(studentClasses))
+	for i, sc := range studentClasses {
+		studentIDs[i] = sc.StudentID
+	}
+
+	// 构建学生查询条件
+	userFilter := bson.M{"_id": bson.M{"$in": studentIDs}}
+
+	// 如果指定了学生ID进行精确查询
+	if req.UserID != nil && *req.UserID != "" {
+		userObjID, err := primitive.ObjectIDFromHex(*req.UserID)
+		if err != nil {
+			return nil, errors.New("无效的学生ID")
+		}
+		userFilter = bson.M{"_id": userObjID}
+	}
+
+	// 如果指定了学生姓名进行模糊查询
+	if req.RealName != nil && *req.RealName != "" {
+		userFilter["real_name"] = bson.M{"$regex": *req.RealName, "$options": "i"}
+	}
+
+	// 查询学生信息
+	userColl := utils.GetCollection("users")
+	userCursor, err := userColl.Find(ctx, userFilter)
+	if err != nil {
+		return nil, errors.New("查询学生信息失败: " + err.Error())
+	}
+	defer userCursor.Close(ctx)
+
+	var students []*models.User
+	if err = userCursor.All(ctx, &students); err != nil {
+		return nil, errors.New("解析学生信息失败: " + err.Error())
+	}
+
+	// 构建学生ID到学生信息的映射
+	studentMap := make(map[primitive.ObjectID]*models.User)
+	for _, student := range students {
+		studentMap[student.ID] = student
+	}
+
+	// 查询任务信息
 	taskColl := utils.GetCollection("tasks")
 	var task models.Task
 	if err = taskColl.FindOne(ctx, bson.M{"_id": taskObjID}).Decode(&task); err != nil {
@@ -1798,11 +1956,62 @@ func (s *ClazzService) CheckTaskCompletion(ctx context.Context, req *models.Chec
 		return nil, errors.New("获取任务信息失败: " + err.Error())
 	}
 
-	response := &models.CheckTaskCompletionResponse{
-		Completed:         false,
-		TotalQuestions:    len(task.RelationIDs),
-		FinishedQuestions: 0,
+	totalQuestions := len(task.RelationIDs)
+
+	// 查询这些学生的任务完成情况
+	userTaskColl := utils.GetCollection("user_task")
+	userTaskFilter := bson.M{
+		"task_id": taskObjID,
+		"user_id": bson.M{"$in": studentIDs},
+	}
+	userTaskCursor, err := userTaskColl.Find(ctx, userTaskFilter)
+	if err != nil {
+		return nil, errors.New("查询任务完成情况失败: " + err.Error())
+	}
+	defer userTaskCursor.Close(ctx)
+
+	var userTasks []models.UserTask
+	if err = userTaskCursor.All(ctx, &userTasks); err != nil {
+		return nil, errors.New("解析任务完成情况数据失败: " + err.Error())
 	}
 
-	return response, nil
+	// 构建用户ID到任务完成情况的映射
+	userTaskMap := make(map[primitive.ObjectID]*models.UserTask)
+	for _, userTask := range userTasks {
+		userTaskMap[userTask.UserID] = &userTask
+	}
+
+	// 构建响应数据
+	completion := make([]models.TaskCompletionResponse, len(students))
+	for i, student := range students {
+		userTask, exists := userTaskMap[student.ID]
+		completed := false
+		var completedAt *time.Time
+		finishedQuestions := 0
+
+		if exists {
+			completed = userTask.State == 1
+			completedAt = userTask.CompletedAt
+			finishedQuestions = userTask.FinishedCount
+		}
+
+		completion[i] = models.TaskCompletionResponse{
+			UserID:            student.ID,
+			RealName:          student.RealName,
+			StudentID:         student.StudentID,
+			Completed:         completed,
+			CompletedAt:       completedAt,
+			TotalQuestions:    totalQuestions,
+			FinishedQuestions: finishedQuestions,
+		}
+	}
+
+	res := &models.PageQueryTaskCompletionResponse{
+		Total:      total,
+		PageNum:    pageNum,
+		PageSize:   pageSize,
+		Completion: completion,
+	}
+
+	return res, nil
 }
