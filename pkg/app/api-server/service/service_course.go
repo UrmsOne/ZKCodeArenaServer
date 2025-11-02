@@ -43,13 +43,14 @@ func (s *CourseService) CreateCourse(ctx context.Context, req *models.CreateCour
 		return "", errors.New("无效的用户ID")
 	}
 
-	// 创建课程对象
+	// 创建课程对象，将创建者默认添加为教师
 	now := time.Now()
 	course := &models.Course{
 		ID:          primitive.NewObjectID(),
 		Name:        req.Name,
 		Description: req.Description,
 		CreatedBy:   creatorObjID,
+		TeacherIds:  []primitive.ObjectID{creatorObjID}, // 将创建者默认添加为教师
 		Status:      models.CourseStatusActive,
 		CTime:       now,
 		MTime:       now,
