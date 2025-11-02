@@ -29,7 +29,7 @@ func (s *Server) RegisterCourse(g *gin.RouterGroup) {
 			jwtGroup.POST("/teachers", s.GetCourseTeachers) // 添加获取课程教师列表
 			jwtGroup.POST("/teacher/query", s.PageQueryTeacherCourses)
 			jwtGroup.POST("/query", s.PageQueryCourse)
-			jwtGroup.POST("/query/teachers", s.addCourseTeacher)
+			jwtGroup.POST("/add/teachers", s.addCourseTeacher)
 			jwtGroup.DELETE("/teachers", s.removeCourseTeacher)
 			// 需要老师权限的路由
 			teacherGroup := jwtGroup.Use(middleware.RequireRole(models.RoleTeacher))
@@ -75,7 +75,7 @@ func (s *Server) PageQueryCourse(c *gin.Context) {
 // @Success      200 {object} utils.Response "添加成功"
 // @Failure      400 {object} models.ErrorResponse "请求参数错误"
 // @Security     BearerAuth
-// @Router       /courses/teachers [post]
+// @Router       /add/teachers [post]
 func (s *Server) addCourseTeacher(c *gin.Context) {
 	var req models.AddCourseTeachersRequest
 	if err := c.ShouldBindJSON(&req); err != nil {

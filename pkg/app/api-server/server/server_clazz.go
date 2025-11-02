@@ -47,8 +47,6 @@ func (s *Server) RegisterClazz(g *gin.RouterGroup) {
 			jwtGroup.DELETE("/task/relationIds", s.RemoveTaskRelationIds)
 			// 检查任务完成情况接口
 			jwtGroup.POST("/task/completion", s.PageQueryTaskCompletion)
-			// 分页查询任务完成情况接口
-
 			// 复制任务接口
 			jwtGroup.POST("/task/copy", s.CopyTaskToClass)
 
