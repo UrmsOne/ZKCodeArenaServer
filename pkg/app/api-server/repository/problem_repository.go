@@ -148,10 +148,15 @@ func (r *ProblemRepository) GetProblemsWithUserStatus(
 	
 	// 填充用户状态（仅当用户已登录时）
 	if userID != nil && len(problems) > 0 {
+		utils.Logger.Debugf("GetProblemsWithUserStatus: 开始填充用户状态, userID=%s, problemCount=%d", userID.Hex(), len(problems))
 		if err := r.fillUserProblemStatus(ctx, problems, *userID); err != nil {
-			utils.Logger.Errorf("GetProblemsWithUserStatus: 填充用户状态失败, error=%v", err)
-			// 不影响主要功能，只记录错误
+			utils.Logger.Errorf("GetProblemsWithUserStatus: 填充用户状态失败, userID=%s, error=%v", userID.Hex(), err)
+			// 不影响主要功能，只记录错误，但确保用户知道状态查询失败
+		} else {
+			utils.Logger.Debugf("GetProblemsWithUserStatus: 用户状态填充成功, userID=%s", userID.Hex())
 		}
+	} else if userID == nil {
+		utils.Logger.Debugf("GetProblemsWithUserStatus: 未登录用户，跳过状态填充")
 	}
 	
 	return problems, total, nil
@@ -252,6 +257,8 @@ func (r *ProblemRepository) UpdateProblemStats(ctx context.Context, problemID pr
 }
 
 // GetUserProblemStatuses 批量获取用户对一组题目的最新状态
+// 注意：这个方法应该委托给SubmitRepository，但为了保持向后兼容，暂时保留
+// TODO: 重构架构，移除这个方法，统一使用SubmitRepository
 func (r *ProblemRepository) GetUserProblemStatuses(ctx context.Context, userID primitive.ObjectID, problemIDs []primitive.ObjectID) (map[primitive.ObjectID]models.UserProblemStatus, error) {
 	if len(problemIDs) == 0 {
 		return make(map[primitive.ObjectID]models.UserProblemStatus), nil
@@ -277,6 +284,7 @@ func (r *ProblemRepository) GetUserProblemStatuses(ctx context.Context, userID p
 	
 	cursor, err := r.Aggregate(ctx, "submits", pipeline)
 	if err != nil {
+		utils.Logger.Errorf("GetUserProblemStatuses: 聚合查询失败, userID=%s, error=%v", userID.Hex(), err)
 		return nil, fmt.Errorf("查询用户题目状态失败: %w", err)
 	}
 	defer cursor.Close(ctx)
@@ -290,6 +298,7 @@ func (r *ProblemRepository) GetUserProblemStatuses(ctx context.Context, userID p
 		}
 		
 		if err := cursor.Decode(&result); err != nil {
+			utils.Logger.Warnf("GetUserProblemStatuses: 解析结果失败, error=%v", err)
 			continue
 		}
 		
@@ -311,6 +320,7 @@ func (r *ProblemRepository) GetUserProblemStatuses(ctx context.Context, userID p
 		}
 	}
 	
+	utils.Logger.Debugf("GetUserProblemStatuses: 查询完成, userID=%s, 返回%d个状态", userID.Hex(), len(statusMap))
 	return statusMap, nil
 }
 

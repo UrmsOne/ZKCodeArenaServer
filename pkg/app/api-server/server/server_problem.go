@@ -9,6 +9,7 @@ package server
 
 import (
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -60,7 +61,7 @@ func (s *Server) RegisterProblem(g *gin.RouterGroup) {
 // @Param        page_size query int false "每页数量" default(10)
 // @Param        difficulty query string false "难度" Enums(easy, medium, hard)
 // @Param        tags query []string false "标签列表"
-// @Success      200 {object} utils.Response{data=object{problems=[]models.Problem,total=int64,page=int,page_size=int,total_page=int64}} "题目列表"
+// @Success      200 {object} utils.Response{data=object{problems=[]models.ProblemList,total=int64,page=int,page_size=int,total_page=int64}} "题目列表"
 // @Failure      400 {object} models.ErrorResponse "请求参数错误"
 // @Failure      500 {object} models.ErrorResponse "获取失败"
 // @Router       /problem [get]
@@ -81,9 +82,18 @@ func (s *Server) GetProblems(c *gin.Context) {
 
 	// 获取用户ID（可选，用于获取用户提交状态）
 	var userObjectID *primitive.ObjectID
-	if userIDVal, exists := c.Get("user_id"); exists {
-		if objID, err := primitive.ObjectIDFromHex(userIDVal.(string)); err == nil {
-			userObjectID = &objID
+ 	authHeader := c.GetHeader("Authorization")
+	if authHeader != "" {
+		// 有token，尝试解析
+		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+		if tokenString != authHeader {
+			// token格式正确，解析token
+			if claims, err := middleware.ParseToken(tokenString); err == nil {
+				// token有效，提取用户ID
+				if objID, err := primitive.ObjectIDFromHex(claims.UserID); err == nil {
+					userObjectID = &objID
+				}
+			}
 		}
 	}
 
@@ -121,7 +131,7 @@ func (s *Server) GetProblems(c *gin.Context) {
 // @Param        page_size query int false "每页数量" default(10)
 // @Param        difficulty query string false "难度" Enums(easy, medium, hard)
 // @Param        tags query []string false "标签列表"
-// @Success      200 {object} utils.Response{data=object{problems=[]models.Problem,total=int64,page=int,page_size=int,total_page=int64}} "题目列表"
+// @Success      200 {object} utils.Response{data=object{problems=[]models.ProblemList,total=int64,page=int,page_size=int,total_page=int64}} "题目列表"
 // @Failure      400 {object} models.ErrorResponse "请求参数错误"
 // @Failure      401 {object} models.ErrorResponse "未授权访问"
 // @Failure      403 {object} models.ErrorResponse "权限不足"
@@ -515,7 +525,7 @@ func (s *Server) RunCode(c *gin.Context) {
 // @Param        tags query []string false "标签列表"
 // @Param        page query int false "页码" default(1)
 // @Param        page_size query int false "每页数量" default(10)
-// @Success      200 {object} utils.Response{data=object{problems=[]models.Problem,total=int64,page=int,page_size=int,total_page=int64}} "搜索结果"
+// @Success      200 {object} utils.Response{data=object{problems=[]models.ProblemList,total=int64,page=int,page_size=int,total_page=int64}} "搜索结果"
 // @Failure      500 {object} models.ErrorResponse "搜索失败"
 // @Router       /problem/search [get]
 func (s *Server) SearchProblems(c *gin.Context) {
@@ -534,9 +544,18 @@ func (s *Server) SearchProblems(c *gin.Context) {
 
 	// 获取用户ID（用于用户状态查询）
 	var userObjectID *primitive.ObjectID
-	if userIDVal, exists := c.Get("user_id"); exists {
-		if objID, err := primitive.ObjectIDFromHex(userIDVal.(string)); err == nil {
-			userObjectID = &objID
+	authHeader := c.GetHeader("Authorization")
+	if authHeader != "" {
+		// 有token，尝试解析
+		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+		if tokenString != authHeader {
+			// token格式正确，解析token
+			if claims, err := middleware.ParseToken(tokenString); err == nil {
+				// token有效，提取用户ID
+				if objID, err := primitive.ObjectIDFromHex(claims.UserID); err == nil {
+					userObjectID = &objID
+				}
+			}
 		}
 	}
 

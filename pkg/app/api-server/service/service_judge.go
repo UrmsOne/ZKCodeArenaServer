@@ -291,6 +291,29 @@ func (js *JudgeService) runSingleTestCase(
 	judgeCtx *JudgeContext,
 	testCase *models.TestCase,
 ) (*models.TestResult, error) {
+	logger := utils.GetLogger(ctx)
+	
+	// 记录测试用例信息（用于调试）
+	logger.Debugf("运行测试用例: TestCaseID=%s, Input长度=%d, Output长度=%d, Input预览=%s, Output预览=%s", 
+		testCase.ID.Hex(), 
+		len(testCase.Input), 
+		len(testCase.Output),
+		truncateString(testCase.Input, 50),
+		truncateString(testCase.Output, 50))
+	
+	// 验证测试用例数据是否有效
+	if testCase.Input == "" && testCase.Output == "" {
+		logger.Warnf("测试用例数据可能为空: TestCaseID=%s", testCase.ID.Hex())
+	}
+	
+	// 检查是否是占位符数据（常见问题：测试用例使用占位符文本）
+	if testCase.Input == "测试用例1" || testCase.Output == "测试用例1" ||
+		testCase.Input == "测试用例2" || testCase.Output == "测试用例2" ||
+		testCase.Input == "test case 1" || testCase.Output == "test case 1" {
+		logger.Warnf("⚠️ 检测到测试用例可能使用占位符数据: TestCaseID=%s, Input=%s, Output=%s", 
+			testCase.ID.Hex(), testCase.Input, testCase.Output)
+	}
+	
 	// 获取时间和内存限制
 	timeLimit := js.getTimeLimit(testCase, judgeCtx.Problem)
 	memoryLimit := js.getMemoryLimit(testCase, judgeCtx.Problem)
@@ -315,8 +338,18 @@ func (js *JudgeService) runSingleTestCase(
 	// 调用沙箱运行
 	runResp, err := js.sandboxClient.RunCode(ctx, runReq)
 	if err != nil {
+		logger.Errorf("沙箱运行失败: TestCaseID=%s, Error=%v", testCase.ID.Hex(), err)
 		return nil, fmt.Errorf("沙箱运行失败: %w", err)
 	}
+	
+	// 记录沙箱返回的详细信息
+	logger.Debugf("沙箱运行结果: TestCaseID=%s, Status=%s, ExitCode=%d, Output长度=%d, Error长度=%d, Output预览=%s", 
+		testCase.ID.Hex(),
+		string(runResp.Status),
+		runResp.ExitCode,
+		len(runResp.Output),
+		len(runResp.Error),
+		truncateString(runResp.Output, 50))
 
 	// 构建测试结果
 	result := &models.TestResult{
@@ -330,10 +363,16 @@ func (js *JudgeService) runSingleTestCase(
 	switch runResp.Status {
 	case sandbox.RunStatusAccepted:
 		// 比对输出
-		if js.compareOutput(runResp.Output, testCase.Output) {
+		isMatch := js.compareOutput(runResp.Output, testCase.Output)
+		if isMatch {
 			result.Status = models.StatusAccepted
+			logger.Debugf("输出匹配: TestCaseID=%s", testCase.ID.Hex())
 		} else {
 			result.Status = models.StatusWrongAnswer
+			logger.Infof("输出不匹配: TestCaseID=%s, 期望输出=%s, 实际输出=%s", 
+				testCase.ID.Hex(),
+				truncateString(testCase.Output, 100),
+				truncateString(runResp.Output, 100))
 		}
 	case sandbox.RunStatusTimeLimitExceeded:
 		result.Status = models.StatusTimeLimit
@@ -341,7 +380,17 @@ func (js *JudgeService) runSingleTestCase(
 		result.Status = models.StatusMemoryLimit
 	case sandbox.RunStatusRuntimeError:
 		result.Status = models.StatusRuntimeError
+	case sandbox.RunStatusSystemError:
+		// 沙箱返回系统错误
+		logger := utils.GetLogger(ctx)
+		logger.Warnf("测试用例返回系统错误: TestCaseID=%s, ExitCode=%d, Error=%s", 
+			testCase.ID.Hex(), runResp.ExitCode, runResp.Error)
+		result.Status = models.StatusSystemError
 	default:
+		// 未知状态，记录详细信息
+		logger := utils.GetLogger(ctx)
+		logger.Errorf("未知的运行状态: Status=%s, TestCaseID=%s, ExitCode=%d, Error=%s", 
+			string(runResp.Status), testCase.ID.Hex(), runResp.ExitCode, runResp.Error)
 		result.Status = models.StatusSystemError
 	}
 
@@ -436,6 +485,14 @@ func (js *JudgeService) determineFinalStatus(testResults []models.TestResult) mo
 	}
 
 	return models.StatusSystemError
+}
+
+// truncateString 截断字符串用于日志输出
+func truncateString(s string, maxLen int) string {
+	if len(s) <= maxLen {
+		return s
+	}
+	return s[:maxLen] + "..."
 }
 
 // getTimeLimit 获取时间限制（ms）
