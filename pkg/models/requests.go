@@ -179,6 +179,13 @@ type PageQueryCourseTeachersRequest struct {
 	TeacherId *string `json:"teacher_id,omitempty"`
 }
 
+// PageQueryAllTeachersRequest 分页查询所有教师请求
+type PageQueryAllTeachersRequest struct {
+	PageNum  *int64  `json:"page_num,omitempty"`
+	PageSize *int64  `json:"page_size,omitempty"`
+	RealName *string `json:"real_name,omitempty"`
+}
+
 // PageQueryCourseStudentsResponse 分页查询课程学生响应
 type PageQueryCourseStudentsResponse struct {
 	Total    int64         `json:"total" example:"100"`

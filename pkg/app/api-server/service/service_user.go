@@ -180,6 +180,69 @@ func (s *UserService) GetUsers(ctx context.Context, page, pageSize int, role mod
 	return users, total, nil
 }
 
+// PageQueryAllTeachers 分页查询所有教师信息，支持按姓名模糊查询
+func (s *UserService) PageQueryAllTeachers(ctx context.Context, req *models.PageQueryAllTeachersRequest) (*models.PageQueryCourseTeachersResponse, error) {
+	// 设置默认分页参数
+	pageNum := int64(1)
+	pageSize := int64(10)
+	if req.PageNum != nil {
+		pageNum = *req.PageNum
+	}
+	if req.PageSize != nil {
+		pageSize = *req.PageSize
+	}
+	// 设置合理的限制
+	if pageSize > 100 {
+		pageSize = 50
+	}
+
+	// 构建查询条件：角色为教师
+	userFilter := bson.M{"role": models.RoleTeacher}
+
+	// 如果指定了教师姓名进行模糊查询
+	if req.RealName != nil && *req.RealName != "" {
+		userFilter["real_name"] = bson.M{"$regex": *req.RealName, "$options": "i"}
+	}
+
+	// 查询教师总数
+	total, err := utils.GetCollection("users").CountDocuments(ctx, userFilter)
+	if err != nil {
+		return nil, errors.New("查询教师总数失败: " + err.Error())
+	}
+
+	// 分页查询教师信息
+	findOptions := options.Find().
+		SetSkip((pageNum - 1) * pageSize).
+		SetLimit(pageSize).
+		SetSort(bson.D{{"created_at", -1}})
+
+	cursor, err := utils.GetCollection("users").Find(ctx, userFilter, findOptions)
+	if err != nil {
+		return nil, errors.New("查询教师信息失败: " + err.Error())
+	}
+	defer cursor.Close(ctx)
+
+	var teachers []*models.UserProfile
+	if err = cursor.All(ctx, &teachers); err != nil {
+		return nil, errors.New("解析教师信息失败: " + err.Error())
+	}
+
+	// 构造分页响应
+	res := &models.PageQueryCourseTeachersResponse{
+		Total:    total,
+		PageNum:  pageNum,
+		PageSize: pageSize,
+		Teachers: make([]models.UserProfile, len(teachers)),
+	}
+
+	// 转换教师信息
+	for i, teacher := range teachers {
+		res.Teachers[i] = *teacher
+	}
+
+	return res, nil
+}
+
 // DeleteUser 删除用户
 func (s *UserService) DeleteUser(ctx context.Context, id primitive.ObjectID) error {
 	collection := utils.GetCollection("users")
