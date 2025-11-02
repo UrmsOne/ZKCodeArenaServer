@@ -29,13 +29,13 @@ func (s *Server) RegisterUser(g *gin.RouterGroup) {
 	// 需要认证的路由
 	securedGroup := userGroup.Group("/").Use(middleware.JWTMiddleware())
 	{
-		securedGroup.GET("/profile", s.GetUserProfile)        // 获取用户资料
-		securedGroup.PUT("/profile", s.UpdateUserProfile)     // 更新用户资料
-		securedGroup.GET("/", s.GetUsers)                     // 获取用户列表（管理员）
-		securedGroup.GET("/teachers", s.PageQueryAllTeachers) // 分页查询所有教师信息
-		securedGroup.GET("/:id", s.GetUserByID)               // 获取指定用户
-		securedGroup.PUT("/:id", s.UpdateUser)                // 更新用户信息
-		securedGroup.DELETE("/:id", s.DeleteUser)             // 删除用户
+		securedGroup.GET("/profile", s.GetUserProfile)         // 获取用户资料
+		securedGroup.PUT("/profile", s.UpdateUserProfile)      // 更新用户资料
+		securedGroup.GET("/", s.GetUsers)                      // 获取用户列表（管理员）
+		securedGroup.POST("/teachers", s.PageQueryAllTeachers) // 分页查询所有教师信息
+		securedGroup.GET("/:id", s.GetUserByID)                // 获取指定用户
+		securedGroup.PUT("/:id", s.UpdateUser)                 // 更新用户信息
+		securedGroup.DELETE("/:id", s.DeleteUser)              // 删除用户
 	}
 }
 
@@ -268,7 +268,7 @@ func (s *Server) GetUsers(c *gin.Context) {
 // @Failure      400 {object} models.ErrorResponse "请求参数错误"
 // @Failure      500 {object} models.ErrorResponse "查询失败"
 // @Security     BearerAuth
-// @Router       /user/teachers [get]
+// @Router       /user/teachers [POST]
 func (s *Server) PageQueryAllTeachers(c *gin.Context) {
 	var req models.PageQueryAllTeachersRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
