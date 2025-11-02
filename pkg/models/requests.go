@@ -278,7 +278,6 @@ type GetClazzResponse struct {
 	Description   string               `bson:"description,omitempty" json:"description,omitempty"`
 	CourseId      primitive.ObjectID   `bson:"course_id" json:"course_id" binding:"required"`
 	Schedule      string               `bson:"schedule,omitempty" json:"schedule,omitempty"`
-	MemberIDs     []primitive.ObjectID `bson:"member_ids,omitempty" json:"member_ids,omitempty"`
 	TeacherIds    []primitive.ObjectID `bson:"teacher_ids,omitempty" json:"teacher_ids,omitempty"`
 	RequireInvite bool                 `bson:"require_invite" json:"require_invite"`
 	MaxMembers    int                  `bson:"max_members,omitempty" json:"max_members,omitempty"`

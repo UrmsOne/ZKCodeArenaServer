@@ -214,6 +214,28 @@ func (s *ClazzService) GetClazzByID(ctx context.Context, clazzID string, userID 
 		return nil, errors.New("权限不足")
 	}
 
+	// 获取班级教师信息
+	if len(clazz.TeacherIds) > 0 {
+		userColl := utils.GetCollection("users")
+		teacherFilter := bson.M{
+			"_id": bson.M{"$in": clazz.TeacherIds},
+		}
+		teacherCursor, err := userColl.Find(ctx, teacherFilter)
+		if err != nil {
+			return nil, errors.New("查询教师信息失败: " + err.Error())
+		}
+		defer teacherCursor.Close(ctx)
+
+		var teachers []models.User
+		if err = teacherCursor.All(ctx, &teachers); err != nil {
+			return nil, errors.New("解析教师信息失败: " + err.Error())
+		}
+
+		// 可以在这里对教师信息进行处理，如果需要的话
+		// 目前 clazz.TeacherIds 已经包含了教师的ID列表
+		_ = teachers
+	}
+
 	return &clazz, nil
 }
 
