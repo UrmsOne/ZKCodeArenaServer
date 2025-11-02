@@ -20,7 +20,7 @@ const (
 	RoleAdmin   UserRole = "admin"   // 系统管理员
 	RoleTeacher UserRole = "teacher" // 老师
 	RoleStudent UserRole = "student" // 学生
-	RoleContest UserRole = "contest" // 竞赛发起者
+	RoleOther   UserRole = "other"   // 外校人员
 )
 
 // User 用户模型

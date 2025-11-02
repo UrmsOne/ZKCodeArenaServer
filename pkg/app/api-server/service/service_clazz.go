@@ -182,13 +182,28 @@ func (s *ClazzService) GetClazzByID(ctx context.Context, clazzID string, userID 
 		return nil, errors.New("无效的用户ID")
 	}
 
-	coll := utils.GetCollection("clazzes")
-	var clazz models.GetClazzResponse
-	if err = coll.FindOne(ctx, bson.M{"_id": clazzObjID}).Decode(&clazz); err != nil {
+	// 先查询班级基本信息
+	clazzColl := utils.GetCollection("clazzes")
+	var clazz models.Clazz
+	if err = clazzColl.FindOne(ctx, bson.M{"_id": clazzObjID}).Decode(&clazz); err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			return nil, errors.New("班级不存在")
 		}
 		return nil, err
+	}
+
+	// 构造返回的响应对象
+	response := &models.GetClazzResponse{
+		ID:            clazz.ID,
+		Name:          clazz.Name,
+		Description:   clazz.Description,
+		CourseId:      clazz.CourseId,
+		Schedule:      clazz.Schedule,
+		RequireInvite: clazz.RequireInvite,
+		MaxMembers:    clazz.MaxMembers,
+		AddNums:       clazz.AddNums,
+		Status:        clazz.Status,
+		CTime:         clazz.CTime,
 	}
 
 	courseObjID := clazz.CourseId
@@ -215,28 +230,28 @@ func (s *ClazzService) GetClazzByID(ctx context.Context, clazzID string, userID 
 	}
 
 	// 获取班级教师信息
-	if len(clazz.TeacherIds) > 0 {
-		userColl := utils.GetCollection("users")
-		teacherFilter := bson.M{
-			"_id": bson.M{"$in": clazz.TeacherIds},
-		}
-		teacherCursor, err := userColl.Find(ctx, teacherFilter)
-		if err != nil {
-			return nil, errors.New("查询教师信息失败: " + err.Error())
-		}
-		defer teacherCursor.Close(ctx)
+	userColl := utils.GetCollection("users")
+	teacherFilter := bson.M{
+		"_id": bson.M{"$in": clazz.TeacherIds},
+	}
+	teacherCursor, err := userColl.Find(ctx, teacherFilter)
+	if err != nil {
+		return nil, errors.New("查询教师信息失败: " + err.Error())
+	}
+	defer teacherCursor.Close(ctx)
 
-		var teachers []models.User
-		if err = teacherCursor.All(ctx, &teachers); err != nil {
-			return nil, errors.New("解析教师信息失败: " + err.Error())
-		}
-
-		// 可以在这里对教师信息进行处理，如果需要的话
-		// 目前 clazz.TeacherIds 已经包含了教师的ID列表
-		_ = teachers
+	var teachers []models.User
+	if err = teacherCursor.All(ctx, &teachers); err != nil {
+		return nil, errors.New("解析教师信息失败: " + err.Error())
 	}
 
-	return &clazz, nil
+	// 转换为用户资料数组
+	response.Teachers = make([]models.UserProfile, 0, len(teachers))
+	for _, teacher := range teachers {
+		response.Teachers = append(response.Teachers, *teacher.ToProfile())
+	}
+
+	return response, nil
 }
 
 // UpdateClazzInfo 更新班级信息（不包括教师和成员）
