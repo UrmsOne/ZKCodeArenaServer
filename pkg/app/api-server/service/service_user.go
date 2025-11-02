@@ -222,8 +222,8 @@ func (s *UserService) PageQueryAllTeachers(ctx context.Context, req *models.Page
 	}
 	defer cursor.Close(ctx)
 
-	var teachers []*models.UserProfile
-	if err = cursor.All(ctx, &teachers); err != nil {
+	var users []*models.User
+	if err = cursor.All(ctx, &users); err != nil {
 		return nil, errors.New("解析教师信息失败: " + err.Error())
 	}
 
@@ -232,12 +232,12 @@ func (s *UserService) PageQueryAllTeachers(ctx context.Context, req *models.Page
 		Total:    total,
 		PageNum:  pageNum,
 		PageSize: pageSize,
-		Teachers: make([]models.UserProfile, len(teachers)),
+		Teachers: make([]models.UserProfile, len(users)),
 	}
 
 	// 转换教师信息
-	for i, teacher := range teachers {
-		res.Teachers[i] = *teacher
+	for i, user := range users {
+		res.Teachers[i] = *user.ToProfile()
 	}
 
 	return res, nil

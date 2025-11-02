@@ -47,20 +47,20 @@ type User struct {
 
 // UserProfile 用户资料（不包含敏感信息）
 type UserProfile struct {
-	ID        primitive.ObjectID `json:"id" swaggertype:"string" example:"507f1f77bcf86cd799439011"`
-	Username  string             `json:"username" example:"student1"`
-	Email     string             `json:"email" example:"student1@example.com"`
-	RealName  string             `json:"real_name" example:"张同学"`
-	StudentID string             `json:"student_id" example:"20240001"`
-	Role      UserRole           `json:"role" example:"student"`
-	Avatar    string             `json:"avatar" example:"https://api.dicebear.com/7.x/avataaars/svg?seed=student1"`
-	Bio       string             `json:"bio" example:"热爱编程的计算机专业学生"`
-	School    string             `json:"school" example:"xx大学"`
-	Major     string             `json:"major" example:"计算机科学与技术"`
-	Grade     string             `json:"grade" example:"2024"`
-	Class     string             `json:"class" example:"计科1班"`
-	IsActive  bool               `json:"is_active" example:"true"`
-	CreatedAt time.Time          `json:"created_at" example:"2024-10-26T10:00:00Z"`
+	ID        primitive.ObjectID `bson:"_id,omitempty" json:"id" swaggertype:"string" example:"507f1f77bcf86cd799439011"`
+	Username  string             `bson:"username" json:"username" example:"student1"`
+	Email     string             `bson:"email" json:"email" example:"student1@example.com"`
+	RealName  string             `bson:"real_name" json:"real_name" example:"张同学"`
+	StudentID string             `bson:"student_id" json:"student_id" example:"20240001"`
+	Role      UserRole           `bson:"role" json:"role" example:"student"`
+	Avatar    string             `bson:"avatar" json:"avatar" example:"https://api.dicebear.com/7.x/avataaars/svg?seed=student1"`
+	Bio       string             `bson:"bio" json:"bio" example:"热爱编程的计算机专业学生"`
+	School    string             `bson:"school" json:"school" example:"xx大学"`
+	Major     string             `bson:"major" json:"major" example:"计算机科学与技术"`
+	Grade     string             `bson:"grade" json:"grade" example:"2024"`
+	Class     string             `bson:"class" json:"class" example:"计科1班"`
+	IsActive  bool               `bson:"is_active" json:"is_active" example:"true"`
+	CreatedAt time.Time          `bson:"created_at" json:"created_at" example:"2024-10-26T10:00:00Z"`
 }
 
 // ToProfile 转换为用户资料
