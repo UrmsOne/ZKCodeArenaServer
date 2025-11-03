@@ -10,6 +10,7 @@ package service
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -182,6 +183,18 @@ func (s *ClazzService) GetClazzByID(ctx context.Context, clazzID string, userID 
 		return nil, errors.New("无效的用户ID")
 	}
 
+	// 尝试从Redis缓存中获取班级详情
+	cacheKey := "clazz_detail:" + clazzID + ":" + userID
+	cachedData, err := utils.RedisClient.Get(ctx, cacheKey).Result()
+	if err == nil && cachedData != "" {
+		// 缓存命中，直接返回缓存数据
+		var response models.GetClazzResponse
+		if err := json.Unmarshal([]byte(cachedData), &response); err == nil {
+			return &response, nil
+		}
+		// 如果反序列化失败，继续执行下面的逻辑
+	}
+
 	// 先查询班级基本信息
 	clazzColl := utils.GetCollection("clazzes")
 	var clazz models.Clazz
@@ -230,25 +243,33 @@ func (s *ClazzService) GetClazzByID(ctx context.Context, clazzID string, userID 
 	}
 
 	// 获取班级教师信息
-	userColl := utils.GetCollection("users")
-	teacherFilter := bson.M{
-		"_id": bson.M{"$in": clazz.TeacherIds},
-	}
-	teacherCursor, err := userColl.Find(ctx, teacherFilter)
-	if err != nil {
-		return nil, errors.New("查询教师信息失败: " + err.Error())
-	}
-	defer teacherCursor.Close(ctx)
-
 	var teachers []models.User
-	if err = teacherCursor.All(ctx, &teachers); err != nil {
-		return nil, errors.New("解析教师信息失败: " + err.Error())
+	if len(clazz.TeacherIds) > 0 {
+		userColl := utils.GetCollection("users")
+		teacherFilter := bson.M{
+			"_id": bson.M{"$in": clazz.TeacherIds},
+		}
+		teacherCursor, err := userColl.Find(ctx, teacherFilter)
+		if err != nil {
+			return nil, errors.New("查询教师信息失败: " + err.Error())
+		}
+		defer teacherCursor.Close(ctx)
+
+		if err = teacherCursor.All(ctx, &teachers); err != nil {
+			return nil, errors.New("解析教师信息失败: " + err.Error())
+		}
 	}
 
 	// 转换为用户资料数组
 	response.Teachers = make([]models.UserProfile, 0, len(teachers))
 	for _, teacher := range teachers {
 		response.Teachers = append(response.Teachers, *teacher.ToProfile())
+	}
+
+	// 将结果缓存到Redis中，缓存10分钟
+	cacheData, err := json.Marshal(response)
+	if err == nil {
+		utils.RedisClient.Set(ctx, cacheKey, cacheData, 10*time.Minute)
 	}
 
 	return response, nil
@@ -1410,6 +1431,11 @@ func (s *ClazzService) FinishTask(ctx context.Context, req models.FinishTaskRequ
 		return errors.New("无效的关系ID")
 	}
 
+	clazzObjId, err := primitive.ObjectIDFromHex(req.ClazzID)
+	if err != nil {
+		return errors.New("无效班级")
+	}
+
 	userObjId, err := primitive.ObjectIDFromHex(userID)
 	if err != nil {
 		return errors.New("无效的用户ID")
@@ -1418,7 +1444,7 @@ func (s *ClazzService) FinishTask(ctx context.Context, req models.FinishTaskRequ
 	// 获取班级信息
 	coll := utils.GetCollection("clazzes")
 	var clazz models.Clazz
-	if err = coll.FindOne(ctx, bson.M{"_id": relationObjId}).Decode(&clazz); err != nil {
+	if err = coll.FindOne(ctx, bson.M{"_id": clazzObjId}).Decode(&clazz); err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			return errors.New("班级不存在")
 		}
@@ -1428,8 +1454,9 @@ func (s *ClazzService) FinishTask(ctx context.Context, req models.FinishTaskRequ
 	// 检查用户是否是班级成员（通过查询学生班级关联表）
 	count, err := utils.GetCollection("student_classes").CountDocuments(ctx, bson.M{
 		"student_id": userObjId,
-		"class_id":   relationObjId,
+		"class_id":   clazzObjId,
 	})
+
 	if err != nil {
 		return errors.New("检查班级成员失败: " + err.Error())
 	}
@@ -1471,7 +1498,7 @@ func (s *ClazzService) FinishTask(ctx context.Context, req models.FinishTaskRequ
 
 	// 如果已经有完成记录，直接返回
 	if count > 0 {
-		return errors.New("您已经完成过该题目")
+		return nil
 	}
 
 	// 在 user_relation_question 表中添加完成记录
@@ -1497,6 +1524,7 @@ func (s *ClazzService) FinishTask(ctx context.Context, req models.FinishTaskRequ
 		"user_id": userObjId,
 		"state":   1, // 1 表示已完成
 	})
+
 	if err != nil {
 		// 记录错误但不中断响应
 		log.Printf("查询用户完成题目数量失败: %v", err)
