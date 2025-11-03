@@ -255,8 +255,8 @@ type UpdateClazzRequest struct {
 
 // JoinClazzRequest 加入班级请求
 type JoinClazzRequest struct {
-	ClazzID string  `json:"clazz_id" form:"clazzId" binding:"required"`
-	RanCode *string `json:"ran_code,omitempty" form:"ran_code,omitempty"`
+	ClazzID string  `json:"clazz_id" binding:"required"`
+	RanCode *string `json:"invite_code,omitempty"`
 }
 
 // AddClazzMemberRequest 添加班级成员请求
