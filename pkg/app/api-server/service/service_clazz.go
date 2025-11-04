@@ -52,7 +52,7 @@ func (s2 *ClazzService) RefreshQrcode(userId string, courseId string, clazzId st
 		return nil, err
 	}
 
-	ran := fmt.Sprintf("%d,%s", rand.Int(), clazzId)
+	ran := fmt.Sprintf("%d", rand.Int())
 	encode, err := qrcode.Encode(ran, qrcode.Medium, 256)
 	if err != nil {
 		return nil, err
@@ -157,7 +157,7 @@ func (s *ClazzService) CreateClass(ctx context.Context, req *models.CreateClazzR
 
 	if req.RequireInvite {
 		id := one.InsertedID.(primitive.ObjectID)
-		ran := fmt.Sprintf("%d,%s", rand.Int(), id.Hex())
+		ran := fmt.Sprintf("%d", rand.Int())
 		encode, err := qrcode.Encode(ran, qrcode.Medium, 256)
 		if err != nil {
 			return nil, err
@@ -1338,7 +1338,6 @@ func (s *ClazzService) JoinClazz(ctx context.Context, req models.JoinClazzReques
 
 	// 如果班级需要邀请，则验证二维码
 	key := "clazz_qrcode" + req.ClazzID
-	log.Printf("尝试从Redis获取二维码key: %s", key)
 	storedRan, err := utils.RedisClient.HGet(ctx, key, "ran").Result()
 	if err != nil {
 		log.Printf("从Redis获取二维码失败: %v", err)
@@ -1350,7 +1349,6 @@ func (s *ClazzService) JoinClazz(ctx context.Context, req models.JoinClazzReques
 		return errors.New("二维码无效: 请求中未提供邀请码")
 	}
 
-	// 添加调试日志
 	log.Printf("Stored ran: %s, Request ran: %s", storedRan, *req.RanCode)
 
 	if storedRan != *req.RanCode {
