@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"log"
 	"math/rand/v2"
+	"strings"
 	"time"
 	"zk-code-arena-server/pkg/models"
 	"zk-code-arena-server/pkg/utils"
@@ -52,7 +53,7 @@ func (s2 *ClazzService) RefreshQrcode(userId string, courseId string, clazzId st
 		return nil, err
 	}
 
-	ran := fmt.Sprintf("%d", rand.Int())
+	ran := fmt.Sprintf("%d,%s", rand.Int(), clazzId)
 	encode, err := qrcode.Encode(ran, qrcode.Medium, 256)
 	if err != nil {
 		return nil, err
@@ -157,7 +158,7 @@ func (s *ClazzService) CreateClass(ctx context.Context, req *models.CreateClazzR
 
 	if req.RequireInvite {
 		id := one.InsertedID.(primitive.ObjectID)
-		ran := fmt.Sprintf("%d", rand.Int())
+		ran := fmt.Sprintf("%d,%s", rand.Int(), id.Hex())
 		encode, err := qrcode.Encode(ran, qrcode.Medium, 256)
 		if err != nil {
 			return nil, err
@@ -1348,10 +1349,11 @@ func (s *ClazzService) JoinClazz(ctx context.Context, req models.JoinClazzReques
 	if req.RanCode == nil {
 		return errors.New("二维码无效: 请求中未提供邀请码")
 	}
+	ranAndClazz := strings.Split(*req.RanCode, ",")
+	ran := strings.TrimSpace(ranAndClazz[0])
+	log.Printf("Stored ran: %s, Request ran: %s", storedRan, ran)
 
-	log.Printf("Stored ran: %s, Request ran: %s", storedRan, *req.RanCode)
-
-	if storedRan != *req.RanCode {
+	if storedRan != ran {
 		return errors.New("二维码无效: 邀请码不匹配")
 	}
 
