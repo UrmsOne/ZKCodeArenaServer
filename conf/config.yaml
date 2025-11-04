@@ -121,9 +121,9 @@ JWT:
   ExpireTime: 24h
 
 Redis:
-  Host: "redis"
+  Host: "localhost"
   Port: 6379
-  Password: "redis123"
+  Password:
   DB: 0
   PoolSize: 10
 
