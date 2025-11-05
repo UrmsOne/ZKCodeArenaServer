@@ -21,6 +21,7 @@ import (
 	"zk-code-arena-server/pkg/models"
 	"zk-code-arena-server/pkg/utils"
 
+	"github.com/gabriel-vasile/mimetype"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -135,6 +136,21 @@ func (s *CourseService) UpdateCourseAvatar(ctx context.Context, file multipart.F
 	if err != nil {
 		return err
 	}
+
+	// 验证文件类型 - 只允许常见的图片格式
+	mtype := mimetype.Detect(fileBytes)
+	allowedTypes := []string{"image/jpeg", "image/png", "image/gif", "image/webp", "image/svg+xml"}
+	isValidType := false
+	for _, allowedType := range allowedTypes {
+		if mtype.String() == allowedType {
+			isValidType = true
+			break
+		}
+	}
+	if !isValidType {
+		return errors.New("不支持的图片格式，仅支持 JPG、PNG、GIF、WEBP 和 SVG 格式")
+	}
+
 	// 将文件内容转为Base64字符串
 	base64Str := base64.StdEncoding.EncodeToString(fileBytes)
 

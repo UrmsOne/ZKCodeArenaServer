@@ -15,7 +15,6 @@ import (
 	"fmt"
 	"log"
 	"math/rand/v2"
-	"strings"
 	"time"
 	"zk-code-arena-server/pkg/models"
 	"zk-code-arena-server/pkg/utils"
@@ -94,9 +93,16 @@ func (s *ClazzService) CreateClass(ctx context.Context, req *models.CreateClazzR
 		return nil, err
 	}
 
-	// 验证权限
-	if result.CreatorID.Hex() != userId {
-		return nil, errors.New("权限不足")
+	// 验证权限 - 任何课程教师都可以创建班级
+	isTeacher := false
+	for _, teacherId := range result.TeacherIds {
+		if teacherId.Hex() == userId {
+			isTeacher = true
+			break
+		}
+	}
+	if !isTeacher {
+		return nil, errors.New("权限不足，只有课程教师可以创建班级")
 	}
 
 	// 处理教师ID列表 - 现在是必须字段
@@ -1339,6 +1345,7 @@ func (s *ClazzService) JoinClazz(ctx context.Context, req models.JoinClazzReques
 
 	// 如果班级需要邀请，则验证二维码
 	key := "clazz_qrcode" + req.ClazzID
+	log.Printf("尝试从Redis获取二维码key: %s", key)
 	storedRan, err := utils.RedisClient.HGet(ctx, key, "ran").Result()
 	if err != nil {
 		log.Printf("从Redis获取二维码失败: %v", err)
@@ -1349,11 +1356,10 @@ func (s *ClazzService) JoinClazz(ctx context.Context, req models.JoinClazzReques
 	if req.RanCode == nil {
 		return errors.New("二维码无效: 请求中未提供邀请码")
 	}
-	ranAndClazz := strings.Split(*req.RanCode, ",")
-	ran := strings.TrimSpace(ranAndClazz[0])
-	log.Printf("Stored ran: %s, Request ran: %s", storedRan, ran)
 
-	if storedRan != ran {
+	log.Printf("Stored ran: %s, Request ran: %s", storedRan, *req.RanCode)
+
+	if storedRan != *req.RanCode {
 		return errors.New("二维码无效: 邀请码不匹配")
 	}
 
