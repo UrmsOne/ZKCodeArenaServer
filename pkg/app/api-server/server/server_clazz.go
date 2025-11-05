@@ -47,6 +47,8 @@ func (s *Server) RegisterClazz(g *gin.RouterGroup) {
 			jwtGroup.DELETE("/task/relationIds", s.RemoveTaskRelationIds)
 			// 检查任务完成情况接口
 			jwtGroup.POST("/task/completion", s.PageQueryTaskCompletion)
+			// 分页查询任务完成情况接口
+
 			// 复制任务接口
 			jwtGroup.POST("/task/copy", s.CopyTaskToClass)
 
@@ -134,15 +136,14 @@ func (s *Server) refreshQrcode(c *gin.Context) {
 // @Tags         班级
 // @Accept       json
 // @Produce      json
-// @Param        ran query string true "随机值"
-// @Param        clazzId query string true "班级ID"
+// @Param        request body models.JoinClazzRequest true "加入班级请求"
 // @Success      200 {object} utils.Response "加入成功"
 // @Failure      400 {object} models.ErrorResponse "请求参数错误"
 // @Security     BearerAuth
 // @Router       /clazzes/join [post]
 func (s *Server) JoinClass(c *gin.Context) {
 	var req models.JoinClazzRequest
-	if err := c.ShouldBindQuery(&req); err != nil {
+	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
 	}
@@ -629,7 +630,7 @@ func (s *Server) GetTasksByClazzId(c *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Param        taskId path string true "任务ID"
-// @Success      200 {object} utils.Response{data=models.Task} "任务详情"
+// @Success      200 {object} utils.Response{data=models.TaskResponse} "任务详情"
 // @Failure      400 {object} models.ErrorResponse "请求参数错误"
 // @Security     BearerAuth
 // @Router       /clazzes/task/{taskId} [get]

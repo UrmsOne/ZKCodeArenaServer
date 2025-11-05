@@ -255,8 +255,8 @@ type UpdateClazzRequest struct {
 
 // JoinClazzRequest 加入班级请求
 type JoinClazzRequest struct {
-	ClazzID string  `json:"clazz_id" form:"clazzId" binding:"required"`
-	RanCode *string `json:"ran_code,omitempty" form:"ran_code,omitempty"`
+	ClazzID string  `json:"clazz_id" binding:"required"`
+	RanCode *string `json:"invite_code,omitempty"`
 }
 
 // AddClazzMemberRequest 添加班级成员请求
@@ -273,18 +273,17 @@ type RemoveClazzMembersRequest struct {
 
 // GetClazzResponse 获取班级响应
 type GetClazzResponse struct {
-	ID            primitive.ObjectID   `bson:"_id,omitempty" json:"id"`
-	Name          string               `bson:"name" json:"name" binding:"required"`
-	Description   string               `bson:"description,omitempty" json:"description,omitempty"`
-	CourseId      primitive.ObjectID   `bson:"course_id" json:"course_id" binding:"required"`
-	Schedule      string               `bson:"schedule,omitempty" json:"schedule,omitempty"`
-	MemberIDs     []primitive.ObjectID `bson:"member_ids,omitempty" json:"member_ids,omitempty"`
-	TeacherIds    []primitive.ObjectID `bson:"teacher_ids,omitempty" json:"teacher_ids,omitempty"`
-	RequireInvite bool                 `bson:"require_invite" json:"require_invite"`
-	MaxMembers    int                  `bson:"max_members,omitempty" json:"max_members,omitempty"`
-	AddNums       int                  `bson:"add_nums" json:"add_nums"`
-	Status        ClassStatus          `bson:"status" json:"status"`
-	CTime         time.Time            `bson:"ctime" json:"ctime"`
+	ID            primitive.ObjectID `bson:"_id,omitempty" json:"id"`
+	Name          string             `bson:"name" json:"name" binding:"required"`
+	Description   string             `bson:"description,omitempty" json:"description,omitempty"`
+	CourseId      primitive.ObjectID `bson:"course_id" json:"course_id" binding:"required"`
+	Schedule      string             `bson:"schedule,omitempty" json:"schedule,omitempty"`
+	Teachers      []UserProfile      `bson:"-" json:"teachers,omitempty"` // 教师完整信息列表
+	RequireInvite bool               `bson:"require_invite" json:"require_invite"`
+	MaxMembers    int                `bson:"max_members,omitempty" json:"max_members,omitempty"`
+	AddNums       int                `bson:"add_nums" json:"add_nums"`
+	Status        ClassStatus        `bson:"status" json:"status"`
+	CTime         time.Time          `bson:"ctime" json:"ctime"`
 }
 
 // AddClazzTeachersRequest 班级添加教师请求

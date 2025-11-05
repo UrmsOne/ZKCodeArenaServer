@@ -10,10 +10,12 @@ package service
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
 	"math/rand/v2"
+	"strings"
 	"time"
 	"zk-code-arena-server/pkg/models"
 	"zk-code-arena-server/pkg/utils"
@@ -50,6 +52,7 @@ func (s2 *ClazzService) RefreshQrcode(userId string, courseId string, clazzId st
 		}
 		return nil, err
 	}
+
 	ran := fmt.Sprintf("%d,%s", rand.Int(), clazzId)
 	encode, err := qrcode.Encode(ran, qrcode.Medium, 256)
 	if err != nil {
@@ -162,7 +165,7 @@ func (s *ClazzService) CreateClass(ctx context.Context, req *models.CreateClazzR
 		}
 		base64QRCode := base64.StdEncoding.EncodeToString(encode)
 		err = utils.RedisClient.HSet(ctx, "clazz_qrcode"+id.Hex(), "qrcode", base64QRCode, "ran", ran).Err()
-		utils.RedisClient.Expire(ctx, "clazz_qrcode"+ran, 30*time.Minute)
+		utils.RedisClient.Expire(ctx, "clazz_qrcode"+id.Hex(), 30*time.Minute)
 	}
 
 	return &models.ClazzResponse{
@@ -182,13 +185,40 @@ func (s *ClazzService) GetClazzByID(ctx context.Context, clazzID string, userID 
 		return nil, errors.New("无效的用户ID")
 	}
 
-	coll := utils.GetCollection("clazzes")
-	var clazz models.GetClazzResponse
-	if err = coll.FindOne(ctx, bson.M{"_id": clazzObjID}).Decode(&clazz); err != nil {
+	// 尝试从Redis缓存中获取班级详情
+	cacheKey := "clazz_detail:" + clazzID + ":" + userID
+	cachedData, err := utils.RedisClient.Get(ctx, cacheKey).Result()
+	if err == nil && cachedData != "" {
+		// 缓存命中，直接返回缓存数据
+		var response models.GetClazzResponse
+		if err := json.Unmarshal([]byte(cachedData), &response); err == nil {
+			return &response, nil
+		}
+		// 如果反序列化失败，继续执行下面的逻辑
+	}
+
+	// 先查询班级基本信息
+	clazzColl := utils.GetCollection("clazzes")
+	var clazz models.Clazz
+	if err = clazzColl.FindOne(ctx, bson.M{"_id": clazzObjID}).Decode(&clazz); err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			return nil, errors.New("班级不存在")
 		}
 		return nil, err
+	}
+
+	// 构造返回的响应对象
+	response := &models.GetClazzResponse{
+		ID:            clazz.ID,
+		Name:          clazz.Name,
+		Description:   clazz.Description,
+		CourseId:      clazz.CourseId,
+		Schedule:      clazz.Schedule,
+		RequireInvite: clazz.RequireInvite,
+		MaxMembers:    clazz.MaxMembers,
+		AddNums:       clazz.AddNums,
+		Status:        clazz.Status,
+		CTime:         clazz.CTime,
 	}
 
 	courseObjID := clazz.CourseId
@@ -214,7 +244,37 @@ func (s *ClazzService) GetClazzByID(ctx context.Context, clazzID string, userID 
 		return nil, errors.New("权限不足")
 	}
 
-	return &clazz, nil
+	// 获取班级教师信息
+	var teachers []models.User
+	if len(clazz.TeacherIds) > 0 {
+		userColl := utils.GetCollection("users")
+		teacherFilter := bson.M{
+			"_id": bson.M{"$in": clazz.TeacherIds},
+		}
+		teacherCursor, err := userColl.Find(ctx, teacherFilter)
+		if err != nil {
+			return nil, errors.New("查询教师信息失败: " + err.Error())
+		}
+		defer teacherCursor.Close(ctx)
+
+		if err = teacherCursor.All(ctx, &teachers); err != nil {
+			return nil, errors.New("解析教师信息失败: " + err.Error())
+		}
+	}
+
+	// 转换为用户资料数组
+	response.Teachers = make([]models.UserProfile, 0, len(teachers))
+	for _, teacher := range teachers {
+		response.Teachers = append(response.Teachers, *teacher.ToProfile())
+	}
+
+	// 将结果缓存到Redis中，缓存10分钟
+	cacheData, err := json.Marshal(response)
+	if err == nil {
+		utils.RedisClient.Set(ctx, cacheKey, cacheData, 10*time.Minute)
+	}
+
+	return response, nil
 }
 
 // UpdateClazzInfo 更新班级信息（不包括教师和成员）
@@ -1281,12 +1341,20 @@ func (s *ClazzService) JoinClazz(ctx context.Context, req models.JoinClazzReques
 	key := "clazz_qrcode" + req.ClazzID
 	storedRan, err := utils.RedisClient.HGet(ctx, key, "ran").Result()
 	if err != nil {
+		log.Printf("从Redis获取二维码失败: %v", err)
 		return errors.New("二维码已过期或不存在")
 	}
 
 	// 验证ran值是否匹配
-	if req.RanCode == nil || storedRan != *req.RanCode {
-		return errors.New("二维码无效")
+	if req.RanCode == nil {
+		return errors.New("二维码无效: 请求中未提供邀请码")
+	}
+	ranAndClazz := strings.Split(*req.RanCode, ",")
+	ran := strings.TrimSpace(ranAndClazz[0])
+	log.Printf("Stored ran: %s, Request ran: %s", storedRan, ran)
+
+	if storedRan != ran {
+		return errors.New("二维码无效: 邀请码不匹配")
 	}
 
 	// 执行加入班级的逻辑
@@ -1373,6 +1441,11 @@ func (s *ClazzService) FinishTask(ctx context.Context, req models.FinishTaskRequ
 		return errors.New("无效的关系ID")
 	}
 
+	clazzObjId, err := primitive.ObjectIDFromHex(req.ClazzID)
+	if err != nil {
+		return errors.New("无效班级")
+	}
+
 	userObjId, err := primitive.ObjectIDFromHex(userID)
 	if err != nil {
 		return errors.New("无效的用户ID")
@@ -1381,7 +1454,7 @@ func (s *ClazzService) FinishTask(ctx context.Context, req models.FinishTaskRequ
 	// 获取班级信息
 	coll := utils.GetCollection("clazzes")
 	var clazz models.Clazz
-	if err = coll.FindOne(ctx, bson.M{"_id": relationObjId}).Decode(&clazz); err != nil {
+	if err = coll.FindOne(ctx, bson.M{"_id": clazzObjId}).Decode(&clazz); err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			return errors.New("班级不存在")
 		}
@@ -1391,8 +1464,9 @@ func (s *ClazzService) FinishTask(ctx context.Context, req models.FinishTaskRequ
 	// 检查用户是否是班级成员（通过查询学生班级关联表）
 	count, err := utils.GetCollection("student_classes").CountDocuments(ctx, bson.M{
 		"student_id": userObjId,
-		"class_id":   relationObjId,
+		"class_id":   clazzObjId,
 	})
+
 	if err != nil {
 		return errors.New("检查班级成员失败: " + err.Error())
 	}
@@ -1434,7 +1508,7 @@ func (s *ClazzService) FinishTask(ctx context.Context, req models.FinishTaskRequ
 
 	// 如果已经有完成记录，直接返回
 	if count > 0 {
-		return errors.New("您已经完成过该题目")
+		return nil
 	}
 
 	// 在 user_relation_question 表中添加完成记录
@@ -1460,6 +1534,7 @@ func (s *ClazzService) FinishTask(ctx context.Context, req models.FinishTaskRequ
 		"user_id": userObjId,
 		"state":   1, // 1 表示已完成
 	})
+
 	if err != nil {
 		// 记录错误但不中断响应
 		log.Printf("查询用户完成题目数量失败: %v", err)
