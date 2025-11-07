@@ -11,7 +11,6 @@ import (
 	"strings"
 	"time"
 	"zk-code-arena-server/conf"
-	"zk-code-arena-server/pkg/models"
 	"zk-code-arena-server/pkg/utils"
 
 	"github.com/gin-gonic/gin"
@@ -92,28 +91,5 @@ func JWTMiddleware() gin.HandlerFunc {
 		c.Set("claims", claims)
 
 		c.Next()
-	}
-}
-
-// RequireRole 角色权限中间件
-func RequireRole(roles ...models.UserRole) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		role, exists := c.Get("role")
-		if !exists {
-			utils.UnauthorizedResponse(c, "未认证用户")
-			c.Abort()
-			return
-		}
-
-		userRole := models.UserRole(role.(string))
-		for _, requiredRole := range roles {
-			if userRole == requiredRole {
-				c.Next()
-				return
-			}
-		}
-
-		utils.ForbiddenResponse(c, "权限不足")
-		c.Abort()
 	}
 }

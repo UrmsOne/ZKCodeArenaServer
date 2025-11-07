@@ -136,7 +136,8 @@ func (s *Server) refreshQrcode(c *gin.Context) {
 // @Tags         班级
 // @Accept       json
 // @Produce      json
-// @Param        request body models.JoinClazzRequest true "加入班级请求"
+// @Param        clazz_id query string true "班级ID"
+// @Param        invite_code query string false "邀请码"
 // @Success      200 {object} utils.Response "加入成功"
 // @Failure      400 {object} models.ErrorResponse "请求参数错误"
 // @Security     BearerAuth

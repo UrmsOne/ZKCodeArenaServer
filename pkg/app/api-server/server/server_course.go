@@ -31,11 +31,7 @@ func (s *Server) RegisterCourse(g *gin.RouterGroup) {
 			jwtGroup.POST("/query", s.PageQueryCourse)
 			jwtGroup.POST("/add/teachers", s.addCourseTeacher)
 			jwtGroup.DELETE("/teachers", s.removeCourseTeacher)
-			// 需要老师权限的路由
-			teacherGroup := jwtGroup.Use(middleware.RequireRole(models.RoleTeacher))
-			{
-				teacherGroup.POST("", s.CreateCourse) // 创建课程需要老师权限
-			}
+			jwtGroup.POST("", s.CreateCourse)
 		}
 	}
 }
@@ -147,9 +143,22 @@ func (s *Server) removeCourseTeacher(c *gin.Context) {
 // @Param        request body models.CreateCourseRequest true "课程信息"
 // @Success      200 {object} utils.Response{data=string} "创建成功，返回课程ID"
 // @Failure      400 {object} models.ErrorResponse "请求参数错误"
+// @Failure      403 {object} models.ErrorResponse "权限不足"
 // @Security     BearerAuth
 // @Router       /courses [post]
 func (s *Server) CreateCourse(c *gin.Context) {
+	// 检查权限：只有教师和管理员可以创建课程
+	role, exists := c.Get("role")
+	if !exists {
+		utils.UnauthorizedResponse(c, "需要登录")
+		return
+	}
+	userRole := role.(string)
+	if userRole != string(models.RoleAdmin) && userRole != string(models.RoleTeacher) {
+		utils.ForbiddenResponse(c, "权限不足，只有教师和管理员可以创建课程")
+		return
+	}
+
 	var req models.CreateCourseRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.BadRequestResponse(c, err.Error())
