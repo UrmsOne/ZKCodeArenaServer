@@ -23,14 +23,14 @@ import (
 func (s *Server) RegisterProblem(g *gin.RouterGroup) {
 	// 每日一题（独立路由，不在problem组下）
 	g.GET("/daily-problem", s.GetDailyProblem) // 获取每日推荐题目
-	
+
 	// 用户端题目路由组
 	problemGroup := g.Group("/problem")
 	{
 		// 公开路由
-		problemGroup.GET("/", s.GetProblems)          // 获取题目列表（用户端）
-		problemGroup.GET("/search", s.SearchProblems) // 搜索题目
-		problemGroup.GET("/:id", s.GetProblem)        // 获取题目详情
+		problemGroup.GET("/", s.GetProblems)                // 获取题目列表（用户端）
+		problemGroup.GET("/search", s.SearchProblems)       // 搜索题目
+		problemGroup.GET("/:id", s.GetProblem)              // 获取题目详情
 		problemGroup.GET("/:id/detail", s.GetProblemDetail) // 获取题目详情聚合信息
 	}
 
@@ -45,7 +45,7 @@ func (s *Server) RegisterProblem(g *gin.RouterGroup) {
 	}
 
 	// 管理员专用路由组
-	adminGroup := g.Group("/admin/problems").Use(middleware.JWTMiddleware(), middleware.RequireRole(models.RoleAdmin))
+	adminGroup := g.Group("/admin/problems").Use(middleware.JWTMiddleware())
 	{
 		adminGroup.GET("/", s.GetProblemsForAdmin) // 获取题目列表（管理员端）
 	}
@@ -82,7 +82,7 @@ func (s *Server) GetProblems(c *gin.Context) {
 
 	// 获取用户ID（可选，用于获取用户提交状态）
 	var userObjectID *primitive.ObjectID
- 	authHeader := c.GetHeader("Authorization")
+	authHeader := c.GetHeader("Authorization")
 	if authHeader != "" {
 		// 有token，尝试解析
 		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
@@ -139,6 +139,13 @@ func (s *Server) GetProblems(c *gin.Context) {
 // @Router       /admin/problems [get]
 // @Security     BearerAuth
 func (s *Server) GetProblemsForAdmin(c *gin.Context) {
+	// 检查用户是否为管理员
+	role, exists := c.Get("role")
+	if !exists || role.(string) != string(models.RoleAdmin) {
+		utils.ForbiddenResponse(c, "权限不足，只有管理员可以访问")
+		return
+	}
+
 	// 参数解析和验证
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "10"))
@@ -293,7 +300,7 @@ func (s *Server) CreateProblem(c *gin.Context) {
 		utils.ForbiddenResponse(c, "权限不足，只有管理员和教师可以创建题目")
 		return
 	}
-	
+
 	// 2. 绑定和验证请求参数
 	var req models.CreateProblemRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
