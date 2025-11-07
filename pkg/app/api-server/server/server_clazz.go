@@ -143,7 +143,7 @@ func (s *Server) refreshQrcode(c *gin.Context) {
 // @Router       /clazzes/join [post]
 func (s *Server) JoinClass(c *gin.Context) {
 	var req models.JoinClazzRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
+	if err := c.ShouldBindQuery(&req); err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
 	}
