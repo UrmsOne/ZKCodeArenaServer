@@ -17,16 +17,13 @@ import (
 type UserRole string
 
 const (
-	RoleAdmin   UserRole = "admin"   // 系统管理员
-	RoleTeacher UserRole = "teacher" // 老师
-	RoleStudent UserRole = "student" // 学生
-<<<<<<< HEAD
-	RoleContest UserRole = "contest" // 竞赛发起者
-	RoleGuest   UserRole = "guest"   // 游客
+	RoleAdmin    UserRole = "admin"    // 系统管理员
+	RoleTeacher  UserRole = "teacher"  // 老师
+	RoleStudent  UserRole = "student"  // 学生
+	RoleContest  UserRole = "contest"  // 竞赛发起者
+	RoleGuest    UserRole = "guest"    // 游客
 	RoleExternal UserRole = "external" // 校外人员
-=======
-	RoleOther   UserRole = "other"   // 外校人员
->>>>>>> f21be04d50c0039f17fbf66c1465c12e074f7c61
+	RoleOther    UserRole = "other"    // 外校人员
 )
 
 // User 用户模型
