@@ -1305,6 +1305,7 @@ func (s *ClazzService) JoinClazz(ctx context.Context, req models.JoinClazzReques
 		return errors.New("无效的用户ID")
 	}
 
+	log.Printf("解析班级Obj: %s", req.ClazzID)
 	clazzObjID, err := primitive.ObjectIDFromHex(req.ClazzID)
 	if err != nil {
 		return errors.New("无效的班级ID")
@@ -1353,13 +1354,13 @@ func (s *ClazzService) JoinClazz(ctx context.Context, req models.JoinClazzReques
 	}
 
 	// 验证ran值是否匹配
-	if req.RanCode == nil {
+	if req.InviteCode == nil {
 		return errors.New("二维码无效: 请求中未提供邀请码")
 	}
 
-	log.Printf("Stored ran: %s, Request ran: %s", storedRan, *req.RanCode)
+	log.Printf("Stored ran: %s, Request ran: %s", storedRan, *req.InviteCode)
 
-	if storedRan != *req.RanCode {
+	if storedRan != *req.InviteCode {
 		return errors.New("二维码无效: 邀请码不匹配")
 	}
 
