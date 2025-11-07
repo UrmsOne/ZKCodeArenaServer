@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"log"
 	"math/rand/v2"
+	"strings"
 	"time"
 	"zk-code-arena-server/pkg/models"
 	"zk-code-arena-server/pkg/utils"
@@ -1360,7 +1361,14 @@ func (s *ClazzService) JoinClazz(ctx context.Context, req models.JoinClazzReques
 
 	log.Printf("Stored ran: %s, Request ran: %s", storedRan, *req.InviteCode)
 
-	if storedRan != *req.InviteCode {
+	// 解析存储的ran值，格式为 "random_number,clazz_id"
+	storedParts := strings.Split(storedRan, ",")
+	if len(storedParts) != 2 {
+		return errors.New("二维码数据格式错误")
+	}
+
+	// 只比较随机数部分
+	if storedParts[0] != *req.InviteCode {
 		return errors.New("二维码无效: 邀请码不匹配")
 	}
 
