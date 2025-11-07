@@ -1105,25 +1105,32 @@ func (s *CourseService) RemoveStudentFromClass(ctx context.Context, studentID, c
 		return errors.New("无效的课程ID")
 	}
 
-	// 删除学生班级关联记录
+	// 更新学生班级关联记录状态为dropped而不是直接删除
 	coll := utils.GetCollection("student_classes")
 	filter := bson.M{
 		"student_id": studentObjID,
 		"class_id":   classObjID,
 		"course_id":  courseObjID,
+		"status":     models.StudentClassStatusActive, // 只更新活跃状态的记录
 	}
-	result, err := coll.DeleteOne(ctx, filter)
+	update := bson.M{
+		"$set": bson.M{
+			"status": models.StudentClassStatusDropped,
+			"mtime":  time.Now(),
+		},
+	}
+	result, err := coll.UpdateOne(ctx, filter, update)
 	if err != nil {
 		return errors.New("从班级移除学生失败: " + err.Error())
 	}
 
-	if result.DeletedCount == 0 {
+	if result.MatchedCount == 0 {
 		return errors.New("学生不在该班级中")
 	}
 
 	// 同时更新班级的成员列表
 	clazzColl := utils.GetCollection("clazzes")
-	update := bson.M{
+	updateClazz := bson.M{
 		"$pull": bson.M{
 			"member_ids": studentObjID,
 		},
@@ -1135,10 +1142,10 @@ func (s *CourseService) RemoveStudentFromClass(ctx context.Context, studentID, c
 		},
 	}
 
-	_, err = clazzColl.UpdateOne(ctx, bson.M{"_id": classObjID}, update)
+	_, err = clazzColl.UpdateOne(ctx, bson.M{"_id": classObjID}, updateClazz)
 	if err != nil {
-		// 注意：这里如果更新失败，学生班级关联记录已经被删除，数据会不一致
-		// 在生产环境中应该使用事务来保证一致性
+		// 回滚学生班级关联记录状态
+		_, _ = coll.UpdateOne(ctx, filter, bson.M{"$set": bson.M{"status": models.StudentClassStatusActive}})
 		return errors.New("更新班级成员失败: " + err.Error())
 	}
 
@@ -1154,7 +1161,7 @@ func (s *CourseService) GetStudentClasses(ctx context.Context, studentID string)
 
 	// 查询学生的所有班级关联记录
 	coll := utils.GetCollection("student_classes")
-	cursor, err := coll.Find(ctx, bson.M{"student_id": studentObjID, "status": "active"})
+	cursor, err := coll.Find(ctx, bson.M{"student_id": studentObjID, "status": models.StudentClassStatusActive})
 	if err != nil {
 		return nil, errors.New("查询学生班级失败: " + err.Error())
 	}
@@ -1213,7 +1220,7 @@ func (s *CourseService) GetClassStudents(ctx context.Context, classID string) ([
 
 	// 查询班级的所有学生关联记录
 	coll := utils.GetCollection("student_classes")
-	cursor, err := coll.Find(ctx, bson.M{"class_id": classObjID, "status": "active"})
+	cursor, err := coll.Find(ctx, bson.M{"class_id": classObjID, "status": models.StudentClassStatusActive})
 	if err != nil {
 		return nil, errors.New("查询班级学生失败: " + err.Error())
 	}

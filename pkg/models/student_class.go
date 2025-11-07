@@ -13,6 +13,13 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+type StudentClassStatus string
+
+const (
+	StudentClassStatusActive  StudentClassStatus = "active"
+	StudentClassStatusDropped StudentClassStatus = "dropped"
+)
+
 // StudentClass 学生班级关联模型
 type StudentClass struct {
 	ID        primitive.ObjectID `bson:"_id,omitempty" json:"id"`
@@ -22,7 +29,7 @@ type StudentClass struct {
 	// 加入时间
 	JoinTime time.Time `bson:"join_time" json:"join_time"`
 	// 状态：active(活跃), dropped(退课)
-	Status string `bson:"status" json:"status"`
+	Status StudentClassStatus `bson:"status" json:"status"`
 	// 创建时间
 	CTime time.Time `bson:"ctime" json:"ctime"`
 	// 更新时间
@@ -40,9 +47,9 @@ type StudentClassResponse struct {
 	// 班级信息
 	Class *Clazz `json:"class,omitempty"`
 	// 课程信息
-	Course   *Course   `json:"course,omitempty"`
-	JoinTime time.Time `json:"join_time"`
-	Status   string    `json:"status"`
-	CTime    time.Time `json:"ctime"`
-	MTime    time.Time `json:"mtime"`
+	Course   *Course            `json:"course,omitempty"`
+	JoinTime time.Time          `json:"join_time"`
+	Status   StudentClassStatus `json:"status"`
+	CTime    time.Time          `json:"ctime"`
+	MTime    time.Time          `json:"mtime"`
 }
