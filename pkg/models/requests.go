@@ -137,6 +137,28 @@ type BatchCreateTestCasesRequest struct {
 	TestCases []TestCase `json:"test_cases" binding:"required,min=1"`
 }
 
+// BatchCreateProblemsRequest 批量创建题目请求
+type BatchCreateProblemsRequest struct {
+	Problems []CreateProblemRequest `json:"problems" binding:"required,min=1,max=100"` // 限制最多100个题目
+}
+
+// BatchCreateProblemResult 批量创建题目结果
+type BatchCreateProblemResult struct {
+	Index     int    `json:"index"`     // 题目在请求中的索引
+	Title     string `json:"title"`     // 题目标题
+	Success   bool   `json:"success"`   // 是否创建成功
+	ProblemID string `json:"problem_id,omitempty"` // 成功时的题目ID
+	Error     string `json:"error,omitempty"`     // 失败时的错误信息
+}
+
+// BatchCreateProblemsResponse 批量创建题目响应
+type BatchCreateProblemsResponse struct {
+	SuccessCount int                        `json:"success_count"` // 成功数量
+	FailCount    int                        `json:"fail_count"`    // 失败数量
+	TotalCount   int                        `json:"total_count"`   // 总数量
+	Results      []BatchCreateProblemResult `json:"results"`       // 详细结果
+}
+
 // ==================== 课程模块请求 ====================
 
 // CreateCourseRequest 创建课程请求

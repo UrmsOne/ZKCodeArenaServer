@@ -8,6 +8,7 @@
 package server
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -37,9 +38,10 @@ func (s *Server) RegisterProblem(g *gin.RouterGroup) {
 	// 需要认证的路由
 	securedGroup := problemGroup.Group("/").Use(middleware.JWTMiddleware())
 	{
-		securedGroup.POST("/", s.CreateProblem)      // 创建题目
-		securedGroup.PUT("/:id", s.UpdateProblem)    // 更新题目
-		securedGroup.DELETE("/:id", s.DeleteProblem) // 删除题目
+		securedGroup.POST("/", s.CreateProblem)         // 创建题目
+		securedGroup.POST("/batch", s.BatchCreateProblems) // 批量创建题目
+		securedGroup.PUT("/:id", s.UpdateProblem)       // 更新题目
+		securedGroup.DELETE("/:id", s.DeleteProblem)    // 删除题目
 
 		securedGroup.POST("/:id/run", middleware.CodeRunRateLimitMiddleware(), s.RunCode) // 运行代码测试
 	}
@@ -358,6 +360,78 @@ func (s *Server) CreateProblem(c *gin.Context) {
 
 	// 8. 返回成功响应
 	utils.SuccessResponse(c, problem)
+}
+
+// BatchCreateProblems godoc
+// @Summary      批量创建题目（教师/管理员）
+// @Description  批量创建多个题目，单次最多50个，部分失败不影响整体创建
+// @Tags         题目
+// @Accept       json
+// @Produce      json
+// @Param        request body models.BatchCreateProblemsRequest true "批量题目信息"
+// @Success      200 {object} utils.Response{data=models.BatchCreateProblemsResponse} "批量创建结果"
+// @Failure      400 {object} map[string]interface{} "请求参数错误或业务规则错误"
+// @Failure      401 {object} map[string]interface{} "需要登录"
+// @Failure      403 {object} map[string]interface{} "权限不足"
+// @Failure      500 {object} map[string]interface{} "创建失败"
+// @Security     BearerAuth
+// @Router       /problems/batch [post]
+func (s *Server) BatchCreateProblems(c *gin.Context) {
+	// 1. 检查权限：只有管理员和教师可以批量创建题目
+	role, exists := c.Get("role")
+	if !exists {
+		utils.UnauthorizedResponse(c, "需要登录")
+		return
+	}
+	userRole := role.(string)
+	if userRole != string(models.RoleAdmin) && userRole != string(models.RoleTeacher) {
+		utils.ForbiddenResponse(c, "权限不足，只有管理员和教师可以批量创建题目")
+		return
+	}
+
+	// 2. 绑定和验证请求参数
+	var req models.BatchCreateProblemsRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.BadRequestResponse(c, "请求参数错误: "+err.Error())
+		return
+	}
+
+	// 3. 业务规则预检：限制批量创建数量
+	if len(req.Problems) == 0 {
+		utils.BadRequestResponse(c, "批量创建题目列表不能为空")
+		return
+	}
+	if len(req.Problems) > 50 {
+		utils.BadRequestResponse(c, "单次批量创建题目数量不能超过50个")
+		return
+	}
+
+	// 4. 获取当前用户ID并设置到每个题目中
+	userID, _ := c.Get("user_id")
+	currentUserID, _ := primitive.ObjectIDFromHex(userID.(string))
+	
+	for i := range req.Problems {
+		req.Problems[i].CreatedBy = currentUserID
+		
+		// 业务规则预检：草稿状态不能公开
+		if req.Problems[i].Status != nil && *req.Problems[i].Status == models.StatusDraft {
+			if req.Problems[i].IsPublic != nil && *req.Problems[i].IsPublic {
+				utils.BadRequestResponse(c, fmt.Sprintf("第%d个题目：草稿状态的题目不能设为公开", i+1))
+				return
+			}
+		}
+	}
+
+	// 5. 调用Service层批量创建
+	ctx := c.Request.Context()
+	response, err := s.svc.ProblemService.BatchCreateProblems(ctx, &req)
+	if err != nil {
+		utils.InternalServerErrorResponse(c, "批量创建题目失败: "+err.Error())
+		return
+	}
+
+	// 6. 返回成功响应
+	utils.SuccessResponse(c, response)
 }
 
 // UpdateProblem godoc

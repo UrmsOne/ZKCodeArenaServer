@@ -570,3 +570,79 @@ func (s *ProblemService) GetProblemDetail(ctx context.Context, problemID primiti
 
 	return response, nil
 }
+
+// BatchCreateProblems 批量创建题目
+func (s *ProblemService) BatchCreateProblems(ctx context.Context, req *models.BatchCreateProblemsRequest) (*models.BatchCreateProblemsResponse, error) {
+	// 业务逻辑：记录批量创建日志
+	utils.Logger.Infof("BatchCreateProblems: 开始批量创建题目, count=%d", len(req.Problems))
+	
+	// 初始化响应
+	response := &models.BatchCreateProblemsResponse{
+		SuccessCount: 0,
+		FailCount:     0,
+		TotalCount:    len(req.Problems),
+		Results:       make([]models.BatchCreateProblemResult, 0, len(req.Problems)),
+	}
+	
+	// 遍历创建每个题目
+	for i, problemReq := range req.Problems {
+		// 创建Problem模型
+		problem := &models.Problem{
+			Title:        problemReq.Title,
+			Description:  problemReq.Description,
+			Input:        problemReq.Input,
+			Output:       problemReq.Output,
+			SampleInput:  problemReq.SampleInput,
+			SampleOutput: problemReq.SampleOutput,
+			Hint:         problemReq.Hint,
+			Source:       problemReq.Source,
+			Author:       problemReq.Author,
+			Difficulty:   problemReq.Difficulty,
+			Tags:         problemReq.Tags,
+			CreatedBy:    problemReq.CreatedBy,
+		}
+		
+		// 设置可选字段
+		if problemReq.TimeLimit != nil {
+			problem.TimeLimit = *problemReq.TimeLimit
+		}
+		if problemReq.MemoryLimit != nil {
+			problem.MemoryLimit = *problemReq.MemoryLimit
+		}
+		if problemReq.Status != nil {
+			problem.Status = *problemReq.Status
+		}
+		if problemReq.IsPublic != nil {
+			problem.IsPublic = *problemReq.IsPublic
+		}
+		
+		// 调用单个创建方法
+		err := s.CreateProblem(ctx, problem)
+		
+		// 构建结果
+		result := models.BatchCreateProblemResult{
+			Index:     i,
+			Title:     problemReq.Title,
+			Success:   err == nil,
+			ProblemID: problem.ID.Hex(),
+		}
+		
+		if err != nil {
+			result.Error = err.Error()
+			response.FailCount++
+			utils.Logger.Errorf("BatchCreateProblems: 题目创建失败, index=%d, title=%s, error=%v", 
+				i, problemReq.Title, err)
+		} else {
+			response.SuccessCount++
+			utils.Logger.Infof("BatchCreateProblems: 题目创建成功, index=%d, title=%s, id=%s", 
+				i, problemReq.Title, problem.ID.Hex())
+		}
+		
+		response.Results = append(response.Results, result)
+	}
+	
+	utils.Logger.Infof("BatchCreateProblems: 批量创建完成, total=%d, success=%d, fail=%d", 
+		response.TotalCount, response.SuccessCount, response.FailCount)
+	
+	return response, nil
+}
