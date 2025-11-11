@@ -72,7 +72,8 @@ docker-compose up -d
 
 1. 安装 Air
 ```bash
-go install github.com/cosmtrek/air@latest
+# 使用兼容 Go 1.23 的版本
+go install github.com/air-verse/air@v1.49.0
 ```
 
 2. 启动开发服务器

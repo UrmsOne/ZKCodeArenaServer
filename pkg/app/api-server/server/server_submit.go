@@ -8,12 +8,14 @@
 package server
 
 import (
-	"github.com/gin-gonic/gin"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"strconv"
 	"zk-code-arena-server/pkg/models"
+	"zk-code-arena-server/pkg/queue"
 	"zk-code-arena-server/pkg/utils"
 	"zk-code-arena-server/pkg/utils/middleware"
+
+	"github.com/gin-gonic/gin"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 // RegisterSubmit 注册提交相关路由
@@ -23,22 +25,33 @@ func (s *Server) RegisterSubmit(g *gin.RouterGroup) {
 		// 需要认证的路由
 		submitGroup.Use(middleware.JWTMiddleware())
 		{
-			submitGroup.POST("/", s.SubmitCode)  // 提交代码
-			submitGroup.GET("/", s.GetSubmits)   // 获取提交列表
-			submitGroup.GET("/:id", s.GetSubmit) // 获取提交详情
+			submitGroup.POST("/", s.SubmitCode)        // 提交代码
+			submitGroup.GET("/", s.GetSubmits)         // 获取提交列表
+			submitGroup.GET("/:id", s.GetSubmit)       // 获取提交详情
+			submitGroup.GET("/:id/status", s.GetSubmitStatus) // 获取提交状态（轻量级）
 		}
 	}
 }
 
-// SubmitCode 提交代码
+// SubmitCode godoc
+// @Summary      提交代码
+// @Description  提交代码进行判题
+// @Tags         提交
+// @Accept       json
+// @Produce      json
+// @Param        request body models.SubmitCodeRequest true "提交信息"
+// @Success      200 {object} utils.Response{data=models.Submit} "提交记录"
+// @Failure      400 {object} map[string]interface{} "请求参数错误"
+// @Failure      401 {object} map[string]interface{} "未认证用户"
+// @Failure      404 {object} map[string]interface{} "题目不存在"
+// @Failure      500 {object} map[string]interface{} "提交失败"
+// @Security     BearerAuth
+// @Router       /submit [post]
 func (s *Server) SubmitCode(c *gin.Context) {
-	var submitReq struct {
-		ProblemID primitive.ObjectID `json:"problem_id" binding:"required"`
-		Code      string             `json:"code" binding:"required"`
-		Language  string             `json:"language" binding:"required"`
-	}
 
-	if err := c.ShouldBindJSON(&submitReq); err != nil {
+	var submitReq models.SubmitCodeRequest
+
+	if err := c.ShouldBindJSON(&submitReq); err != nil{
 		utils.BadRequestResponse(c, "请求参数错误: "+err.Error())
 		return
 	}
@@ -93,29 +106,27 @@ func (s *Server) SubmitCode(c *gin.Context) {
 		return
 	}
 
-	// 异步评测
-	go func() {
-		// 调用评测服务
-		result, err := s.svc.JudgeService.JudgeSubmit(ctx, submit, problem)
-		if err != nil {
-			// 评测失败，更新状态为系统错误
-			submit.Status = models.StatusSystemError
-			submit.Result = &models.JudgeResult{
-				Status:       models.StatusSystemError,
-				RuntimeError: err.Error(),
-			}
-		} else {
-			submit.Status = result.Status
-			submit.Result = result
+	// 构建判题任务
+	judgeTask := &queue.JudgeTask{
+		SubmitID:  submit.ID,
+		ProblemID: submit.ProblemID,
+		UserID:    submit.UserID,
+		Code:      submit.Code,
+		Language:  string(submit.Language),
+	}
+
+	// 推送判题任务到消息队列（异步评测）
+	if err := s.svc.JudgeService.SubmitTask(ctx, judgeTask); err != nil {
+		// 任务推送失败，更新状态为系统错误
+		submit.Status = models.StatusSystemError
+		submit.Result = &models.JudgeResult{
+			Status:       models.StatusSystemError,
+			RuntimeError: "任务推送失败: " + err.Error(),
 		}
-
-		// 更新提交记录
 		s.svc.SubmitService.UpdateSubmit(ctx, submit)
-
-		// 更新题目统计
-		isAC := result != nil && result.Status == models.StatusAccepted
-		s.svc.ProblemService.UpdateProblemStats(ctx, submitReq.ProblemID, isAC)
-	}()
+		utils.InternalServerErrorResponse(c, "判题任务推送失败: "+err.Error())
+		return
+	}
 
 	utils.SuccessResponse(c, gin.H{
 		"message":   "提交成功，正在评测中",
@@ -123,7 +134,22 @@ func (s *Server) SubmitCode(c *gin.Context) {
 	})
 }
 
-// GetSubmits 获取提交列表
+// GetSubmits godoc
+// @Summary      获取提交列表
+// @Description  分页获取提交记录（非管理员仅可查看自己的提交）
+// @Tags         提交
+// @Accept       json
+// @Produce      json
+// @Param        page query int false "页码" default(1)
+// @Param        page_size query int false "每页数量" default(10)
+// @Param        problem_id query string false "题目ID筛选"
+// @Param        user_id query string false "用户ID筛选（管理员可用）"
+// @Success      200 {object} utils.Response{data=object{submits=[]models.Submit,total=int64,page=int,page_size=int,total_page=int64}} "提交列表"
+// @Failure      400 {object} models.ErrorResponse "请求参数错误"
+// @Failure      401 {object} models.ErrorResponse "需要登录"
+// @Failure      500 {object} models.ErrorResponse "获取失败"
+// @Security     BearerAuth
+// @Router       /submit [get]
 func (s *Server) GetSubmits(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "10"))
@@ -186,7 +212,20 @@ func (s *Server) GetSubmits(c *gin.Context) {
 	})
 }
 
-// GetSubmit 获取提交详情
+// GetSubmit godoc
+// @Summary      获取提交详情
+// @Description  根据提交ID获取详细信息（管理员或提交者本人）
+// @Tags         提交
+// @Accept       json
+// @Produce      json
+// @Param        id path string true "提交ID"
+// @Success      200 {object} utils.Response{data=models.Submit} "提交详情"
+// @Failure      400 {object} models.ErrorResponse "无效的提交ID"
+// @Failure      401 {object} models.ErrorResponse "需要登录"
+// @Failure      403 {object} models.ErrorResponse "权限不足"
+// @Failure      404 {object} models.ErrorResponse "提交不存在"
+// @Security     BearerAuth
+// @Router       /submit/{id} [get]
 func (s *Server) GetSubmit(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := primitive.ObjectIDFromHex(idStr)
@@ -219,4 +258,61 @@ func (s *Server) GetSubmit(c *gin.Context) {
 	}
 
 	utils.SuccessResponse(c, submit)
+}
+
+// GetSubmitStatus godoc
+// @Summary      获取提交状态（轻量级）
+// @Description  获取提交的当前状态和进度信息，用于实时状态监控，比完整详情接口更轻量
+// @Tags         提交
+// @Accept       json
+// @Produce      json
+// @Param        id path string true "提交ID"
+// @Success      200 {object} utils.Response{data=models.SubmitStatusResponse} "提交状态信息"
+// @Failure      400 {object} map[string]interface{} "无效的提交ID"
+// @Failure      401 {object} map[string]interface{} "需要登录"
+// @Failure      403 {object} map[string]interface{} "权限不足"
+// @Failure      404 {object} map[string]interface{} "提交不存在"
+// @Security     BearerAuth
+// @Router       /submit/{id}/status [get]
+func (s *Server) GetSubmitStatus(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := primitive.ObjectIDFromHex(idStr)
+	if err != nil {
+		utils.BadRequestResponse(c, "无效的提交ID")
+		return
+	}
+
+	ctx := c.Request.Context()
+	
+	// 首先获取提交基本信息以进行权限检查
+	submit, err := s.svc.SubmitService.GetSubmitByID(ctx, id)
+	if err != nil {
+		utils.NotFoundResponse(c, "提交不存在")
+		return
+	}
+
+	// 检查权限：非管理员只能查看自己的提交
+	role, exists := c.Get("role")
+	if !exists {
+		utils.UnauthorizedResponse(c, "需要登录")
+		return
+	}
+
+	if role.(string) != string(models.RoleAdmin) {
+		currentUserID, _ := c.Get("user_id")
+		currentUserObjectID, _ := primitive.ObjectIDFromHex(currentUserID.(string))
+		if submit.UserID != currentUserObjectID {
+			utils.ForbiddenResponse(c, "只能查看自己的提交状态")
+			return
+		}
+	}
+
+	// 获取轻量级状态信息
+	status, err := s.svc.SubmitService.GetSubmitStatus(ctx, id)
+	if err != nil {
+		utils.InternalServerErrorResponse(c, "获取提交状态失败")
+		return
+	}
+
+	utils.SuccessResponse(c, status)
 }

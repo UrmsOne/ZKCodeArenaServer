@@ -67,3 +67,9 @@ config.production.yaml
 # Temporary files
 *.tmp
 *.temp
+
+# Documentation generated files
+# docs/  # 注释掉这一行，确保Swagger文档被包含
+
+# Cursor IDE files
+.cursor/

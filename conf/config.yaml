@@ -10,19 +10,95 @@ Mongo:
   DbName: zk_code_arena
 
 Judge:
-  Type: LocalJudge
-  Java:
-    JDK11:
-      BaseArgs: "java"
-      Env: "PATH=/usr/lib/jvm/java-11-openjdk/bin"
-  Python:
-    Python3:
-      BaseArgs: "python3"
-      Env: "PATH=/usr/bin"
-  Cpp:
-    Gcc:
-      BaseArgs: "g++"
-      Env: "PATH=/usr/bin"
+  SandboxURL: "http://judge:5050"  # 沙箱服务地址
+  Workers: 4                            # 消费者数量
+  QueueSize: 100                        # 队列容量
+
+  # 语言配置
+  Languages:
+    java:
+      name: "Java 17"
+      compile:
+        args: ["/usr/bin/javac", "-encoding", "UTF-8", "Main.java"]
+        env:
+          - "PATH=/usr/bin:/bin"
+          - "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64"
+        time_limit: 10000000000    # 10秒（纳秒）
+        memory_limit: 268435456    # 256MB（字节）
+        proc_limit: 50
+        source_file: "Main.java"
+        executable_file: "Main.class"
+      run:
+        args: ["/usr/bin/java", "-server", "-XX:+UseSerialGC", "-XX:MaxRAMPercentage=50", "-XX:InitialRAMPercentage=25", "Main"]
+        env:
+          - "PATH=/usr/bin:/bin"
+          - "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64"
+          - "_JAVA_OPTIONS=-Djava.awt.headless=true"
+        time_limit: 1000000000     # 1秒（纳秒）
+        memory_limit: 268435456    # 256MB（字节）
+        proc_limit: 100
+    
+    cpp:
+      name: "C++ 17"
+      compile:
+        args: ["/usr/bin/g++", "-std=c++17", "-O2", "-Wall", "main.cpp", "-o", "main"]
+        env: ["PATH=/usr/bin:/bin"]
+        time_limit: 10000000000
+        memory_limit: 268435456
+        proc_limit: 50
+        source_file: "main.cpp"
+        executable_file: "main"
+      run:
+        args: ["./main"]
+        env: ["PATH=/usr/bin:/bin"]
+        time_limit: 1000000000
+        memory_limit: 134217728    # 128MB
+        proc_limit: 1
+    
+    python:
+      name: "Python 3.9"
+      # Python 无需编译
+      run:
+        args: ["/usr/bin/python3", "-u", "main.py"]
+        env: ["PATH=/usr/bin:/bin", "PYTHONPATH=/w"]
+        time_limit: 2000000000     # 2秒（Python 需要更多时间）
+        memory_limit: 268435456
+        proc_limit: 1
+        source_file: "main.py"
+    
+    go:
+      name: "Go 1.21"
+      compile:
+        args: ["/usr/bin/go", "build", "-o", "main", "main.go"]
+        env: ["PATH=/usr/bin:/bin", "GOCACHE=/tmp"]
+        time_limit: 10000000000
+        memory_limit: 268435456
+        proc_limit: 50
+        source_file: "main.go"
+        executable_file: "main"
+      run:
+        args: ["./main"]
+        env: ["PATH=/usr/bin:/bin"]
+        time_limit: 1000000000
+        memory_limit: 134217728
+        proc_limit: 1
+    
+    c:
+      name: "C11"
+      compile:
+        args: ["/usr/bin/gcc", "-std=c11", "-O2", "-Wall", "main.c", "-o", "main", "-lm"]
+        env: ["PATH=/usr/bin:/bin"]
+        time_limit: 10000000000
+        memory_limit: 268435456
+        proc_limit: 50
+        source_file: "main.c"
+        executable_file: "main"
+      run:
+        args: ["./main"]
+        env: ["PATH=/usr/bin:/bin"]
+        time_limit: 1000000000
+        memory_limit: 134217728
+        proc_limit: 1
 
 Sandbox:
   Url: "http://localhost:5050/run"
@@ -45,8 +121,42 @@ JWT:
   ExpireTime: 24h
 
 Redis:
-  Host: "localhost"
+  Host: "redis"
   Port: 6379
-  Password: ""
+  Password: "redis123"
   DB: 0
   PoolSize: 10
+
+RateLimit:
+  Enabled: false       # 限流开关，默认关闭
+  Type: "memory"       # 限流类型: memory（内存）或 redis（Redis）
+  # 代码运行测试限流规则
+  CodeRun:
+    Limit: 3           # 每个时间窗口允许的最大请求数
+    Window: 60         # 时间窗口（秒）
+  # 代码提交限流规则  
+  Submit:
+    Limit: 10
+    Window: 60
+
+
+
+Server:
+  Domain: "localhost"
+
+# Scalar API 文档配置
+Scalar:
+  Title: "ZK Code Arena API"
+  Description: "在线编程竞赛平台 API 文档 - 支持题目管理、用户认证、实时判题等功能"
+  SwaggerUrl: "/swagger/doc.json"
+  Theme: "auto"  # light, dark, auto
+  Layout: "modern"  # modern, classic
+  ShowSidebar: true
+  HideDownloadButton: false
+  CustomCss: |
+    .scalar-app {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    .scalar-app .sidebar {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }

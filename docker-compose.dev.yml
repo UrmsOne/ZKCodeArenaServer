@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  # 开发环境应用服务 (使用 Air 热更新)
+  # 开发环境应用服务
   app:
     build:
       context: .
@@ -10,9 +10,7 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - .:/app
-      - /app/tmp
-      - /app/logs
+      - app_logs:/app/logs
     environment:
       - MONGO_URI=mongodb://mongo:27017
       - REDIS_HOST=redis
@@ -32,7 +30,8 @@ services:
     ports:
       - "27017:27017"
     volumes:
-      - mongo_dev_data:/data/db
+      - ./data/mongo:/data/db
+      - ./deploy/mongo/init:/docker-entrypoint-initdb.d
     environment:
       - MONGO_INITDB_DATABASE=zk_code_arena
     restart: unless-stopped
@@ -46,20 +45,19 @@ services:
     ports:
       - "6379:6379"
     volumes:
-      - redis_dev_data:/data
-    command: redis-server --appendonly yes
+      - ./data/redis:/data
+    command: redis-server --appendonly yes --requirepass redis123
     restart: unless-stopped
     networks:
       - zk-arena-dev-network
 
-  # 代码评测服务
   judge:
-    image: criyle/go-judge:latest
+    image: crpi-n330h2d2rz94g7d2.cn-hangzhou.personal.cr.aliyuncs.com/zhku-oj/zhku-oj-java:1.0
     container_name: zk-arena-judge-dev
     ports:
       - "5050:5050"
     volumes:
-      - judge_dev_data:/judge
+      - ./data/judge:/judge
     environment:
       - JUDGE_DEBUG=1
     restart: unless-stopped
@@ -68,11 +66,7 @@ services:
     privileged: true
 
 volumes:
-  mongo_dev_data:
-    driver: local
-  redis_dev_data:
-    driver: local
-  judge_dev_data:
+  app_logs:
     driver: local
 
 networks:

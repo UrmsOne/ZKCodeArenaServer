@@ -8,12 +8,13 @@
 package server
 
 import (
-	"github.com/gin-gonic/gin"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"strconv"
 	"zk-code-arena-server/pkg/models"
 	"zk-code-arena-server/pkg/utils"
 	"zk-code-arena-server/pkg/utils/middleware"
+
+	"github.com/gin-gonic/gin"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 // RegisterUser 注册用户相关路由
@@ -22,22 +23,33 @@ func (s *Server) RegisterUser(g *gin.RouterGroup) {
 	{
 		// 公开路由
 		userGroup.POST("/register", s.CreateUser) // 用户注册
-		userGroup.POST("/login", s.LoginUser)       // 用户登录
+		userGroup.POST("/login", s.LoginUser)     // 用户登录
 	}
 
 	// 需要认证的路由
 	securedGroup := userGroup.Group("/").Use(middleware.JWTMiddleware())
 	{
-		securedGroup.GET("/profile", s.GetUserProfile)    // 获取用户资料
-		securedGroup.PUT("/profile", s.UpdateUserProfile) // 更新用户资料
-		securedGroup.GET("/", s.GetUsers)                 // 获取用户列表（管理员）
-		securedGroup.GET("/:id", s.GetUserByID)           // 获取指定用户
-		securedGroup.PUT("/:id", s.UpdateUser)            // 更新用户信息
-		securedGroup.DELETE("/:id", s.DeleteUser)         // 删除用户
+		securedGroup.GET("/profile", s.GetUserProfile)         // 获取用户资料
+		securedGroup.PUT("/profile", s.UpdateUserProfile)      // 更新用户资料
+		securedGroup.GET("/", s.GetUsers)                      // 获取用户列表（管理员）
+		securedGroup.POST("/teachers", s.PageQueryAllTeachers) // 分页查询所有教师信息
+		securedGroup.GET("/:id", s.GetUserByID)                // 获取指定用户
+		securedGroup.PUT("/:id", s.UpdateUser)                 // 更新用户信息
+		securedGroup.DELETE("/:id", s.DeleteUser)              // 删除用户
 	}
 }
 
-// CreateUser 用户注册
+// CreateUser godoc
+// @Summary      用户注册
+// @Description  注册新用户账号（学生/教师/学习者）
+// @Tags         用户
+// @Accept       json
+// @Produce      json
+// @Param        request body models.User true "用户信息"
+// @Success      200 {object} utils.Response{data=object{message=string,user=models.UserProfile}} "注册成功"
+// @Failure      400 {object} models.ErrorResponse "请求参数错误"
+// @Failure      500 {object} models.ErrorResponse "注册失败"
+// @Router       /user/register [post]
 func (s *Server) CreateUser(c *gin.Context) {
 	var user models.User
 	if err := c.ShouldBindJSON(&user); err != nil {
@@ -57,12 +69,19 @@ func (s *Server) CreateUser(c *gin.Context) {
 	})
 }
 
-// LoginUser 用户登录
+// LoginUser godoc
+// @Summary      用户登录
+// @Description  使用学号/工号和密码登录系统
+// @Tags         用户
+// @Accept       json
+// @Produce      json
+// @Param        request body models.LoginRequest true "登录信息"
+// @Success      200 {object} utils.Response{data=object{message=string,token=string,user=models.UserProfile}} "登录成功，返回token和用户信息"
+// @Failure      400 {object} models.ErrorResponse "请求参数错误"
+// @Failure      401 {object} models.ErrorResponse "账号或密码错误"
+// @Router       /user/login [post]
 func (s *Server) LoginUser(c *gin.Context) {
-	var loginReq struct {
-		Username string `json:"username" binding:"required"`
-		Password string `json:"password" binding:"required"`
-	}
+	var loginReq models.LoginRequest
 
 	if err := c.ShouldBindJSON(&loginReq); err != nil {
 		utils.BadRequestResponse(c, "请求参数错误: "+err.Error())
@@ -70,7 +89,7 @@ func (s *Server) LoginUser(c *gin.Context) {
 	}
 
 	ctx := c.Request.Context()
-	user, err := s.svc.UserService.ValidateUser(ctx, loginReq.Username, loginReq.Password)
+	user, err := s.svc.UserService.ValidateUser(ctx, loginReq.StudentID, loginReq.Password)
 	if err != nil {
 		utils.UnauthorizedResponse(c, err.Error())
 		return
@@ -90,7 +109,17 @@ func (s *Server) LoginUser(c *gin.Context) {
 	})
 }
 
-// GetUserProfile 获取用户资料
+// GetUserProfile godoc
+// @Summary      获取当前用户资料
+// @Description  获取当前登录用户的个人资料信息
+// @Tags         用户
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} utils.Response{data=models.UserProfile} "用户资料"
+// @Failure      401 {object} models.ErrorResponse "未认证用户"
+// @Failure      404 {object} models.ErrorResponse "用户不存在"
+// @Security     BearerAuth
+// @Router       /user/profile [get]
 func (s *Server) GetUserProfile(c *gin.Context) {
 	userID, exists := c.Get("user_id")
 	if !exists {
@@ -114,7 +143,20 @@ func (s *Server) GetUserProfile(c *gin.Context) {
 	utils.SuccessResponse(c, user.ToProfile())
 }
 
-// UpdateUserProfile 更新用户资料
+// UpdateUserProfile godoc
+// @Summary      更新当前用户资料
+// @Description  更新当前登录用户的个人资料（姓名、邮箱、学校等）
+// @Tags         用户
+// @Accept       json
+// @Produce      json
+// @Param        request body object{real_name=string,email=string,bio=string,school=string,major=string,grade=string,class=string,phone=string} true "更新信息"
+// @Success      200 {object} utils.Response{data=models.UserProfile} "更新后的用户资料"
+// @Failure      400 {object} models.ErrorResponse "请求参数错误"
+// @Failure      401 {object} models.ErrorResponse "未认证用户"
+// @Failure      404 {object} models.ErrorResponse "用户不存在"
+// @Failure      500 {object} models.ErrorResponse "更新失败"
+// @Security     BearerAuth
+// @Router       /user/profile [put]
 func (s *Server) UpdateUserProfile(c *gin.Context) {
 	userID, exists := c.Get("user_id")
 	if !exists {
@@ -128,16 +170,7 @@ func (s *Server) UpdateUserProfile(c *gin.Context) {
 		return
 	}
 
-	var updateReq struct {
-		RealName string `json:"real_name"`
-		Email    string `json:"email"`
-		Bio      string `json:"bio"`
-		School   string `json:"school"`
-		Major    string `json:"major"`
-		Grade    string `json:"grade"`
-		Class    string `json:"class"`
-		Phone    string `json:"phone"`
-	}
+	var updateReq models.UpdateProfileRequest
 
 	if err := c.ShouldBindJSON(&updateReq); err != nil {
 		utils.BadRequestResponse(c, "请求参数错误: "+err.Error())
@@ -169,7 +202,20 @@ func (s *Server) UpdateUserProfile(c *gin.Context) {
 	utils.SuccessResponse(c, user.ToProfile())
 }
 
-// GetUsers 获取用户列表
+// GetUsers godoc
+// @Summary      获取用户列表（管理员）
+// @Description  分页获取用户列表，可按角色筛选（仅管理员）
+// @Tags         用户
+// @Accept       json
+// @Produce      json
+// @Param        page query int false "页码" default(1)
+// @Param        page_size query int false "每页数量" default(10)
+// @Param        role query string false "用户角色筛选" Enums(admin, teacher, student)
+// @Success      200 {object} utils.Response{data=object{users=[]models.UserProfile,total=int64,page=int,page_size=int,total_page=int64}} "用户列表"
+// @Failure      403 {object} models.ErrorResponse "权限不足"
+// @Failure      500 {object} models.ErrorResponse "获取失败"
+// @Security     BearerAuth
+// @Router       /user [get]
 func (s *Server) GetUsers(c *gin.Context) {
 	// 检查管理员权限
 	role, exists := c.Get("role")
@@ -211,12 +257,71 @@ func (s *Server) GetUsers(c *gin.Context) {
 	})
 }
 
-// GetUserByID 获取指定用户
+// PageQueryAllTeachers godoc
+// @Summary      分页查询所有教师信息
+// @Description  分页查询所有教师信息，支持按姓名模糊查询
+// @Tags         用户
+// @Accept       json
+// @Produce      json
+// @Param        request body models.PageQueryAllTeachersRequest true "分页查询参数"
+// @Success      200 {object} utils.Response{data=models.PageQueryCourseTeachersResponse} "教师列表"
+// @Failure      400 {object} models.ErrorResponse "请求参数错误"
+// @Failure      500 {object} models.ErrorResponse "查询失败"
+// @Security     BearerAuth
+// @Router       /user/teachers [POST]
+func (s *Server) PageQueryAllTeachers(c *gin.Context) {
+	var req models.PageQueryAllTeachersRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.BadRequestResponse(c, err.Error())
+		return
+	}
+
+	ctx := c.Request.Context()
+	teachers, err := s.svc.UserService.PageQueryAllTeachers(ctx, &req)
+	if err != nil {
+		utils.InternalServerErrorResponse(c, err.Error())
+		return
+	}
+
+	utils.SuccessResponse(c, teachers)
+}
+
+// GetUserByID godoc
+// @Summary      获取指定用户信息
+// @Description  根据用户ID获取用户信息（管理员或本人）
+// @Tags         用户
+// @Accept       json
+// @Produce      json
+// @Param        id path string true "用户ID"
+// @Success      200 {object} utils.Response{data=models.UserProfile} "用户信息"
+// @Failure      400 {object} models.ErrorResponse "无效的用户ID"
+// @Failure      401 {object} models.ErrorResponse "未认证用户"
+// @Failure      403 {object} models.ErrorResponse "权限不足"
+// @Failure      404 {object} models.ErrorResponse "用户不存在"
+// @Security     BearerAuth
+// @Router       /user/{id} [get]
 func (s *Server) GetUserByID(c *gin.Context) {
+	// 权限校验：仅管理员或用户本人可查看
+	currentUserID, exists := c.Get("user_id")
+	if !exists {
+		utils.UnauthorizedResponse(c, "未认证用户")
+		return
+	}
+
 	idStr := c.Param("id")
 	id, err := primitive.ObjectIDFromHex(idStr)
 	if err != nil {
 		utils.BadRequestResponse(c, "无效的用户ID")
+		return
+	}
+
+	// 检查是否为管理员或查询自己的信息
+	role, roleExists := c.Get("role")
+	isAdmin := roleExists && role.(string) == string(models.RoleAdmin)
+	isSelf := currentUserID.(string) == idStr
+
+	if !isAdmin && !isSelf {
+		utils.ForbiddenResponse(c, "权限不足")
 		return
 	}
 
@@ -230,7 +335,21 @@ func (s *Server) GetUserByID(c *gin.Context) {
 	utils.SuccessResponse(c, user.ToProfile())
 }
 
-// UpdateUser 更新用户信息
+// UpdateUser godoc
+// @Summary      更新用户信息（管理员）
+// @Description  管理员更新用户角色和激活状态
+// @Tags         用户
+// @Accept       json
+// @Produce      json
+// @Param        id path string true "用户ID"
+// @Param        request body models.UpdateUserRequest true "更新信息"
+// @Success      200 {object} utils.Response{data=models.UserProfile} "更新后的用户信息"
+// @Failure      400 {object} models.ErrorResponse "请求参数错误"
+// @Failure      403 {object} models.ErrorResponse "权限不足"
+// @Failure      404 {object} models.ErrorResponse "用户不存在"
+// @Failure      500 {object} models.ErrorResponse "更新失败"
+// @Security     BearerAuth
+// @Router       /user/{id} [put]
 func (s *Server) UpdateUser(c *gin.Context) {
 	// 检查管理员权限
 	role, exists := c.Get("role")
@@ -246,10 +365,7 @@ func (s *Server) UpdateUser(c *gin.Context) {
 		return
 	}
 
-	var updateReq struct {
-		Role     string `json:"role"`
-		IsActive *bool  `json:"is_active"`
-	}
+	var updateReq models.UpdateUserRequest
 
 	if err := c.ShouldBindJSON(&updateReq); err != nil {
 		utils.BadRequestResponse(c, "请求参数错误: "+err.Error())
@@ -279,7 +395,19 @@ func (s *Server) UpdateUser(c *gin.Context) {
 	utils.SuccessResponse(c, user.ToProfile())
 }
 
-// DeleteUser 删除用户
+// DeleteUser godoc
+// @Summary      删除用户（管理员）
+// @Description  管理员删除指定用户
+// @Tags         用户
+// @Accept       json
+// @Produce      json
+// @Param        id path string true "用户ID"
+// @Success      200 {object} utils.Response{data=object{message=string}} "删除成功"
+// @Failure      400 {object} models.ErrorResponse "无效的用户ID"
+// @Failure      403 {object} models.ErrorResponse "权限不足"
+// @Failure      500 {object} models.ErrorResponse "删除失败"
+// @Security     BearerAuth
+// @Router       /user/{id} [delete]
 func (s *Server) DeleteUser(c *gin.Context) {
 	// 检查管理员权限
 	role, exists := c.Get("role")

@@ -35,27 +35,10 @@ type configYaml struct {
 		Uri    string `yaml:"Uri"`
 		DbName string `yaml:"DbName"`
 	} `yaml:"Mongo"`
-	Judge struct {
-		Type   string `yaml:"Type"`
-		Java   struct {
-			JDK11 struct {
-				BaseArgs string `yaml:"BaseArgs"`
-				Env      string `yaml:"Env"`
-			} `yaml:"JDK11"`
-		} `yaml:"Java"`
-		Python struct {
-			Python3 struct {
-				BaseArgs string `yaml:"BaseArgs"`
-				Env      string `yaml:"Env"`
-			} `yaml:"Python3"`
-		} `yaml:"Python"`
-		Cpp struct {
-			Gcc struct {
-				BaseArgs string `yaml:"BaseArgs"`
-				Env      string `yaml:"Env"`
-			} `yaml:"Gcc"`
-		} `yaml:"Cpp"`
-	} `yaml:"Judge"`
+	Server struct {
+		Domain string `yaml:"Domain"`
+	} `yaml:"Server"`
+	Judge JudgeConfig `yaml:"Judge"`
 	Sandbox struct {
 		Url     string        `yaml:"Url"`
 		Method  string        `yaml:"Method"`
@@ -84,6 +67,54 @@ type configYaml struct {
 		DB       int    `yaml:"DB"`
 		PoolSize int    `yaml:"PoolSize"`
 	} `yaml:"Redis"`
+	RateLimit struct {
+		Enabled bool   `yaml:"Enabled"` // 限流开关
+		Type    string `yaml:"Type"`    // 限流类型: memory 或 redis
+		CodeRun struct {
+			Limit  int `yaml:"Limit"`  // 时间窗口内最大请求数
+			Window int `yaml:"Window"` // 时间窗口（秒）
+		} `yaml:"CodeRun"`
+		Submit struct {
+			Limit  int `yaml:"Limit"`
+			Window int `yaml:"Window"`
+		} `yaml:"Submit"`
+	} `yaml:"RateLimit"`
+	Scalar struct {
+		Title              string `yaml:"Title"`
+		Description        string `yaml:"Description"`
+		SwaggerURL         string `yaml:"SwaggerUrl"`
+		Theme              string `yaml:"Theme"`
+		Layout             string `yaml:"Layout"`
+		ShowSidebar        bool   `yaml:"ShowSidebar"`
+		HideDownloadButton bool   `yaml:"HideDownloadButton"`
+		CustomCSS          string `yaml:"CustomCss"`
+	} `yaml:"Scalar"`
+}
+
+// JudgeConfig 判题配置
+type JudgeConfig struct {
+	SandboxURL string                        `yaml:"SandboxURL"` // 沙箱服务地址
+	Workers    int                           `yaml:"Workers"`    // 消费者数量
+	QueueSize  int                           `yaml:"QueueSize"`  // 队列容量
+	Languages  map[string]*LanguageConfig    `yaml:"Languages"`  // 语言配置
+}
+
+// LanguageConfig 语言配置
+type LanguageConfig struct {
+	Name    string       `yaml:"name"`              // 语言名称
+	Compile *StageConfig `yaml:"compile,omitempty"` // 编译配置（可选，解释型语言无需编译）
+	Run     *StageConfig `yaml:"run"`               // 运行配置
+}
+
+// StageConfig 阶段配置（编译或运行）
+type StageConfig struct {
+	Args           []string `yaml:"args"`                       // 执行命令参数
+	Env            []string `yaml:"env"`                        // 环境变量
+	TimeLimit      int64    `yaml:"time_limit"`                 // 时间限制（纳秒）
+	MemoryLimit    int64    `yaml:"memory_limit"`               // 内存限制（字节）
+	ProcLimit      int      `yaml:"proc_limit"`                 // 进程数限制
+	SourceFile     string   `yaml:"source_file,omitempty"`      // 源文件名
+	ExecutableFile string   `yaml:"executable_file,omitempty"`  // 可执行文件名
 }
 
 func Init() {
@@ -113,6 +144,48 @@ func Init() {
 	err = v.Unmarshal(&c)
 	if err != nil {
 		panic(fmt.Errorf("配置文件解析失败: %s", err))
+	}
+	
+	// 手动解析 Judge.Languages (Viper 对嵌套 map 的支持不好,且会将 key 转为小写)
+	if languagesMap := v.GetStringMap("judge.languages"); languagesMap != nil {
+		c.Judge.Languages = make(map[string]*LanguageConfig)
+		for lang := range languagesMap {
+			// Viper 会将所有 key 转为小写,所以我们需要使用小写的 key
+			langKey := strings.ToLower(lang)
+			langConfig := &LanguageConfig{
+				Name: v.GetString(fmt.Sprintf("judge.languages.%s.name", langKey)),
+			}
+			
+			// 解析 compile 配置
+			compileKey := fmt.Sprintf("judge.languages.%s.compile", langKey)
+			if v.IsSet(compileKey) {
+				langConfig.Compile = &StageConfig{
+					Args:           v.GetStringSlice(fmt.Sprintf("%s.args", compileKey)),
+					Env:            v.GetStringSlice(fmt.Sprintf("%s.env", compileKey)),
+					TimeLimit:      v.GetInt64(fmt.Sprintf("%s.time_limit", compileKey)),
+					MemoryLimit:    v.GetInt64(fmt.Sprintf("%s.memory_limit", compileKey)),
+					ProcLimit:      v.GetInt(fmt.Sprintf("%s.proc_limit", compileKey)),
+					SourceFile:     v.GetString(fmt.Sprintf("%s.source_file", compileKey)),
+					ExecutableFile: v.GetString(fmt.Sprintf("%s.executable_file", compileKey)),
+				}
+			}
+			
+			// 解析 run 配置
+			runKey := fmt.Sprintf("judge.languages.%s.run", langKey)
+			if v.IsSet(runKey) {
+				langConfig.Run = &StageConfig{
+					Args:           v.GetStringSlice(fmt.Sprintf("%s.args", runKey)),
+					Env:            v.GetStringSlice(fmt.Sprintf("%s.env", runKey)),
+					TimeLimit:      v.GetInt64(fmt.Sprintf("%s.time_limit", runKey)),
+					MemoryLimit:    v.GetInt64(fmt.Sprintf("%s.memory_limit", runKey)),
+					ProcLimit:      v.GetInt(fmt.Sprintf("%s.proc_limit", runKey)),
+					SourceFile:     v.GetString(fmt.Sprintf("%s.source_file", runKey)),
+					ExecutableFile: v.GetString(fmt.Sprintf("%s.executable_file", runKey)),
+				}
+			}
+			
+			c.Judge.Languages[lang] = langConfig
+		}
 	}
 	
 	Config = c
