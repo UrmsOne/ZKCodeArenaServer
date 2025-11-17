@@ -16,7 +16,6 @@ import (
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 // ProblemRepository Problem数据访问层
@@ -32,18 +31,18 @@ func NewProblemRepository() *ProblemRepository {
 }
 
 // CreateProblem 创建题目
-func (r *ProblemRepository) CreateProblem(ctx context.Context, problem *models.Problem) error {
+func (p *ProblemRepository) CreateProblem(ctx context.Context, problem *models.Problem) error {
 	// 设置系统字段
 	problem.ID = primitive.NewObjectID()
 	problem.CreatedAt = time.Now()
 	problem.UpdatedAt = time.Now()
 
 	// 应用业务规则
-	if err := r.validateProblemCreation(problem); err != nil {
+	if err := p.validateProblemCreation(problem); err != nil {
 		return err
 	}
 
-	_, err := r.InsertOne(ctx, "problems", problem)
+	_, err := p.InsertOne(ctx, "problems", problem)
 	if err != nil {
 		utils.Logger.Errorf("CreateProblem: 创建题目失败, title=%s, error=%v", problem.Title, err)
 		return fmt.Errorf("创建题目失败: %w", err)
@@ -54,9 +53,9 @@ func (r *ProblemRepository) CreateProblem(ctx context.Context, problem *models.P
 }
 
 // GetByID 根据ID查询题目
-func (r *ProblemRepository) GetByID(ctx context.Context, id primitive.ObjectID) (*models.Problem, error) {
+func (p *ProblemRepository) GetByID(ctx context.Context, id primitive.ObjectID) (*models.Problem, error) {
 	var problem models.Problem
-	err := r.FindOne(ctx, "problems", bson.M{"_id": id}, &problem)
+	err := p.FindOne(ctx, "problems", bson.M{"_id": id}, &problem)
 	if err != nil {
 		return nil, err
 	}
@@ -64,8 +63,8 @@ func (r *ProblemRepository) GetByID(ctx context.Context, id primitive.ObjectID) 
 }
 
 // DeleteProblem 删除题目
-func (r *ProblemRepository) DeleteProblem(ctx context.Context, id primitive.ObjectID) error {
-	result, err := r.DeleteOne(ctx, "problems", bson.M{"_id": id})
+func (p *ProblemRepository) DeleteProblem(ctx context.Context, id primitive.ObjectID) error {
+	result, err := p.DeleteOne(ctx, "problems", bson.M{"_id": id})
 	if err != nil {
 		return err
 	}
@@ -77,8 +76,8 @@ func (r *ProblemRepository) DeleteProblem(ctx context.Context, id primitive.Obje
 	return nil
 }
 
-// GetProblems 查询题目列表（带权限控制）
-func (r *ProblemRepository) GetProblems(
+// GetProblems 查询题目列表 - 使用通用查询框架重构
+func (p *ProblemRepository) GetProblems(
 	ctx context.Context,
 	page, pageSize int,
 	difficulty models.ProblemDifficulty,
@@ -88,34 +87,61 @@ func (r *ProblemRepository) GetProblems(
 	userID *primitive.ObjectID,
 ) ([]*models.ProblemList, int64, error) {
 	// 构建查询条件
-	filter := r.buildProblemFilter(difficulty, tags, includePrivate, role, userID)
+	filter := p.buildProblemFilter(difficulty, tags, includePrivate, role, userID)
 
-	// 获取总数
-	total, err := r.CountDocuments(ctx, "problems", filter)
-	if err != nil {
-		return nil, 0, fmt.Errorf("统计题目数量失败: %w", err)
-	}
+	// 构建查询选项
+	sort := p.BuildSort("-created_at")
+	opts := p.BuildFindOptionsWithPagination(int64(page), int64(pageSize), sort, nil)
 
-	// 分页查询选项
-	opts := options.Find().
-		SetSkip(int64((page - 1) * pageSize)).
-		SetLimit(int64(pageSize)).
-		SetSort(bson.D{{"created_at", -1}})
-
-	cursor, err := r.Find(ctx, "problems", filter, opts)
+	// 执行泛型分页查询
+	problems, total, err := FindWithPaginationTyped[models.Problem](ctx, p.BaseRepository, "problems", filter, opts)
 	if err != nil {
 		return nil, 0, fmt.Errorf("查询题目列表失败: %w", err)
 	}
-	defer cursor.Close(ctx)
 
-	var problems []*models.ProblemList
-	for cursor.Next(ctx) {
-		var problem models.Problem
-		if err := cursor.Decode(&problem); err != nil {
-			return nil, 0, fmt.Errorf("解析题目数据失败: %w", err)
-		}
+	// 转换为 ProblemList
+	var problemList []*models.ProblemList
+	for _, problem := range problems {
+		problemList = append(problemList, &models.ProblemList{
+			ID:          problem.ID,
+			Title:       problem.Title,
+			Difficulty:  problem.Difficulty,
+			ACCount:     problem.ACCount,
+			SubmitCount: problem.SubmitCount,
+			CreatedAt:   problem.CreatedAt,
+		})
+	}
 
-		problems = append(problems, &models.ProblemList{
+	return problemList, total, nil
+}
+
+// GetProblemsWithUserStatus 查询题目列表（带用户状态）- 使用通用查询框架重构
+func (p *ProblemRepository) GetProblemsWithUserStatus(
+	ctx context.Context,
+	page, pageSize int,
+	difficulty models.ProblemDifficulty,
+	tags []string,
+	includePrivate bool,
+	role models.UserRole,
+	userID *primitive.ObjectID,
+) ([]*models.ProblemList, int64, error) {
+	// 构建查询条件
+	filter := p.buildProblemFilter(difficulty, tags, includePrivate, role, userID)
+
+	// 构建查询选项
+	sort := p.BuildSort("-created_at")
+	opts := p.BuildFindOptionsWithPagination(int64(page), int64(pageSize), sort, nil)
+
+	// 执行泛型分页查询
+	problems, total, err := FindWithPaginationTyped[models.Problem](ctx, p.BaseRepository, "problems", filter, opts)
+	if err != nil {
+		return nil, 0, fmt.Errorf("查询题目列表失败: %w", err)
+	}
+
+	// 转换为 ProblemList
+	var problemList []*models.ProblemList
+	for _, problem := range problems {
+		problemList = append(problemList, &models.ProblemList{
 			ID:          problem.ID,
 			Title:       problem.Title,
 			Difficulty:  problem.Difficulty,
@@ -128,31 +154,11 @@ func (r *ProblemRepository) GetProblems(
 		})
 	}
 
-	return problems, total, nil
-}
-
-// GetProblemsWithUserStatus 查询题目列表并填充用户状态
-func (r *ProblemRepository) GetProblemsWithUserStatus(
-	ctx context.Context,
-	page, pageSize int,
-	difficulty models.ProblemDifficulty,
-	tags []string,
-	includePrivate bool,
-	role models.UserRole,
-	userID *primitive.ObjectID,
-) ([]*models.ProblemList, int64, error) {
-	// 先获取题目列表
-	problems, total, err := r.GetProblems(ctx, page, pageSize, difficulty, tags, includePrivate, role, userID)
-	if err != nil {
-		return nil, 0, err
-	}
-
 	// 填充用户状态（仅当用户已登录时）
-	if userID != nil && len(problems) > 0 {
-		utils.Logger.Debugf("GetProblemsWithUserStatus: 开始填充用户状态, userID=%s, problemCount=%d", userID.Hex(), len(problems))
-		if err := r.fillUserProblemStatus(ctx, problems, *userID); err != nil {
+	if userID != nil && len(problemList) > 0 {
+		utils.Logger.Debugf("GetProblemsWithUserStatus: 开始填充用户状态, userID=%s, problemCount=%d", userID.Hex(), len(problemList))
+		if err := p.fillUserProblemStatus(ctx, problemList, *userID); err != nil {
 			utils.Logger.Errorf("GetProblemsWithUserStatus: 填充用户状态失败, userID=%s, error=%v", userID.Hex(), err)
-			// 不影响主要功能，只记录错误，但确保用户知道状态查询失败
 		} else {
 			utils.Logger.Debugf("GetProblemsWithUserStatus: 用户状态填充成功, userID=%s", userID.Hex())
 		}
@@ -160,58 +166,57 @@ func (r *ProblemRepository) GetProblemsWithUserStatus(
 		utils.Logger.Debugf("GetProblemsWithUserStatus: 未登录用户，跳过状态填充")
 	}
 
-	return problems, total, nil
+	return problemList, total, nil
 }
 
-// SearchProblems 搜索题目
-func (r *ProblemRepository) SearchProblems(
+// SearchProblems 搜索题目 - 使用通用查询框架重构
+func (p *ProblemRepository) SearchProblems(
 	ctx context.Context,
 	keyword string,
 	page, pageSize int,
 	difficulty models.ProblemDifficulty,
 	tags []string,
-	includePrivate bool,
-	role models.UserRole,
 	userID *primitive.ObjectID,
 ) ([]*models.ProblemList, int64, error) {
-	// 构建搜索过滤条件
-	filter := r.buildProblemFilter(difficulty, tags, includePrivate, role, userID)
+	// 使用 BuildKeywordFilter 构建关键字过滤器
+	keywordFilter := p.BuildKeywordFilter(keyword, []string{"title", "description"})
 
-	// 添加关键词搜索
-	if keyword != "" {
-		filter["$or"] = []bson.M{
-			{"title": bson.M{"$regex": keyword, "$options": "i"}},
-			{"description": bson.M{"$regex": keyword, "$options": "i"}},
-			{"tags": bson.M{"$regex": keyword, "$options": "i"}},
-		}
+	// 构建其他过滤器
+	var filters []bson.M
+	if len(keywordFilter) > 0 {
+		filters = append(filters, keywordFilter)
 	}
 
-	// 获取总数
-	total, err := r.CountDocuments(ctx, "problems", filter)
-	if err != nil {
-		return nil, 0, fmt.Errorf("统计搜索结果数量失败: %w", err)
+	// 添加公开和已发布的过滤条件
+	filters = append(filters, bson.M{"is_public": true, "status": models.StatusPublished})
+
+	// 添加难度过滤
+	if difficulty != "" {
+		filters = append(filters, bson.M{"difficulty": difficulty})
 	}
 
-	// 分页查询选项
-	opts := options.Find().
-		SetSkip(int64((page - 1) * pageSize)).
-		SetLimit(int64(pageSize)).
-		SetSort(bson.D{{"created_at", -1}})
+	// 添加标签过滤
+	if len(tags) > 0 {
+		filters = append(filters, bson.M{"tags": bson.M{"$in": tags}})
+	}
 
-	cursor, err := r.Find(ctx, "problems", filter, opts)
+	// 使用 MergeFilters 合并所有过滤器
+	filter := p.MergeFilters(filters...)
+
+	// 构建查询选项
+	sort := p.BuildSort("-created_at")
+	opts := p.BuildFindOptionsWithPagination(int64(page), int64(pageSize), sort, nil)
+
+	// 执行泛型分页查询
+	problems, total, err := FindWithPaginationTyped[models.Problem](ctx, p.BaseRepository, "problems", filter, opts)
 	if err != nil {
 		return nil, 0, fmt.Errorf("搜索题目失败: %w", err)
 	}
-	defer cursor.Close(ctx)
 
-	var problems []*models.ProblemList
-	for cursor.Next(ctx) {
-		var problem models.Problem
-		if err := cursor.Decode(&problem); err != nil {
-			return nil, 0, fmt.Errorf("解析搜索结果失败: %w", err)
-		}
-
-		problems = append(problems, &models.ProblemList{
+	// 转换为 ProblemList
+	var problemList []*models.ProblemList
+	for _, problem := range problems {
+		problemList = append(problemList, &models.ProblemList{
 			ID:          problem.ID,
 			Title:       problem.Title,
 			Difficulty:  problem.Difficulty,
@@ -225,17 +230,17 @@ func (r *ProblemRepository) SearchProblems(
 	}
 
 	// 填充用户状态
-	if userID != nil && len(problems) > 0 {
-		if err := r.fillUserProblemStatus(ctx, problems, *userID); err != nil {
+	if userID != nil && len(problemList) > 0 {
+		if err := p.fillUserProblemStatus(ctx, problemList, *userID); err != nil {
 			utils.Logger.Errorf("SearchProblems: 填充用户状态失败, error=%v", err)
 		}
 	}
 
-	return problems, total, nil
+	return problemList, total, nil
 }
 
 // UpdateProblemStats 更新题目统计信息
-func (r *ProblemRepository) UpdateProblemStats(ctx context.Context, problemID primitive.ObjectID, isAC bool) error {
+func (p *ProblemRepository) UpdateProblemStats(ctx context.Context, problemID primitive.ObjectID, isAC bool) error {
 	update := bson.M{
 		"$inc": bson.M{
 			"submit_count": 1,
@@ -246,7 +251,7 @@ func (r *ProblemRepository) UpdateProblemStats(ctx context.Context, problemID pr
 		update["$inc"].(bson.M)["ac_count"] = 1
 	}
 
-	coll := r.db.Collection("problems")
+	coll := p.db.Collection("problems")
 	_, err := coll.UpdateOne(ctx, bson.M{"_id": problemID}, update)
 
 	if err != nil {
@@ -258,7 +263,7 @@ func (r *ProblemRepository) UpdateProblemStats(ctx context.Context, problemID pr
 }
 
 // GetUserProblemStatuses 批量获取用户对一组题目的最新状态
-func (r *ProblemRepository) GetUserProblemStatuses(ctx context.Context, userID primitive.ObjectID, problemIDs []primitive.ObjectID) (map[primitive.ObjectID]models.UserProblemStatus, error) {
+func (p *ProblemRepository) GetUserProblemStatuses(ctx context.Context, userID primitive.ObjectID, problemIDs []primitive.ObjectID) (map[primitive.ObjectID]models.UserProblemStatus, error) {
 	if len(problemIDs) == 0 {
 		return make(map[primitive.ObjectID]models.UserProblemStatus), nil
 	}
@@ -281,7 +286,7 @@ func (r *ProblemRepository) GetUserProblemStatuses(ctx context.Context, userID p
 		},
 	}
 
-	cursor, err := r.Aggregate(ctx, "submits", pipeline)
+	cursor, err := p.Aggregate(ctx, "submits", pipeline)
 	if err != nil {
 		utils.Logger.Errorf("GetUserProblemStatuses: 聚合查询失败, userID=%s, error=%v", userID.Hex(), err)
 		return nil, fmt.Errorf("查询用户题目状态失败: %w", err)
@@ -390,8 +395,6 @@ func (p *ProblemRepository) UpdateProblemFromRequest(ctx context.Context, proble
 	// 必须更新的字段：更新时间
 	updateFields["updated_at"] = time.Now()
 
-	// 执行更新操作（直接传入 updateFields，UpdateOne 会自动添加 $set）
-	// 注意：不要再手动包装 bson.M{"$set": ...}，会导致双重 $set 错误
 	filter := bson.M{"_id": problemID}
 	update := bson.M{"$set": updateFields}
 
@@ -411,7 +414,7 @@ func (p *ProblemRepository) UpdateProblemFromRequest(ctx context.Context, proble
 }
 
 // buildProblemFilter 构建题目查询过滤条件
-func (r *ProblemRepository) buildProblemFilter(
+func (p *ProblemRepository) buildProblemFilter(
 	difficulty models.ProblemDifficulty,
 	tags []string,
 	includePrivate bool,
@@ -456,7 +459,7 @@ func (r *ProblemRepository) buildProblemFilter(
 }
 
 // fillUserProblemStatus 填充题目列表的用户状态
-func (r *ProblemRepository) fillUserProblemStatus(ctx context.Context, problems []*models.ProblemList, userID primitive.ObjectID) error {
+func (p *ProblemRepository) fillUserProblemStatus(ctx context.Context, problems []*models.ProblemList, userID primitive.ObjectID) error {
 	// 收集所有题目ID
 	problemIDs := make([]primitive.ObjectID, len(problems))
 	for i, problem := range problems {
@@ -464,7 +467,7 @@ func (r *ProblemRepository) fillUserProblemStatus(ctx context.Context, problems 
 	}
 
 	// 批量查询用户状态
-	statusMap, err := r.GetUserProblemStatuses(ctx, userID, problemIDs)
+	statusMap, err := p.GetUserProblemStatuses(ctx, userID, problemIDs)
 	if err != nil {
 		return err
 	}
@@ -479,8 +482,8 @@ func (r *ProblemRepository) fillUserProblemStatus(ctx context.Context, problems 
 	return nil
 }
 
-// validateProblemCreation 验证题目创建参数
-func (r *ProblemRepository) validateProblemCreation(problem *models.Problem) error {
+// validateProblemCreation 验证题目创建参
+func (p *ProblemRepository) validateProblemCreation(problem *models.Problem) error {
 	if problem.Title == "" {
 		return fmt.Errorf("题目标题不能为空")
 	}
@@ -500,7 +503,7 @@ func (r *ProblemRepository) validateProblemCreation(problem *models.Problem) err
 }
 
 // validateProblemUpdate 验证题目更新参数
-func (r *ProblemRepository) validateProblemUpdate(req *models.UpdateProblemRequest) error {
+func (p *ProblemRepository) validateProblemUpdate(req *models.UpdateProblemRequest) error {
 	// 业务规则：草稿状态强制私有
 	if req.Status != nil && *req.Status == models.StatusDraft {
 		// 通过修改请求对象来应用业务规则
