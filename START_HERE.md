@@ -52,10 +52,36 @@ air
 
 ## 🔧 详细步骤
 
-### 步骤 1: 在 WSL2 中配置环境
+### 步骤 0: 安装 Go（首次运行需要）
+
+如果你的 WSL2 中还没有安装 Go，需要先安装：
 
 ```bash
 # 打开 WSL2
+wsl
+
+# 进入项目
+cd /mnt/g/code-oj/ZKCodeArenaServer
+
+# 给脚本添加执行权限
+chmod +x scripts/install_go.sh
+
+# 运行安装脚本
+./scripts/install_go.sh
+
+# 重新加载环境变量
+source ~/.bashrc
+
+# 验证安装
+go version
+```
+
+**详细安装指南**: 查看 `INSTALL_GUIDE.md`
+
+### 步骤 1: 在 WSL2 中配置环境
+
+```bash
+# 如果还没有打开 WSL2
 wsl
 
 # 进入项目（G 盘映射为 /mnt/g）

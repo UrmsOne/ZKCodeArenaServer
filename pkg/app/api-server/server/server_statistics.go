@@ -7,17 +7,18 @@
 package server
 
 import (
-	"github.com/gin-gonic/gin"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"zk-code-arena-server/pkg/models"
 	"zk-code-arena-server/pkg/utils"
 	"zk-code-arena-server/pkg/utils/middleware"
+
+	"github.com/gin-gonic/gin"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 // RegisterStatistics 注册统计相关路由
 func (s *Server) RegisterStatistics(g *gin.RouterGroup) {
 	statsGroup := g.Group("/statistics")
-	
+
 	// 需要认证的路由
 	securedGroup := statsGroup.Group("/").Use(middleware.JWTMiddleware())
 	{
@@ -54,20 +55,20 @@ func (s *Server) GetUserStatistics(c *gin.Context) {
 		utils.UnauthorizedResponse(c, "需要登录")
 		return
 	}
-	
+
 	userObjID, err := primitive.ObjectIDFromHex(userID.(string))
 	if err != nil {
 		utils.BadRequestResponse(c, "无效的用户ID")
 		return
 	}
-	
+
 	ctx := c.Request.Context()
 	stats, err := s.svc.StatisticsService.GetUserStatistics(ctx, userObjID)
 	if err != nil {
 		utils.InternalServerErrorResponse(c, "获取用户统计失败: "+err.Error())
 		return
 	}
-	
+
 	utils.SuccessResponse(c, stats)
 }
 
@@ -91,21 +92,21 @@ func (s *Server) GetUserStatisticsByID(c *gin.Context) {
 		utils.ForbiddenResponse(c, "权限不足")
 		return
 	}
-	
+
 	idStr := c.Param("id")
 	userObjID, err := primitive.ObjectIDFromHex(idStr)
 	if err != nil {
 		utils.BadRequestResponse(c, "无效的用户ID")
 		return
 	}
-	
+
 	ctx := c.Request.Context()
 	stats, err := s.svc.StatisticsService.GetUserStatistics(ctx, userObjID)
 	if err != nil {
 		utils.InternalServerErrorResponse(c, "获取用户统计失败: "+err.Error())
 		return
 	}
-	
+
 	utils.SuccessResponse(c, stats)
 }
 
@@ -127,14 +128,14 @@ func (s *Server) GetSystemStatistics(c *gin.Context) {
 		utils.ForbiddenResponse(c, "权限不足")
 		return
 	}
-	
+
 	ctx := c.Request.Context()
 	stats, err := s.svc.StatisticsService.GetSystemStatistics(ctx)
 	if err != nil {
 		utils.InternalServerErrorResponse(c, "获取系统统计失败: "+err.Error())
 		return
 	}
-	
+
 	utils.SuccessResponse(c, stats)
 }
 
@@ -142,20 +143,19 @@ func (s *Server) GetSystemStatistics(c *gin.Context) {
 // @Summary      获取题目难度分布统计
 // @Description  获取各难度题目数量的轻量级统计
 // @Tags         统计
-// @Accept       json  
+// @Accept       json
 // @Produce      json
 // @Success      200 {object} utils.Response{data=models.DifficultyStatsResponse} "难度统计"
 // @Failure      500 {object} models.ErrorResponse "获取失败"
 // @Router       /problems/difficulty-stats [get]
 func (s *Server) GetProblemDifficultyStats(c *gin.Context) {
 	ctx := c.Request.Context()
-	
+
 	stats, err := s.svc.StatisticsService.GetProblemDifficultyStats(ctx)
 	if err != nil {
 		utils.InternalServerErrorResponse(c, "获取题目难度统计失败: "+err.Error())
 		return
 	}
-	
+
 	utils.SuccessResponse(c, stats)
 }
-

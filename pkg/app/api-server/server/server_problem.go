@@ -12,12 +12,13 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/gin-gonic/gin"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"zk-code-arena-server/pkg/app/api-server/service"
 	"zk-code-arena-server/pkg/models"
 	"zk-code-arena-server/pkg/utils"
 	"zk-code-arena-server/pkg/utils/middleware"
+
+	"github.com/gin-gonic/gin"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 // RegisterProblem 注册题目相关路由
@@ -38,10 +39,10 @@ func (s *Server) RegisterProblem(g *gin.RouterGroup) {
 	// 需要认证的路由
 	securedGroup := problemGroup.Group("/").Use(middleware.JWTMiddleware())
 	{
-		securedGroup.POST("/", s.CreateProblem)         // 创建题目
+		securedGroup.POST("/", s.CreateProblem)            // 创建题目
 		securedGroup.POST("/batch", s.BatchCreateProblems) // 批量创建题目
-		securedGroup.PUT("/:id", s.UpdateProblem)       // 更新题目
-		securedGroup.DELETE("/:id", s.DeleteProblem)    // 删除题目
+		securedGroup.PUT("/:id", s.UpdateProblem)          // 更新题目
+		securedGroup.DELETE("/:id", s.DeleteProblem)       // 删除题目
 
 		securedGroup.POST("/:id/run", middleware.CodeRunRateLimitMiddleware(), s.RunCode) // 运行代码测试
 	}
@@ -406,14 +407,12 @@ func (s *Server) BatchCreateProblems(c *gin.Context) {
 		return
 	}
 
-	// 4. 获取当前用户ID并设置到每个题目中
+	// 4. 获取当前用户ID
 	userID, _ := c.Get("user_id")
 	currentUserID, _ := primitive.ObjectIDFromHex(userID.(string))
-	
+
+	// 5. 业务规则预检：草稿状态不能公开
 	for i := range req.Problems {
-		req.Problems[i].CreatedBy = currentUserID
-		
-		// 业务规则预检：草稿状态不能公开
 		if req.Problems[i].Status != nil && *req.Problems[i].Status == models.StatusDraft {
 			if req.Problems[i].IsPublic != nil && *req.Problems[i].IsPublic {
 				utils.BadRequestResponse(c, fmt.Sprintf("第%d个题目：草稿状态的题目不能设为公开", i+1))
@@ -422,9 +421,44 @@ func (s *Server) BatchCreateProblems(c *gin.Context) {
 		}
 	}
 
-	// 5. 调用Service层批量创建
+	// 6. 构建Problem对象列表
+	problems := make([]*models.Problem, len(req.Problems))
+	for i, problemReq := range req.Problems {
+		problem := models.Problem{
+			Title:        problemReq.Title,
+			Description:  problemReq.Description,
+			Input:        problemReq.Input,
+			Output:       problemReq.Output,
+			SampleInput:  problemReq.SampleInput,
+			SampleOutput: problemReq.SampleOutput,
+			Hint:         problemReq.Hint,
+			Source:       problemReq.Source,
+			Author:       problemReq.Author,
+			Difficulty:   problemReq.Difficulty,
+			Tags:         problemReq.Tags,
+			CreatedBy:    currentUserID, // 设置创建者
+		}
+
+		// 设置可选字段（使用指针判断是否传入）
+		if problemReq.TimeLimit != nil {
+			problem.TimeLimit = *problemReq.TimeLimit
+		}
+		if problemReq.MemoryLimit != nil {
+			problem.MemoryLimit = *problemReq.MemoryLimit
+		}
+		if problemReq.Status != nil {
+			problem.Status = *problemReq.Status
+		}
+		if problemReq.IsPublic != nil {
+			problem.IsPublic = *problemReq.IsPublic
+		}
+
+		problems[i] = &problem
+	}
+
+	// 7. 调用Service层批量创建
 	ctx := c.Request.Context()
-	response, err := s.svc.ProblemService.BatchCreateProblems(ctx, &req)
+	response, err := s.svc.ProblemService.BatchCreateProblems(ctx, problems)
 	if err != nil {
 		utils.InternalServerErrorResponse(c, "批量创建题目失败: "+err.Error())
 		return

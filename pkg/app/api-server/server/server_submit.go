@@ -9,8 +9,8 @@ package server
 
 import (
 	"strconv"
+	"zk-code-arena-server/pkg/common/queue"
 	"zk-code-arena-server/pkg/models"
-	"zk-code-arena-server/pkg/queue"
 	"zk-code-arena-server/pkg/utils"
 	"zk-code-arena-server/pkg/utils/middleware"
 
@@ -25,9 +25,9 @@ func (s *Server) RegisterSubmit(g *gin.RouterGroup) {
 		// 需要认证的路由
 		submitGroup.Use(middleware.JWTMiddleware())
 		{
-			submitGroup.POST("/", s.SubmitCode)        // 提交代码
-			submitGroup.GET("/", s.GetSubmits)         // 获取提交列表
-			submitGroup.GET("/:id", s.GetSubmit)       // 获取提交详情
+			submitGroup.POST("/", s.SubmitCode)               // 提交代码
+			submitGroup.GET("/", s.GetSubmits)                // 获取提交列表
+			submitGroup.GET("/:id", s.GetSubmit)              // 获取提交详情
 			submitGroup.GET("/:id/status", s.GetSubmitStatus) // 获取提交状态（轻量级）
 		}
 	}
@@ -51,7 +51,7 @@ func (s *Server) SubmitCode(c *gin.Context) {
 
 	var submitReq models.SubmitCodeRequest
 
-	if err := c.ShouldBindJSON(&submitReq); err != nil{
+	if err := c.ShouldBindJSON(&submitReq); err != nil {
 		utils.BadRequestResponse(c, "请求参数错误: "+err.Error())
 		return
 	}
@@ -283,7 +283,7 @@ func (s *Server) GetSubmitStatus(c *gin.Context) {
 	}
 
 	ctx := c.Request.Context()
-	
+
 	// 首先获取提交基本信息以进行权限检查
 	submit, err := s.svc.SubmitService.GetSubmitByID(ctx, id)
 	if err != nil {

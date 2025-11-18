@@ -13,24 +13,25 @@ import (
 	"strings"
 	"time"
 
-	"go.mongodb.org/mongo-driver/bson/primitive"
-	"zk-code-arena-server/pkg/models"
 	"zk-code-arena-server/pkg/app/api-server/repository"
-	"zk-code-arena-server/pkg/sandbox"
+	"zk-code-arena-server/pkg/common/sandbox"
+	"zk-code-arena-server/pkg/models"
 	"zk-code-arena-server/pkg/utils"
+
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type ProblemService struct {
 	sandboxClient   sandbox.Client
 	testCaseService *TestCaseService
-	repo           *repository.ProblemRepository
+	repo            *repository.ProblemRepository
 }
 
 func NewProblemService(sandboxClient sandbox.Client, testCaseService *TestCaseService, repo *repository.ProblemRepository) *ProblemService {
 	return &ProblemService{
 		sandboxClient:   sandboxClient,
 		testCaseService: testCaseService,
-		repo:           repo,
+		repo:            repo,
 	}
 }
 
@@ -91,6 +92,7 @@ func (s *ProblemService) CreateProblem(ctx context.Context, problem *models.Prob
 	utils.Logger.Infof("CreateProblem: 题目创建成功, id=%s", problem.ID.Hex())
 	return nil
 }
+
 // GetProblemByID 根据ID获取题目
 func (s *ProblemService) GetProblemByID(ctx context.Context, id primitive.ObjectID) (*models.Problem, error) {
 	// 数据操作：直接委托给Repository层
@@ -161,20 +163,20 @@ func (s *ProblemService) GetProblemsForUser(
 		PageSize:       pageSize,
 		Difficulty:     difficulty,
 		Tags:           tags,
-		IncludePrivate: false,                // 用户端固定为false，只看公开题目
-		Role:           models.RoleStudent,   // 固定为学生角色
-		UserID:         userID,               // 用于获取用户提交状态
+		IncludePrivate: false,              // 用户端固定为false，只看公开题目
+		Role:           models.RoleStudent, // 固定为学生角色
+		UserID:         userID,             // 用于获取用户提交状态
 	}
-	
+
 	// 业务逻辑：记录用户端查询日志
 	if userID != nil {
-		utils.Logger.Debugf("GetProblemsForUser: 用户端查询, userID=%s, difficulty=%s, tags=%v", 
+		utils.Logger.Debugf("GetProblemsForUser: 用户端查询, userID=%s, difficulty=%s, tags=%v",
 			userID.Hex(), difficulty, tags)
 	} else {
-		utils.Logger.Debugf("GetProblemsForUser: 未登录用户查询, difficulty=%s, tags=%v", 
+		utils.Logger.Debugf("GetProblemsForUser: 未登录用户查询, difficulty=%s, tags=%v",
 			difficulty, tags)
 	}
-	
+
 	return s.getProblemsByCondition(ctx, condition)
 }
 
@@ -191,29 +193,26 @@ func (s *ProblemService) GetProblemsForAdmin(
 		PageSize:       pageSize,
 		Difficulty:     difficulty,
 		Tags:           tags,
-		IncludePrivate: true,                // 管理员可以看所有题目，包括私有
-		Role:           models.RoleAdmin,    // 管理员角色
-		UserID:         nil,                 // 管理员不需要获取用户提交状态
+		IncludePrivate: true,             // 管理员可以看所有题目，包括私有
+		Role:           models.RoleAdmin, // 管理员角色
+		UserID:         nil,              // 管理员不需要获取用户提交状态
 		// 注意：status和createdBy筛选将在后续版本中支持
 	}
-	
+
 	// 业务逻辑：记录管理员查询日志
-	utils.Logger.Debugf("GetProblemsForAdmin: 管理员查询, difficulty=%s, tags=%v", 
+	utils.Logger.Debugf("GetProblemsForAdmin: 管理员查询, difficulty=%s, tags=%v",
 		difficulty, tags)
 	utils.Logger.Infof("GetProblemsForAdmin: 管理员可查看所有题目（包括私有和草稿状态）")
-	
+
 	return s.getProblemsByCondition(ctx, condition)
 }
-
-
-
 
 func (s *ProblemService) UpdateProblem(ctx context.Context, problemID primitive.ObjectID, req *models.UpdateProblemRequest) error {
 	// 业务逻辑：记录更新操作日志和处理特殊业务规则
 	if req.Status != nil && *req.Status == models.StatusDraft {
 		utils.Logger.Warnf("UpdateProblem: 草稿状态不能公开，强制设为私有, problemID=%s", problemID.Hex())
 	}
-	
+
 	utils.Logger.Infof("UpdateProblem: 开始更新题目, problemID=%s", problemID.Hex())
 
 	// 数据操作：委托给Repository层处理字段映射和更新
@@ -226,7 +225,6 @@ func (s *ProblemService) UpdateProblem(ctx context.Context, problemID primitive.
 	utils.Logger.Infof("UpdateProblem: 题目更新成功, problemID=%s", problemID.Hex())
 	return nil
 }
-
 
 // DeleteProblem 删除题目
 func (s *ProblemService) DeleteProblem(ctx context.Context, id primitive.ObjectID) error {
@@ -494,7 +492,7 @@ func (s *ProblemService) SearchProblems(
 	// 业务逻辑：根据用户登录状态设置默认参数
 	includePrivate := userID != nil // 登录用户可以看到私有题目
 	role := models.RoleStudent      // 默认为学生角色
-	
+
 	return s.repo.SearchProblems(ctx, keyword, page, pageSize, difficulty, tags, includePrivate, role, userID)
 }
 
@@ -503,6 +501,7 @@ func (s *ProblemService) SearchProblems(
 //   - ctx: 上下文
 //   - userID: 用户ID
 //   - problemIDs: 题目ID列表
+//
 // 返回:
 //   - map[string]models.UserProblemStatus: key为题目ID字符串，value为用户状态
 //   - error: 错误信息
@@ -512,26 +511,26 @@ func (s *ProblemService) GetUserProblemStatuses(
 	problemIDs []primitive.ObjectID,
 ) (map[string]models.UserProblemStatus, error) {
 	// 业务逻辑：记录查询日志
-	utils.Logger.Debugf("GetUserProblemStatuses: 查询用户状态, userID=%s, problemCount=%d", 
+	utils.Logger.Debugf("GetUserProblemStatuses: 查询用户状态, userID=%s, problemCount=%d",
 		userID.Hex(), len(problemIDs))
-	
+
 	// 数据操作：委托给Repository层
 	statusMap, err := s.repo.GetUserProblemStatuses(ctx, userID, problemIDs)
 	if err != nil {
-		utils.Logger.Errorf("GetUserProblemStatuses: Repository查询失败, userID=%s, error=%v", 
+		utils.Logger.Errorf("GetUserProblemStatuses: Repository查询失败, userID=%s, error=%v",
 			userID.Hex(), err)
 		return nil, err
 	}
-	
+
 	// 业务逻辑：转换map键类型从ObjectID到string
 	result := make(map[string]models.UserProblemStatus, len(statusMap))
 	for problemID, status := range statusMap {
 		result[problemID.Hex()] = status
 	}
-	
-	utils.Logger.Infof("GetUserProblemStatuses: 查询完成, userID=%s, 返回%d个题目状态", 
+
+	utils.Logger.Infof("GetUserProblemStatuses: 查询完成, userID=%s, 返回%d个题目状态",
 		userID.Hex(), len(result))
-	
+
 	return result, nil
 }
 
@@ -565,84 +564,54 @@ func (s *ProblemService) GetProblemDetail(ctx context.Context, problemID primiti
 		response.SampleCases[i] = *testCase
 	}
 
-	utils.Logger.Infof("GetProblemDetail: 题目详情聚合完成, problemID=%s, sampleCasesCount=%d", 
+	utils.Logger.Infof("GetProblemDetail: 题目详情聚合完成, problemID=%s, sampleCasesCount=%d",
 		problemID.Hex(), len(sampleCases))
 
 	return response, nil
 }
 
 // BatchCreateProblems 批量创建题目
-func (s *ProblemService) BatchCreateProblems(ctx context.Context, req *models.BatchCreateProblemsRequest) (*models.BatchCreateProblemsResponse, error) {
+func (s *ProblemService) BatchCreateProblems(ctx context.Context, problems []*models.Problem) (*models.BatchCreateProblemsResponse, error) {
 	// 业务逻辑：记录批量创建日志
-	utils.Logger.Infof("BatchCreateProblems: 开始批量创建题目, count=%d", len(req.Problems))
-	
+	utils.Logger.Infof("BatchCreateProblems: 开始批量创建题目, count=%d", len(problems))
+
 	// 初始化响应
 	response := &models.BatchCreateProblemsResponse{
 		SuccessCount: 0,
-		FailCount:     0,
-		TotalCount:    len(req.Problems),
-		Results:       make([]models.BatchCreateProblemResult, 0, len(req.Problems)),
+		FailCount:    0,
+		TotalCount:   len(problems),
+		Results:      make([]models.BatchCreateProblemResult, 0, len(problems)),
 	}
-	
+
 	// 遍历创建每个题目
-	for i, problemReq := range req.Problems {
-		// 创建Problem模型
-		problem := &models.Problem{
-			Title:        problemReq.Title,
-			Description:  problemReq.Description,
-			Input:        problemReq.Input,
-			Output:       problemReq.Output,
-			SampleInput:  problemReq.SampleInput,
-			SampleOutput: problemReq.SampleOutput,
-			Hint:         problemReq.Hint,
-			Source:       problemReq.Source,
-			Author:       problemReq.Author,
-			Difficulty:   problemReq.Difficulty,
-			Tags:         problemReq.Tags,
-			CreatedBy:    problemReq.CreatedBy,
-		}
-		
-		// 设置可选字段
-		if problemReq.TimeLimit != nil {
-			problem.TimeLimit = *problemReq.TimeLimit
-		}
-		if problemReq.MemoryLimit != nil {
-			problem.MemoryLimit = *problemReq.MemoryLimit
-		}
-		if problemReq.Status != nil {
-			problem.Status = *problemReq.Status
-		}
-		if problemReq.IsPublic != nil {
-			problem.IsPublic = *problemReq.IsPublic
-		}
-		
+	for i, problem := range problems {
 		// 调用单个创建方法
 		err := s.CreateProblem(ctx, problem)
-		
+
 		// 构建结果
 		result := models.BatchCreateProblemResult{
 			Index:     i,
-			Title:     problemReq.Title,
+			Title:     problem.Title,
 			Success:   err == nil,
 			ProblemID: problem.ID.Hex(),
 		}
-		
+
 		if err != nil {
 			result.Error = err.Error()
 			response.FailCount++
-			utils.Logger.Errorf("BatchCreateProblems: 题目创建失败, index=%d, title=%s, error=%v", 
-				i, problemReq.Title, err)
+			utils.Logger.Errorf("BatchCreateProblems: 题目创建失败, index=%d, title=%s, error=%v",
+				i, problem.Title, err)
 		} else {
 			response.SuccessCount++
-			utils.Logger.Infof("BatchCreateProblems: 题目创建成功, index=%d, title=%s, id=%s", 
-				i, problemReq.Title, problem.ID.Hex())
+			utils.Logger.Infof("BatchCreateProblems: 题目创建成功, index=%d, title=%s, id=%s",
+				i, problem.Title, problem.ID.Hex())
 		}
-		
+
 		response.Results = append(response.Results, result)
 	}
-	
-	utils.Logger.Infof("BatchCreateProblems: 批量创建完成, total=%d, success=%d, fail=%d", 
+
+	utils.Logger.Infof("BatchCreateProblems: 批量创建完成, total=%d, success=%d, fail=%d",
 		response.TotalCount, response.SuccessCount, response.FailCount)
-	
+
 	return response, nil
 }
