@@ -95,8 +95,15 @@ func (s *SubmitService) getMemoryUsed(result *models.JudgeResult) int {
 	return result.MemoryUsed
 }
 
-// GetSubmitsByStatus 根据状态获取提交列表
-func (s *SubmitService) GetSubmitsByStatus(ctx context.Context, status models.SubmitStatus, page, pageSize int) ([]*models.Submit, int64, error) {
+// GetSubmitsByStatus 根据状态获取提交列表（不分页，用于队列恢复）
+func (s *SubmitService) GetSubmitsByStatus(ctx context.Context, status models.SubmitStatus) ([]*models.Submit, error) {
+	// 数据操作：直接委托给Repository层，使用大分页获取所有记录
+	submits, _, err := s.repo.GetSubmitsByStatus(ctx, status, 1, 1000)
+	return submits, err
+}
+
+// GetSubmitsByStatusWithPagination 根据状态获取提交列表（分页）
+func (s *SubmitService) GetSubmitsByStatusWithPagination(ctx context.Context, status models.SubmitStatus, page, pageSize int) ([]*models.Submit, int64, error) {
 	// 数据操作：直接委托给Repository层
 	return s.repo.GetSubmitsByStatus(ctx, status, page, pageSize)
 }
