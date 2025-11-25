@@ -16,6 +16,8 @@ import (
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 // ProblemRepository Problem数据访问层
@@ -513,4 +515,44 @@ func (p *ProblemRepository) validateProblemUpdate(req *models.UpdateProblemReque
 	}
 
 	return nil
+}
+
+// GetNextSequenceValue 原子性地获取并递增指定序列的值
+func (r *ProblemRepository) GetNextSequenceValue(ctx context.Context, sequenceName string) (int64, error) {
+	countersCollection := r.db.Collection("counters")
+
+	filter := bson.M{"name": sequenceName}
+	update := bson.M{"$inc": bson.M{"sequence_value": 1}}
+	opts := options.FindOneAndUpdate().SetReturnDocument(options.After)
+
+	var result struct {
+		SequenceValue int64 `bson:"sequence_value"`
+	}
+
+	err := countersCollection.FindOneAndUpdate(ctx, filter, update, opts).Decode(&result)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			// 如果计数器不存在，可以尝试初始化或直接报错
+			utils.Logger.Errorf("GetNextSequenceValue: 计数器 '%s' 不存在", sequenceName)
+			return 0, fmt.Errorf("计数器不存在，请先初始化")
+		}
+		utils.Logger.Errorf("GetNextSequenceValue: 数据库操作失败, sequence_name=%s, error=%v", sequenceName, err)
+		return 0, err
+	}
+
+	return result.SequenceValue, nil
+}
+
+// GetByUniqueID 根据唯一编号查询题目
+func (r *ProblemRepository) GetByUniqueID(ctx context.Context, uniqueID int64) (*models.Problem, error) {
+	filter := bson.M{"unique_id": uniqueID}
+
+	var problem models.Problem
+	// 使用BaseRepository提供的FindOne方法，与GetByID保持一致
+	err := r.FindOne(ctx, "problems", filter, &problem)
+	if err != nil {
+		return nil, err
+	}
+
+	return &problem, nil
 }

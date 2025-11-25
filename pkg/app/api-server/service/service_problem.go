@@ -19,6 +19,7 @@ import (
 	"zk-code-arena-server/pkg/utils"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type ProblemService struct {
@@ -41,6 +42,14 @@ func (s *ProblemService) CreateProblem(ctx context.Context, problem *models.Prob
 	problem.ID = primitive.NewObjectID()
 	problem.CreatedAt = time.Now()
 	problem.UpdatedAt = time.Now()
+
+	// 2. 生成唯一编号 UniqueID
+	uniqueID, err := s.repo.GetNextSequenceValue(ctx, "problem_unique_id")
+	if err != nil {
+		utils.Logger.Errorf("CreateProblem: 获取唯一编号失败, error=%v", err)
+		return fmt.Errorf("生成题目编号失败: %w", err)
+	}
+	problem.UniqueID = uniqueID
 
 	// 2. 设置默认Status（如果未传）
 	if problem.Status == "" {
@@ -83,7 +92,7 @@ func (s *ProblemService) CreateProblem(ctx context.Context, problem *models.Prob
 		problem.Title, problem.Difficulty, problem.Status, problem.IsPublic, problem.CreatedBy.Hex())
 
 	// 8. 持久化到数据库 - 委托给Repository层
-	err := s.repo.CreateProblem(ctx, problem)
+	err = s.repo.CreateProblem(ctx, problem)
 	if err != nil {
 		utils.Logger.Errorf("CreateProblem: 数据库插入失败, error=%v", err)
 		return fmt.Errorf("数据库操作失败: %w", err)
@@ -91,6 +100,23 @@ func (s *ProblemService) CreateProblem(ctx context.Context, problem *models.Prob
 
 	utils.Logger.Infof("CreateProblem: 题目创建成功, id=%s", problem.ID.Hex())
 	return nil
+}
+
+// GetProblemByUniqueID 根据唯一编号获取题目
+func (s *ProblemService) GetProblemByUniqueID(ctx context.Context, uniqueID int64) (*models.Problem, error) {
+	utils.Logger.Debugf("GetProblemByUniqueID: unique_id=%d", uniqueID)
+
+	problem, err := s.repo.GetByUniqueID(ctx, uniqueID)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			utils.Logger.Warnf("GetProblemByUniqueID: 题目不存在, unique_id=%d", uniqueID)
+			return nil, fmt.Errorf("题目不存在")
+		}
+		utils.Logger.Errorf("GetProblemByUniqueID: 查询数据库失败, unique_id=%d, error=%v", uniqueID, err)
+		return nil, fmt.Errorf("获取题目失败: %w", err)
+	}
+
+	return problem, nil
 }
 
 // GetProblemByID 根据ID获取题目

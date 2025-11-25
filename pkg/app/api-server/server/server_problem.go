@@ -30,10 +30,11 @@ func (s *Server) RegisterProblem(g *gin.RouterGroup) {
 	problemGroup := g.Group("/problem")
 	{
 		// 公开路由
-		problemGroup.GET("/", s.GetProblems)                // 获取题目列表（用户端）
-		problemGroup.GET("/search", s.SearchProblems)       // 搜索题目
-		problemGroup.GET("/:id", s.GetProblem)              // 获取题目详情
-		problemGroup.GET("/:id/detail", s.GetProblemDetail) // 获取题目详情聚合信息
+		problemGroup.GET("/", s.GetProblems)                    // 获取题目列表（用户端）
+		problemGroup.GET("/search", s.SearchProblems)           // 搜索题目
+		problemGroup.GET("/:id", s.GetProblem)                  // 获取题目详情
+		problemGroup.GET("/unique/:id", s.GetProblemByUniqueID) // 根据 unique_id 获取题目详情
+		problemGroup.GET("/:id/detail", s.GetProblemDetail)     // 获取题目详情聚合信息
 	}
 
 	// 需要认证的路由
@@ -52,6 +53,54 @@ func (s *Server) RegisterProblem(g *gin.RouterGroup) {
 	{
 		adminGroup.GET("/", s.GetProblemsForAdmin) // 获取题目列表（管理员端）
 	}
+}
+
+// GetProblemByUniqueID godoc
+// @Summary      通过题号获取题目详情
+// @Description  根据题目唯一编号（如 1001）获取完整题目信息
+// @Tags         题目
+// @Accept       json
+// @Produce      json
+// @Param        id path int true "题目编号"
+// @Success      200 {object} utils.Response{data=models.Problem} "题目详情"
+// @Failure      400 {object} models.ErrorResponse "无效的题目编号"
+// @Failure      404 {object} models.ErrorResponse "题目不存在"
+// @Failure      500 {object} models.ErrorResponse "服务器内部错误"
+// @Router       /problem/unique/{id} [get]
+func (s *Server) GetProblemByUniqueID(c *gin.Context) {
+	// 1. 从 URL 参数中获取题号，并转换为 int64 类型
+	uniqueIDStr := c.Param("id")
+	uniqueID, err := strconv.ParseInt(uniqueIDStr, 10, 64)
+	if err != nil {
+		utils.BadRequestResponse(c, "无效的题目编号")
+		return
+	}
+
+	// 2. 调用 Service 层的新方法 GetProblemByUniqueID
+	ctx := c.Request.Context()
+	problem, err := s.svc.ProblemService.GetProblemByUniqueID(ctx, uniqueID)
+	if err != nil {
+		// 如果没找到，返回 404
+		if err.Error() == "题目不存在" {
+			utils.NotFoundResponse(c, "题目不存在")
+		} else {
+			// 其他错误，返回 500
+			utils.InternalServerErrorResponse(c, "查询题目失败: "+err.Error())
+		}
+		return
+	}
+
+	// 3. 检查权限：非公开题目需要认证
+	if !problem.IsPublic {
+		_, exists := c.Get("user_id")
+		if !exists {
+			utils.UnauthorizedResponse(c, "需要登录才能查看此题目")
+			return
+		}
+	}
+
+	// 4. 返回题目信息
+	utils.SuccessResponse(c, problem)
 }
 
 // GetProblems godoc

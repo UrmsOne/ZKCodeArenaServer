@@ -8,8 +8,9 @@
 package models
 
 import (
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"time"
+
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 // ProblemDifficulty 题目难度
@@ -42,6 +43,7 @@ const (
 // Problem 题目模型
 type Problem struct {
 	ID           primitive.ObjectID `bson:"_id,omitempty" json:"id" swaggertype:"string" example:"507f1f77bcf86cd799439011"`
+	UniqueID     int64              `bson:"unique_id" json:"unique_id" example:"1001"` // 题目唯一编号
 	Title        string             `bson:"title" json:"title" binding:"required" example:"两数之和"`
 	Description  string             `bson:"description" json:"description" binding:"required" example:"给定一个整数数组 nums 和一个整数目标值 target，请你在该数组中找出和为目标值 target 的那两个整数，并返回它们的数组下标。"`
 	Input        string             `bson:"input" json:"input" example:"第一行包含一个整数 n，表示数组长度。第二行包含 n 个整数，表示数组 nums。第三行包含一个整数 target。"`
@@ -52,8 +54,8 @@ type Problem struct {
 	Source       string             `bson:"source" json:"source" example:"LeetCode"`
 	Author       string             `bson:"author" json:"author" example:"LeetCode"`
 	Difficulty   ProblemDifficulty  `bson:"difficulty" json:"difficulty" example:"easy"`
-	TimeLimit    int                `bson:"time_limit" json:"time_limit" example:"1000"`     // 时间限制(ms)
-	MemoryLimit  int                `bson:"memory_limit" json:"memory_limit" example:"256"`  // 内存限制(MB)
+	TimeLimit    int                `bson:"time_limit" json:"time_limit" example:"1000"`    // 时间限制(ms)
+	MemoryLimit  int                `bson:"memory_limit" json:"memory_limit" example:"256"` // 内存限制(MB)
 	Tags         []string           `bson:"tags" json:"tags" example:"数组,哈希表"`
 	Status       ProblemStatus      `bson:"status" json:"status" example:"published"`
 	IsPublic     bool               `bson:"is_public" json:"is_public" example:"true"`
@@ -66,24 +68,25 @@ type Problem struct {
 
 // TestCase 测试用例
 type TestCase struct {
-	ID          primitive.ObjectID `bson:"_id,omitempty" json:"id" swaggertype:"string" example:"507f1f77bcf86cd799439011"`
-	ProblemID   primitive.ObjectID `bson:"problem_id" json:"problem_id" swaggertype:"string" example:"507f1f77bcf86cd799439012"`
-	Input       string             `bson:"input" json:"input" example:"4\n2 7 11 15\n9"`
-	Output      string             `bson:"output" json:"output" example:"0 1"`
-	IsSample    bool               `bson:"is_sample" json:"is_sample" example:"true"`
-	
+	ID        primitive.ObjectID `bson:"_id,omitempty" json:"id" swaggertype:"string" example:"507f1f77bcf86cd799439011"`
+	ProblemID primitive.ObjectID `bson:"problem_id" json:"problem_id" swaggertype:"string" example:"507f1f77bcf86cd799439012"`
+	Input     string             `bson:"input" json:"input" example:"4\n2 7 11 15\n9"`
+	Output    string             `bson:"output" json:"output" example:"0 1"`
+	IsSample  bool               `bson:"is_sample" json:"is_sample" example:"true"`
+
 	// 可选的超时配置（优先级高于题目默认配置）
-	TimeLimit   *int               `bson:"time_limit,omitempty" json:"time_limit,omitempty" example:"1000"`     // 时间限制(ms)，可选
-	MemoryLimit *int               `bson:"memory_limit,omitempty" json:"memory_limit,omitempty" example:"256"`  // 内存限制(MB)，可选
-	
-	Score       int                `bson:"score" json:"score" example:"10"`           // 用例分数（可选，用于部分分）
-	CreatedAt   time.Time          `bson:"created_at" json:"created_at" example:"2024-10-26T10:00:00Z"`
-	UpdatedAt   time.Time          `bson:"updated_at" json:"updated_at" example:"2024-10-26T10:00:00Z"`
+	TimeLimit   *int `bson:"time_limit,omitempty" json:"time_limit,omitempty" example:"1000"`    // 时间限制(ms)，可选
+	MemoryLimit *int `bson:"memory_limit,omitempty" json:"memory_limit,omitempty" example:"256"` // 内存限制(MB)，可选
+
+	Score     int       `bson:"score" json:"score" example:"10"` // 用例分数（可选，用于部分分）
+	CreatedAt time.Time `bson:"created_at" json:"created_at" example:"2024-10-26T10:00:00Z"`
+	UpdatedAt time.Time `bson:"updated_at" json:"updated_at" example:"2024-10-26T10:00:00Z"`
 }
 
 // ProblemList 题目列表项
 type ProblemList struct {
 	ID          primitive.ObjectID `json:"id"`
+	UniqueID    int64              `json:"unique_id" example:"1001"`
 	Title       string             `json:"title"`
 	Difficulty  ProblemDifficulty  `json:"difficulty"`
 	Tags        []string           `json:"tags"`
@@ -93,5 +96,5 @@ type ProblemList struct {
 	IsPublic    bool               `json:"is_public"`
 	CreatedAt   time.Time          `json:"created_at"`
 	// 用户状态（仅登录用户返回，未登录时为 nil）
-	UserStatus  *UserProblemStatus `json:"user_status,omitempty"`
+	UserStatus *UserProblemStatus `json:"user_status,omitempty"`
 }
