@@ -9,13 +9,14 @@ package service
 
 import (
 	"context"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"time"
-	"zk-code-arena-server/pkg/models"
 	"zk-code-arena-server/pkg/app/api-server/repository"
+	"zk-code-arena-server/pkg/models"
+
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-type SubmitService struct{
+type SubmitService struct {
 	repo *repository.SubmitRepository
 }
 
@@ -44,9 +45,9 @@ func (s *SubmitService) GetSubmitByID(ctx context.Context, id primitive.ObjectID
 }
 
 // GetSubmits 获取提交列表
-func (s *SubmitService) GetSubmits(ctx context.Context, page, pageSize int, userID, problemID primitive.ObjectID) ([]*models.SubmitList, int64, error) {
+func (s *SubmitService) GetSubmits(ctx context.Context, page, pageSize int, userID, problemID *primitive.ObjectID, status models.SubmitStatus) ([]*models.SubmitList, int64, error) {
 	// 数据操作：委托给Repository层进行分页查询
-	submits, total, err := s.repo.GetSubmitsList(ctx, page, pageSize, userID, problemID)
+	submits, total, err := s.repo.GetSubmitsList(ctx, page, pageSize, userID, problemID, status)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -73,7 +74,7 @@ func (s *SubmitService) GetSubmits(ctx context.Context, page, pageSize int, user
 func (s *SubmitService) UpdateSubmit(ctx context.Context, submit *models.Submit) error {
 	// 业务逻辑：设置更新时间
 	submit.UpdatedAt = time.Now()
-	
+
 	// 数据操作：委托给Repository层
 	return s.repo.UpdateSubmit(ctx, submit)
 }
@@ -95,9 +96,9 @@ func (s *SubmitService) getMemoryUsed(result *models.JudgeResult) int {
 }
 
 // GetSubmitsByStatus 根据状态获取提交列表
-func (s *SubmitService) GetSubmitsByStatus(ctx context.Context, status models.SubmitStatus) ([]*models.Submit, error) {
+func (s *SubmitService) GetSubmitsByStatus(ctx context.Context, status models.SubmitStatus, page, pageSize int) ([]*models.Submit, int64, error) {
 	// 数据操作：直接委托给Repository层
-	return s.repo.GetSubmitsByStatus(ctx, status)
+	return s.repo.GetSubmitsByStatus(ctx, status, page, pageSize)
 }
 
 // UpdateSubmitStatus 更新提交状态
@@ -196,7 +197,7 @@ func (s *SubmitService) calculateProgress(result *models.JudgeResult) *models.Ju
 	}
 
 	percentage := (completedCases * 100) / totalCases
-	
+
 	return &models.JudgeProgress{
 		CurrentTestCase: completedCases + 1,
 		TotalTestCases:  totalCases,
@@ -208,8 +209,8 @@ func (s *SubmitService) calculateProgress(result *models.JudgeResult) *models.Ju
 func (s *SubmitService) isCompletedStatus(status models.SubmitStatus) bool {
 	switch status {
 	case models.StatusAccepted, models.StatusWrongAnswer, models.StatusTimeLimit,
-		 models.StatusMemoryLimit, models.StatusRuntimeError, models.StatusCompileError,
-		 models.StatusSystemError:
+		models.StatusMemoryLimit, models.StatusRuntimeError, models.StatusCompileError,
+		models.StatusSystemError:
 		return true
 	default:
 		return false

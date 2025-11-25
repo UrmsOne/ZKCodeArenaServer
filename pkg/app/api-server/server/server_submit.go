@@ -163,23 +163,25 @@ func (s *Server) GetSubmits(c *gin.Context) {
 		pageSize = 10
 	}
 
-	var problemID, userID primitive.ObjectID
+	var problemID, userID *primitive.ObjectID
 	var err error
 
 	if problemIDStr != "" {
-		problemID, err = primitive.ObjectIDFromHex(problemIDStr)
+		id, err := primitive.ObjectIDFromHex(problemIDStr)
 		if err != nil {
 			utils.BadRequestResponse(c, "无效的题目ID")
 			return
 		}
+		problemID = &id
 	}
 
 	if userIDStr != "" {
-		userID, err = primitive.ObjectIDFromHex(userIDStr)
+		id, err := primitive.ObjectIDFromHex(userIDStr)
 		if err != nil {
 			utils.BadRequestResponse(c, "无效的用户ID")
 			return
 		}
+		userID = &id
 	}
 
 	// 检查权限：非管理员只能查看自己的提交
@@ -193,11 +195,15 @@ func (s *Server) GetSubmits(c *gin.Context) {
 		// 非管理员只能查看自己的提交
 		currentUserID, _ := c.Get("user_id")
 		currentUserObjectID, _ := primitive.ObjectIDFromHex(currentUserID.(string))
-		userID = currentUserObjectID
+		userID = &currentUserObjectID
 	}
 
+	// 获取状态筛选参数（可选）
+	statusStr := c.Query("status")
+	status := models.SubmitStatus(statusStr)
+
 	ctx := c.Request.Context()
-	submits, total, err := s.svc.SubmitService.GetSubmits(ctx, page, pageSize, userID, problemID)
+	submits, total, err := s.svc.SubmitService.GetSubmits(ctx, page, pageSize, userID, problemID, status)
 	if err != nil {
 		utils.InternalServerErrorResponse(c, "获取提交列表失败: "+err.Error())
 		return
