@@ -12,9 +12,9 @@ import (
 	"strings"
 
 	"zk-code-arena-server/conf"
+	"zk-code-arena-server/pkg/common/queue"
+	"zk-code-arena-server/pkg/common/sandbox"
 	"zk-code-arena-server/pkg/models"
-	"zk-code-arena-server/pkg/queue"
-	"zk-code-arena-server/pkg/sandbox"
 	"zk-code-arena-server/pkg/utils"
 	wsManager "zk-code-arena-server/pkg/utils/websocket"
 )
@@ -151,7 +151,7 @@ func (js *JudgeService) judgeTask(ctx context.Context, task *queue.JudgeTask) er
 	if err := js.submitService.UpdateSubmitStatus(ctx, task.SubmitID, models.StatusRunning); err != nil {
 		return fmt.Errorf("更新状态为 running 失败: %w", err)
 	}
-	
+
 	// WebSocket推送：开始判题
 	wsManager.BroadcastSubmitStatusUpdate(task.SubmitID, task.UserID, models.StatusRunning, nil, nil)
 
@@ -192,10 +192,10 @@ func (js *JudgeService) judgeTask(ctx context.Context, task *queue.JudgeTask) er
 			TestResults:  []models.TestResult{},
 			CompileError: err.Error(),
 		}
-		
+
 		// WebSocket推送：编译错误
 		wsManager.BroadcastSubmitStatusUpdate(task.SubmitID, task.UserID, models.StatusCompileError, nil, result)
-		
+
 		return js.submitService.UpdateSubmitResult(ctx, task.SubmitID, result)
 	}
 
@@ -222,17 +222,17 @@ func (js *JudgeService) judgeTask(ctx context.Context, task *queue.JudgeTask) er
 	if err != nil {
 		return err
 	}
-	
+
 	// WebSocket推送：判题完成
 	wsManager.BroadcastSubmitStatusUpdate(task.SubmitID, task.UserID, finalStatus, nil, result)
-	
+
 	return nil
 }
 
 // compileStage 编译阶段
 func (js *JudgeService) compileStage(ctx context.Context, judgeCtx *JudgeContext) error {
 	logger := utils.GetLogger(ctx)
-	
+
 	// 检查语言是否需要编译
 	langConfig := js.sandboxClient.GetLanguageConfig(judgeCtx.Task.Language)
 	if langConfig == nil {
@@ -292,28 +292,28 @@ func (js *JudgeService) runSingleTestCase(
 	testCase *models.TestCase,
 ) (*models.TestResult, error) {
 	logger := utils.GetLogger(ctx)
-	
+
 	// 记录测试用例信息（用于调试）
-	logger.Debugf("运行测试用例: TestCaseID=%s, Input长度=%d, Output长度=%d, Input预览=%s, Output预览=%s", 
-		testCase.ID.Hex(), 
-		len(testCase.Input), 
+	logger.Debugf("运行测试用例: TestCaseID=%s, Input长度=%d, Output长度=%d, Input预览=%s, Output预览=%s",
+		testCase.ID.Hex(),
+		len(testCase.Input),
 		len(testCase.Output),
 		truncateString(testCase.Input, 50),
 		truncateString(testCase.Output, 50))
-	
+
 	// 验证测试用例数据是否有效
 	if testCase.Input == "" && testCase.Output == "" {
 		logger.Warnf("测试用例数据可能为空: TestCaseID=%s", testCase.ID.Hex())
 	}
-	
+
 	// 检查是否是占位符数据（常见问题：测试用例使用占位符文本）
 	if testCase.Input == "测试用例1" || testCase.Output == "测试用例1" ||
 		testCase.Input == "测试用例2" || testCase.Output == "测试用例2" ||
 		testCase.Input == "test case 1" || testCase.Output == "test case 1" {
-		logger.Warnf("⚠️ 检测到测试用例可能使用占位符数据: TestCaseID=%s, Input=%s, Output=%s", 
+		logger.Warnf("⚠️ 检测到测试用例可能使用占位符数据: TestCaseID=%s, Input=%s, Output=%s",
 			testCase.ID.Hex(), testCase.Input, testCase.Output)
 	}
-	
+
 	// 获取时间和内存限制
 	timeLimit := js.getTimeLimit(testCase, judgeCtx.Problem)
 	memoryLimit := js.getMemoryLimit(testCase, judgeCtx.Problem)
@@ -326,7 +326,7 @@ func (js *JudgeService) runSingleTestCase(
 		// 解释型语言，使用源代码
 		executableID = judgeCtx.Task.Code
 	}
-	
+
 	runReq := &sandbox.RunRequest{
 		Language:     judgeCtx.Task.Language,
 		ExecutableID: executableID,
@@ -341,9 +341,9 @@ func (js *JudgeService) runSingleTestCase(
 		logger.Errorf("沙箱运行失败: TestCaseID=%s, Error=%v", testCase.ID.Hex(), err)
 		return nil, fmt.Errorf("沙箱运行失败: %w", err)
 	}
-	
+
 	// 记录沙箱返回的详细信息
-	logger.Debugf("沙箱运行结果: TestCaseID=%s, Status=%s, ExitCode=%d, Output长度=%d, Error长度=%d, Output预览=%s", 
+	logger.Debugf("沙箱运行结果: TestCaseID=%s, Status=%s, ExitCode=%d, Output长度=%d, Error长度=%d, Output预览=%s",
 		testCase.ID.Hex(),
 		string(runResp.Status),
 		runResp.ExitCode,
@@ -369,7 +369,7 @@ func (js *JudgeService) runSingleTestCase(
 			logger.Debugf("输出匹配: TestCaseID=%s", testCase.ID.Hex())
 		} else {
 			result.Status = models.StatusWrongAnswer
-			logger.Infof("输出不匹配: TestCaseID=%s, 期望输出=%s, 实际输出=%s", 
+			logger.Infof("输出不匹配: TestCaseID=%s, 期望输出=%s, 实际输出=%s",
 				testCase.ID.Hex(),
 				truncateString(testCase.Output, 100),
 				truncateString(runResp.Output, 100))
@@ -383,13 +383,13 @@ func (js *JudgeService) runSingleTestCase(
 	case sandbox.RunStatusSystemError:
 		// 沙箱返回系统错误
 		logger := utils.GetLogger(ctx)
-		logger.Warnf("测试用例返回系统错误: TestCaseID=%s, ExitCode=%d, Error=%s", 
+		logger.Warnf("测试用例返回系统错误: TestCaseID=%s, ExitCode=%d, Error=%s",
 			testCase.ID.Hex(), runResp.ExitCode, runResp.Error)
 		result.Status = models.StatusSystemError
 	default:
 		// 未知状态，记录详细信息
 		logger := utils.GetLogger(ctx)
-		logger.Errorf("未知的运行状态: Status=%s, TestCaseID=%s, ExitCode=%d, Error=%s", 
+		logger.Errorf("未知的运行状态: Status=%s, TestCaseID=%s, ExitCode=%d, Error=%s",
 			string(runResp.Status), testCase.ID.Hex(), runResp.ExitCode, runResp.Error)
 		result.Status = models.StatusSystemError
 	}
