@@ -13,8 +13,8 @@ import (
 
 	"zk-code-arena-server/conf"
 	"zk-code-arena-server/pkg/app/api-server/repository"
-	"zk-code-arena-server/pkg/queue"
-	"zk-code-arena-server/pkg/sandbox"
+	"zk-code-arena-server/pkg/common/queue"
+	"zk-code-arena-server/pkg/common/sandbox"
 	"zk-code-arena-server/pkg/utils"
 )
 
