@@ -1631,14 +1631,14 @@ func (s2 *CourseService) GetQrcode(userId string, clazzId string, ctx context.Co
 
 	// 如果既不是成员也不是授权用户，则无权限
 	if !isMember && !isAuthorized {
-		return nil, errors.New("权限不足")
+		return nil, models.ErrPermissionDenied
 	}
 
 	// 从Redis获取二维码
 	qrcode, err := utils.RedisClient.HGet(ctx, "clazz_qrcode"+clazzId, "qrcode").Result()
 	if err != nil {
 		// Redis中没有找到二维码，说明二维码已过期
-		return nil, errors.New("二维码已过期")
+		return nil, models.ErrQRCodeExpired
 	}
 
 	return qrcode, nil

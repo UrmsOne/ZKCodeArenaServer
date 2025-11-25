@@ -8,6 +8,8 @@
 package server
 
 import (
+	"errors"
+
 	"zk-code-arena-server/pkg/models"
 	"zk-code-arena-server/pkg/utils"
 	"zk-code-arena-server/pkg/utils/middleware"
@@ -85,10 +87,10 @@ func (s *Server) GetQrcodeClazzById(c *gin.Context) {
 	qrcodeBase64, err := s.svc.CourseService.GetQrcode(userID.(string), clazzId, c.Request.Context())
 	if err != nil {
 		// 根据错误类型返回不同的响应
-		if err.Error() == "权限不足" {
+		if errors.Is(err, models.ErrPermissionDenied) {
 			utils.ForbiddenResponse(c, err.Error())
 			return
-		} else if err.Error() == "二维码已过期" {
+		} else if errors.Is(err, models.ErrQRCodeExpired) {
 			utils.NotFoundResponse(c, err.Error())
 			return
 		} else {

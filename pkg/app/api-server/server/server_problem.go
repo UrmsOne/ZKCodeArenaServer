@@ -8,6 +8,7 @@
 package server
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -81,7 +82,7 @@ func (s *Server) GetProblemByUniqueID(c *gin.Context) {
 	problem, err := s.svc.ProblemService.GetProblemByUniqueID(ctx, uniqueID)
 	if err != nil {
 		// 如果没找到，返回 404
-		if err.Error() == "题目不存在" {
+		if errors.Is(err, models.ErrProblemNotFound) {
 			utils.NotFoundResponse(c, "题目不存在")
 		} else {
 			// 其他错误，返回 500
@@ -301,11 +302,11 @@ func (s *Server) GetProblemDetail(c *gin.Context) {
 	problemDetail, err := s.svc.ProblemService.GetProblemDetail(ctx, id)
 	if err != nil {
 		// 业务逻辑：根据错误类型返回不同响应
-		if err.Error() == "题目不存在" || err.Error() == "获取题目信息失败: mongo: no documents in result" {
+		if errors.Is(err, models.ErrProblemNotFound) || errors.Is(err, models.ErrProblemInfoFetchFailed) {
 			utils.NotFoundResponse(c, "题目不存在")
 			return
 		}
-		if err.Error() == "获取示例测试用例失败: mongo: no documents in result" {
+		if errors.Is(err, models.ErrSampleTestCaseFetchFailed) {
 			utils.NotFoundResponse(c, "题目测试用例不存在")
 			return
 		}

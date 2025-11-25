@@ -9,6 +9,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -18,7 +19,6 @@ import (
 	"zk-code-arena-server/pkg/models"
 	"zk-code-arena-server/pkg/utils"
 
-	"github.com/pkg/errors"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -111,7 +111,7 @@ func (s *ProblemService) GetProblemByUniqueID(ctx context.Context, uniqueID int6
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			utils.Logger.Warnf("GetProblemByUniqueID: 题目不存在, unique_id=%d", uniqueID)
-			return nil, fmt.Errorf("题目不存在")
+			return nil, models.ErrProblemNotFound
 		}
 		utils.Logger.Errorf("GetProblemByUniqueID: 查询数据库失败, unique_id=%d, error=%v", uniqueID, err)
 		return nil, fmt.Errorf("获取题目失败: %w", err)
@@ -566,14 +566,20 @@ func (s *ProblemService) GetProblemDetail(ctx context.Context, problemID primiti
 	problem, err := s.repo.GetByID(ctx, problemID)
 	if err != nil {
 		utils.Logger.Errorf("GetProblemDetail: 获取题目信息失败, problemID=%s, error=%v", problemID.Hex(), err)
-		return nil, fmt.Errorf("获取题目信息失败: %w", err)
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return nil, models.ErrProblemNotFound
+		}
+		return nil, fmt.Errorf("%w: %w", models.ErrProblemInfoFetchFailed, err)
 	}
 
 	// 数据操作2：获取示例测试用例
 	sampleCases, err := s.testCaseService.GetSampleTestCases(ctx, problemID)
 	if err != nil {
 		utils.Logger.Errorf("GetProblemDetail: 获取示例测试用例失败, problemID=%s, error=%v", problemID.Hex(), err)
-		return nil, fmt.Errorf("获取示例测试用例失败: %w", err)
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return nil, models.ErrProblemTestCaseNotFound
+		}
+		return nil, fmt.Errorf("%w: %w", models.ErrSampleTestCaseFetchFailed, err)
 	}
 
 	// 业务逻辑：数据聚合和组装
