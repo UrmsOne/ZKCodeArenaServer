@@ -67,7 +67,7 @@ func NewServer(lg logrus.FieldLogger, svc *service.Service, opts *CmdOptions, st
 
 func (s *Server) Init() {
 	s.RegisterRoutes()
-	
+
 	// 启动WebSocket连接管理器
 	go func() {
 		wsManager := wsManager.GlobalConnectionManager
@@ -87,7 +87,7 @@ func (s *Server) RegisterRoutes() {
 
 	// Swagger 文档路由（保留兼容性）
 	s.app.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
-	
+
 	// Scalar 文档路由（现代化 API 文档）
 	s.RegisterScalar(s.app, nil)
 

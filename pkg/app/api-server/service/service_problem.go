@@ -18,6 +18,7 @@ import (
 	"zk-code-arena-server/pkg/models"
 	"zk-code-arena-server/pkg/utils"
 
+	"github.com/pkg/errors"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -108,7 +109,7 @@ func (s *ProblemService) GetProblemByUniqueID(ctx context.Context, uniqueID int6
 
 	problem, err := s.repo.GetByUniqueID(ctx, uniqueID)
 	if err != nil {
-		if err == mongo.ErrNoDocuments {
+		if errors.Is(err, mongo.ErrNoDocuments) {
 			utils.Logger.Warnf("GetProblemByUniqueID: 题目不存在, unique_id=%d", uniqueID)
 			return nil, fmt.Errorf("题目不存在")
 		}
@@ -515,11 +516,7 @@ func (s *ProblemService) SearchProblems(
 	}
 
 	// 数据操作：委托给Repository层
-	// 业务逻辑：根据用户登录状态设置默认参数
-	includePrivate := userID != nil // 登录用户可以看到私有题目
-	role := models.RoleStudent      // 默认为学生角色
-
-	return s.repo.SearchProblems(ctx, keyword, page, pageSize, difficulty, tags, includePrivate, role, userID)
+	return s.repo.SearchProblems(ctx, keyword, page, pageSize, difficulty, tags, userID)
 }
 
 // GetUserProblemStatuses 批量查询用户对多个题目的状态
