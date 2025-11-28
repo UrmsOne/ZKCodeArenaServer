@@ -106,6 +106,7 @@ func (p *ProblemRepository) GetProblems(
 	for _, problem := range problems {
 		problemList = append(problemList, &models.ProblemList{
 			ID:          problem.ID,
+			UniqueID:    problem.UniqueID,
 			Title:       problem.Title,
 			Difficulty:  problem.Difficulty,
 			ACCount:     problem.ACCount,
@@ -145,6 +146,7 @@ func (p *ProblemRepository) GetProblemsWithUserStatus(
 	for _, problem := range problems {
 		problemList = append(problemList, &models.ProblemList{
 			ID:          problem.ID,
+			UniqueID:    problem.UniqueID,
 			Title:       problem.Title,
 			Difficulty:  problem.Difficulty,
 			Tags:        problem.Tags,
@@ -220,6 +222,7 @@ func (p *ProblemRepository) SearchProblems(
 	for _, problem := range problems {
 		problemList = append(problemList, &models.ProblemList{
 			ID:          problem.ID,
+			UniqueID:    problem.UniqueID,
 			Title:       problem.Title,
 			Difficulty:  problem.Difficulty,
 			Tags:        problem.Tags,

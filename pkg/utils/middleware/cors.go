@@ -15,8 +15,9 @@ import (
 func CorsHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		method := c.Request.Method
+
+		// 动态获取并设置Origin，支持凭证
 		origin := c.Request.Header.Get("Origin")
-		
 		if origin != "" {
 			c.Header("Access-Control-Allow-Origin", origin)
 			c.Header("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE, UPDATE")
