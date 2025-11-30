@@ -144,11 +144,11 @@ type BatchCreateProblemsRequest struct {
 
 // BatchCreateProblemResult 批量创建题目结果
 type BatchCreateProblemResult struct {
-	Index     int    `json:"index"`     // 题目在请求中的索引
-	Title     string `json:"title"`     // 题目标题
-	Success   bool   `json:"success"`   // 是否创建成功
+	Index     int    `json:"index"`                // 题目在请求中的索引
+	Title     string `json:"title"`                // 题目标题
+	Success   bool   `json:"success"`              // 是否创建成功
 	ProblemID string `json:"problem_id,omitempty"` // 成功时的题目ID
-	Error     string `json:"error,omitempty"`     // 失败时的错误信息
+	Error     string `json:"error,omitempty"`      // 失败时的错误信息
 }
 
 // BatchCreateProblemsResponse 批量创建题目响应
@@ -169,36 +169,33 @@ type CreateCourseRequest struct {
 
 // UpdateCourseRequest 更新课程请求
 type UpdateCourseRequest struct {
-	ID          string        `bson:"_id,omitempty" json:"id" binding:"required"`
 	Name        *string       `json:"name,omitempty"`
 	Description *string       `json:"description,omitempty"`
 	Status      *CourseStatus `json:"status,omitempty"`
 }
 
-// PageQueryCourseRequest 分页查询课程请求
+// PageQueryCourseRequest 分页查询课程请求（查询创建的课程）
 type PageQueryCourseRequest struct {
-	PageNum  *int64  `json:"page_num,omitempty"`
-	PageSize *int64  `json:"page_size,omitempty"`
-	Status   *int8   `json:"status,omitempty"`
-	Name     *string `json:"name,omitempty"`
+	PageNum  *int64  `json:"page_num,omitempty" form:"page_num"`
+	PageSize *int64  `json:"page_size,omitempty" form:"page_size"`
+	Status   *int8   `json:"status,omitempty" form:"status"`
+	Name     *string `json:"name,omitempty" form:"name"`
 }
 
 // PageQueryCourseStudentsRequest 分页查询课程学生请求
 type PageQueryCourseStudentsRequest struct {
-	CourseId  string  `json:"course_id" binding:"required"`
-	PageNum   *int64  `json:"page_num,omitempty"`
-	PageSize  *int64  `json:"page_size,omitempty"`
-	RealName  *string `json:"real_name,omitempty"`
-	StudentId *string `json:"student_id,omitempty"`
+	PageNum   *int64  `json:"page_num,omitempty" form:"page_num"`
+	PageSize  *int64  `json:"page_size,omitempty" form:"page_size"`
+	RealName  *string `json:"real_name,omitempty" form:"real_name"`
+	StudentId *string `json:"student_id,omitempty" form:"student_id"`
 }
 
 // PageQueryCourseTeachersRequest 分页查询课程教师请求
 type PageQueryCourseTeachersRequest struct {
-	CourseId  string  `json:"course_id" binding:"required"`
-	PageNum   *int64  `json:"page_num,omitempty"`
-	PageSize  *int64  `json:"page_size,omitempty"`
-	RealName  *string `json:"real_name,omitempty"`
-	TeacherId *string `json:"teacher_id,omitempty"`
+	PageNum   *int64  `json:"page_num,omitempty" form:"page_num"`
+	PageSize  *int64  `json:"page_size,omitempty" form:"page_size"`
+	RealName  *string `json:"real_name,omitempty" form:"real_name"`
+	TeacherId *string `json:"teacher_id,omitempty" form:"teacher_id"`
 }
 
 // PageQueryAllTeachersRequest 分页查询所有教师请求
@@ -226,10 +223,10 @@ type PageQueryCourseTeachersResponse struct {
 
 // PageQueryTeacherCoursesRequest 分页查询老师加入的课程请求
 type PageQueryTeacherCoursesRequest struct {
-	PageNum  *int64  `json:"page_num,omitempty"`
-	PageSize *int64  `json:"page_size,omitempty"`
-	Status   *int8   `json:"status,omitempty"`
-	Name     *string `json:"name,omitempty"`
+	PageNum  *int64  `json:"page_num,omitempty" form:"page_num"`
+	PageSize *int64  `json:"page_size,omitempty" form:"page_size"`
+	Status   *int8   `json:"status,omitempty" form:"status"`
+	Name     *string `json:"name,omitempty" form:"name"`
 }
 
 // PageQueryCourseResponse 分页查询课程响应
@@ -242,15 +239,14 @@ type PageQueryCourseResponse struct {
 
 // AddCourseTeachersRequest 课程添加教师请求
 type AddCourseTeachersRequest struct {
-	CourseId   string   `json:"course_id" binding:"required"`
 	TeacherIds []string `json:"teacher_ids" binding:"required"`
 }
 
-// RemoveCourseTeachersRequest 课程删除教师请求
-type RemoveCourseTeachersRequest struct {
-	CourseId   string   `json:"course_id" binding:"required"`
-	TeacherIds []string `json:"teacher_ids" binding:"required"`
-}
+// RemoveCourseTeachersRequest 课程删除教师请求 (已废弃，改为路径参数)
+// type RemoveCourseTeachersRequest struct {
+// 	CourseId   string   `json:"course_id" binding:"required"`
+// 	TeacherIds []string `json:"teacher_ids" binding:"required"`
+// }
 
 // ==================== 班级模块请求 ====================
 
@@ -267,7 +263,6 @@ type CreateClazzRequest struct {
 
 // UpdateClazzRequest 更新班级请求
 type UpdateClazzRequest struct {
-	ClazzID       string `bson:"clazz_id,omitempty" json:"clazz_id" binding:"required"`
 	Name          string `json:"name,omitempty"`
 	Description   string `json:"description,omitempty"`
 	Schedule      string `json:"schedule,omitempty"`
@@ -277,17 +272,15 @@ type UpdateClazzRequest struct {
 
 // JoinClazzRequest 加入班级请求
 type JoinClazzRequest struct {
-	ClazzID    string  `form:"clazz_id" binding:"required"`
 	InviteCode *string `form:"invite_code,omitempty"`
 }
 
 // AddClazzMemberRequest 添加班级成员请求
 type AddClazzMemberRequest struct {
-	ClazzID  string `json:"clazz_id" form:"clazzId" binding:"required"`
 	MemberID string `json:"member_id" binding:"required"`
 }
 
-// RemoveClazzMembersRequest 批量移除班级成员请求
+// RemoveClazzMembersRequest 批量移除班级成员请求 (内部使用)
 type RemoveClazzMembersRequest struct {
 	ClazzID   string   `json:"clazz_id" binding:"required"`
 	MemberIDs []string `json:"member_ids" binding:"required"`
@@ -310,15 +303,14 @@ type GetClazzResponse struct {
 
 // AddClazzTeachersRequest 班级添加教师请求
 type AddClazzTeachersRequest struct {
-	ClazzId    string   `json:"clazz_id" binding:"required"`
 	TeacherIds []string `json:"teacher_ids" binding:"required"`
 }
 
-// RemoveClazzTeachersRequest 班级移除教师请求
-type RemoveClazzTeachersRequest struct {
-	ClazzId    string   `json:"clazz_id" binding:"required"`
-	TeacherIds []string `json:"teacher_ids" binding:"required"`
-}
+// RemoveClazzTeachersRequest 班级移除教师请求 (已废弃，改为路径参数)
+// type RemoveClazzTeachersRequest struct {
+// 	ClazzId    string   `json:"clazz_id" binding:"required"`
+// 	TeacherIds []string `json:"teacher_ids" binding:"required"`
+// }
 
 // ==================== 任务模块请求 ====================
 
@@ -335,7 +327,6 @@ type CreateTaskRequest struct {
 // AddTaskRequest 添加任务请求
 type AddTaskRequest struct {
 	CourseId    string     `json:"course_id" binding:"required"`
-	ClazzId     string     `bson:"clazz_id" json:"clazz_id" binding:"required"`
 	Title       string     `json:"title" binding:"required"`
 	Description string     `json:"description,omitempty"`
 	Type        TaskType   `json:"type" binding:"required"`
@@ -346,9 +337,7 @@ type AddTaskRequest struct {
 
 // UpdateTaskRequest 更新任务请求
 type UpdateTaskRequest struct {
-	ID          string     `bson:"_id,omitempty" json:"task_id" binding:"required"`
 	CourseId    string     `bson:"course_id" json:"course_id,omitempty" binding:"required"`
-	ClazzId     string     `bson:"clazz_id" json:"clazz_id,omitempty" binding:"required"`
 	Title       *string    `json:"title,omitempty"`
 	Description *string    `json:"description,omitempty"`
 	Type        *TaskType  `json:"type,omitempty"`
@@ -360,25 +349,20 @@ type UpdateTaskRequest struct {
 // FinishTaskRequest 完成任务请求
 type FinishTaskRequest struct {
 	RelationID string `bson:"relation_id" json:"relation_id" binding:"required"`
-	TaskID     string `bson:"task_id" json:"task_id" binding:"required"`
-	ClazzID    string `bson:"clazz_id" json:"clazz_id" binding:"required"`
 }
 
 // AddTaskRelationIdsRequest 添加任务关系ID请求
 type AddTaskRelationIdsRequest struct {
-	TaskID      string   `json:"task_id" binding:"required"`
 	RelationIDs []string `json:"relation_ids" binding:"required"`
 }
 
 // RemoveTaskRelationIdsRequest 删除任务关系ID请求
 type RemoveTaskRelationIdsRequest struct {
-	TaskID      string   `json:"task_id" binding:"required"`
 	RelationIDs []string `json:"relation_ids" binding:"required"`
 }
 
 // CopyTaskToClassRequest 复制任务到班级请求
 type CopyTaskToClassRequest struct {
-	TaskID        string `json:"task_id" binding:"required"`
 	SourceClassID string `json:"source_class_id" binding:"required"`
 	TargetClassID string `json:"target_class_id" binding:"required"`
 }
@@ -393,12 +377,10 @@ type CheckTaskCompletionResponse struct {
 
 // PageQueryTaskCompletionRequest 分页查询任务完成情况请求
 type PageQueryTaskCompletionRequest struct {
-	TaskID   string  `json:"task_id" binding:"required"`
-	ClassID  string  `json:"class_id" binding:"required"`
-	PageNum  *int64  `json:"page_num,omitempty"`
-	PageSize *int64  `json:"page_size,omitempty"`
-	RealName *string `json:"real_name,omitempty"`
-	UserID   *string `json:"user_id,omitempty"`
+	PageNum  *int64  `json:"page_num,omitempty" form:"page_num"`
+	PageSize *int64  `json:"page_size,omitempty" form:"page_size"`
+	RealName *string `json:"real_name,omitempty" form:"real_name"`
+	UserID   *string `json:"user_id,omitempty" form:"user_id"`
 }
 
 // PageQueryTaskCompletionResponse 分页查询任务完成情况响应
@@ -498,16 +480,12 @@ type WSJudgeResult struct {
 
 // AddStudentToClassRequest 添加学生到班级请求
 type AddStudentToClassRequest struct {
-	StudentID string `json:"student_id" binding:"required"`
-	ClassID   string `json:"class_id" binding:"required"`
-	CourseID  string `json:"course_id" binding:"required"`
+	CourseID string `json:"course_id" binding:"required"`
 }
 
 // RemoveStudentFromClassRequest 从班级移除学生请求
 type RemoveStudentFromClassRequest struct {
-	StudentID string `json:"student_id" binding:"required"`
-	ClassID   string `json:"class_id" binding:"required"`
-	CourseID  string `json:"course_id" binding:"required"`
+	CourseID string `json:"course_id" binding:"required"`
 }
 
 // GetStudentClassesRequest 获取学生班级请求

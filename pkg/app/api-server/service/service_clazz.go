@@ -70,6 +70,57 @@ func (s2 *ClazzService) RefreshQrcode(userId string, courseId string, clazzId st
 	return base64QRCode, nil
 }
 
+// RefreshQrcodeByClazzId 通过班级ID刷新二维码（新的RESTful接口使用）
+func (s2 *ClazzService) RefreshQrcodeByClazzId(userId string, clazzId string, ctx context.Context) (interface{}, error) {
+	// 验证用户ID
+	userObjId, err := primitive.ObjectIDFromHex(userId)
+	if err != nil {
+		return nil, errors.New("用户错误")
+	}
+
+	// 验证班级ID
+	clazzObjId, err := primitive.ObjectIDFromHex(clazzId)
+	if err != nil {
+		return nil, errors.New("班级ID错误")
+	}
+
+	// 查询班级信息获取课程ID
+	clazzColl := utils.GetCollection("clazzes")
+	var clazz models.Clazz
+	if err = clazzColl.FindOne(ctx, bson.M{"_id": clazzObjId}).Decode(&clazz); err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return nil, errors.New("班级不存在")
+		}
+		return nil, err
+	}
+
+	// 验证权限
+	if isSuccess, err := authorized(ctx, utils.GetCollection("courses"), clazz.CourseId, userObjId); !isSuccess || err != nil {
+		if !isSuccess {
+			return nil, errors.New("权限不足")
+		}
+		return nil, err
+	}
+
+	// 生成二维码
+	ran := fmt.Sprintf("%d,%s", rand.Int(), clazzId)
+	encode, err := qrcode.Encode(ran, qrcode.Medium, 256)
+	if err != nil {
+		return nil, err
+	}
+	// 将二维码字节切片编码为 Base64 字符串
+	base64QRCode := base64.StdEncoding.EncodeToString(encode)
+
+	// 存储到 Redis
+	err = utils.RedisClient.HSet(ctx, "clazz_qrcode"+clazzId, "qrcode", base64QRCode, "ran", ran).Err()
+	utils.RedisClient.Expire(ctx, "clazz_qrcode"+clazzId, 30*time.Minute)
+
+	if err != nil {
+		return nil, err
+	}
+	return base64QRCode, nil
+}
+
 // CreateClass 创建班级
 func (s *ClazzService) CreateClass(ctx context.Context, req *models.CreateClazzRequest, userId string) (*models.ClazzResponse, error) {
 	coll := utils.GetCollection("courses")
@@ -526,6 +577,15 @@ func (s *ClazzService) AddClazzMember(ctx context.Context, clazzID string, membe
 	return nil
 }
 
+func (s *ClazzService) RemoveClazzMember(ctx context.Context, clazzID, memberID, operatorID string) error {
+	// 构造批量删除请求
+	req := models.RemoveClazzMembersRequest{
+		ClazzID:   clazzID,
+		MemberIDs: []string{memberID},
+	}
+	return s.RemoveClazzMembers(ctx, req, operatorID)
+}
+
 // RemoveClazzMembers 批量移除班级成员
 func (s *ClazzService) RemoveClazzMembers(ctx context.Context, req models.RemoveClazzMembersRequest, operatorID string) error {
 	clazzObjID, err := primitive.ObjectIDFromHex(req.ClazzID)
@@ -538,11 +598,10 @@ func (s *ClazzService) RemoveClazzMembers(ctx context.Context, req models.Remove
 		return errors.New("无效的操作者ID")
 	}
 
-	var null *bool
 	// 去重成员ID
-	uniqueMemberIDs := make(map[string]*bool)
+	uniqueMemberIDs := make(map[string]bool)
 	for _, memberID := range req.MemberIDs {
-		uniqueMemberIDs[memberID] = null
+		uniqueMemberIDs[memberID] = true
 	}
 
 	// 转换成员ID
@@ -1306,15 +1365,15 @@ func (s *ClazzService) cheekIsMember(ids []primitive.ObjectID, userID primitive.
 }
 
 // JoinClazz 通过二维码扫描加入班级
-func (s *ClazzService) JoinClazz(ctx context.Context, req models.JoinClazzRequest, userID string) error {
+func (s *ClazzService) JoinClazz(ctx context.Context, clazzId string, req models.JoinClazzRequest, userID string) error {
 	// 验证用户ID和班级ID格式
 	userObjID, err := primitive.ObjectIDFromHex(userID)
 	if err != nil {
 		return errors.New("无效的用户ID")
 	}
 
-	log.Printf("解析班级Obj: %s", req.ClazzID)
-	clazzObjID, err := primitive.ObjectIDFromHex(req.ClazzID)
+	log.Printf("解析班级Obj: %s", clazzId)
+	clazzObjID, err := primitive.ObjectIDFromHex(clazzId)
 	if err != nil {
 		return errors.New("无效的班级ID")
 	}
@@ -1353,7 +1412,7 @@ func (s *ClazzService) JoinClazz(ctx context.Context, req models.JoinClazzReques
 	}
 
 	// 如果班级需要邀请，则验证二维码
-	key := "clazz_qrcode" + req.ClazzID
+	key := "clazz_qrcode" + clazzId
 	log.Printf("尝试从Redis获取二维码key: %s", key)
 	storedRan, err := utils.RedisClient.HGet(ctx, key, "ran").Result()
 	if err != nil {
@@ -1434,9 +1493,9 @@ func (s *ClazzService) joinClazzDirectly(ctx context.Context, clazz *models.Claz
 }
 
 // FinishTask 完成任务
-func (s *ClazzService) FinishTask(ctx context.Context, req models.FinishTaskRequest, userID string) error {
+func (s *ClazzService) FinishTask(ctx context.Context, clazzId string, taskId string, req models.FinishTaskRequest, userID string) error {
 	// 解析ID
-	taskObjId, err := primitive.ObjectIDFromHex(req.TaskID)
+	taskObjId, err := primitive.ObjectIDFromHex(taskId)
 	if err != nil {
 		return errors.New("无效的任务ID")
 	}
@@ -1446,7 +1505,7 @@ func (s *ClazzService) FinishTask(ctx context.Context, req models.FinishTaskRequ
 		return errors.New("无效的关系ID")
 	}
 
-	clazzObjId, err := primitive.ObjectIDFromHex(req.ClazzID)
+	clazzObjId, err := primitive.ObjectIDFromHex(clazzId)
 	if err != nil {
 		return errors.New("无效班级")
 	}
@@ -1627,7 +1686,7 @@ func (s *ClazzService) FinishTask(ctx context.Context, req models.FinishTaskRequ
 	return nil
 }
 
-func (s *ClazzService) UpdateTask(ctx context.Context, userId string, req models.UpdateTaskRequest) error {
+func (s *ClazzService) UpdateTask(ctx context.Context, userId string, clazzId string, taskId string, req models.UpdateTaskRequest) error {
 	userObjId, err := primitive.ObjectIDFromHex(userId)
 	if err != nil {
 		return err
@@ -1636,11 +1695,11 @@ func (s *ClazzService) UpdateTask(ctx context.Context, userId string, req models
 	if err != nil {
 		return err
 	}
-	_, err = primitive.ObjectIDFromHex(req.ClazzId)
+	_, err = primitive.ObjectIDFromHex(clazzId)
 	if err != nil {
 		return err
 	}
-	taskObjId, err := primitive.ObjectIDFromHex(req.ID)
+	taskObjId, err := primitive.ObjectIDFromHex(taskId)
 	if err != nil {
 		return err
 	}
@@ -1686,13 +1745,13 @@ func (s *ClazzService) UpdateTask(ctx context.Context, userId string, req models
 }
 
 // AddTaskRelationIds 为任务添加关系ID
-func (s *ClazzService) AddTaskRelationIds(ctx context.Context, userId string, req models.AddTaskRelationIdsRequest) error {
+func (s *ClazzService) AddTaskRelationIds(ctx context.Context, userId string, taskId string, req models.AddTaskRelationIdsRequest) error {
 	userObjId, err := primitive.ObjectIDFromHex(userId)
 	if err != nil {
 		return err
 	}
 
-	taskObjId, err := primitive.ObjectIDFromHex(req.TaskID)
+	taskObjId, err := primitive.ObjectIDFromHex(taskId)
 	if err != nil {
 		return err
 	}
@@ -1749,13 +1808,13 @@ func (s *ClazzService) AddTaskRelationIds(ctx context.Context, userId string, re
 }
 
 // RemoveTaskRelationIds 从任务中删除关系ID
-func (s *ClazzService) RemoveTaskRelationIds(ctx context.Context, userId string, req models.RemoveTaskRelationIdsRequest) error {
+func (s *ClazzService) RemoveTaskRelationIds(ctx context.Context, userId string, taskId string, req models.RemoveTaskRelationIdsRequest) error {
 	userObjId, err := primitive.ObjectIDFromHex(userId)
 	if err != nil {
 		return err
 	}
 
-	taskObjId, err := primitive.ObjectIDFromHex(req.TaskID)
+	taskObjId, err := primitive.ObjectIDFromHex(taskId)
 	if err != nil {
 		return err
 	}
@@ -1812,7 +1871,7 @@ func (s *ClazzService) RemoveTaskRelationIds(ctx context.Context, userId string,
 }
 
 // CopyTaskToClass 将一个班级的任务复制到另一个班级
-func (s *ClazzService) CopyTaskToClass(ctx context.Context, userID string, req models.CopyTaskToClassRequest) error {
+func (s *ClazzService) CopyTaskToClass(ctx context.Context, userID string, taskId string, req models.CopyTaskToClassRequest) error {
 	// 验证用户ID格式
 	userObjID, err := primitive.ObjectIDFromHex(userID)
 	if err != nil {
@@ -1832,7 +1891,7 @@ func (s *ClazzService) CopyTaskToClass(ctx context.Context, userID string, req m
 	}
 
 	// 验证任务ID格式
-	taskObjID, err := primitive.ObjectIDFromHex(req.TaskID)
+	taskObjID, err := primitive.ObjectIDFromHex(taskId)
 	if err != nil {
 		return errors.New("无效的任务ID")
 	}
@@ -1911,15 +1970,15 @@ func (s *ClazzService) CopyTaskToClass(ctx context.Context, userID string, req m
 }
 
 // PageQueryTaskCompletion 分页查询班级任务完成情况
-func (s *ClazzService) PageQueryTaskCompletion(ctx context.Context, req *models.PageQueryTaskCompletionRequest) (*models.PageQueryTaskCompletionResponse, error) {
+func (s *ClazzService) PageQueryTaskCompletion(ctx context.Context, clazzId string, taskId string, req *models.PageQueryTaskCompletionRequest) (*models.PageQueryTaskCompletionResponse, error) {
 	// 解析任务ID
-	taskObjID, err := primitive.ObjectIDFromHex(req.TaskID)
+	taskObjID, err := primitive.ObjectIDFromHex(taskId)
 	if err != nil {
 		return nil, errors.New("无效的任务ID")
 	}
 
 	// 解析班级ID
-	classObjID, err := primitive.ObjectIDFromHex(req.ClassID)
+	classObjID, err := primitive.ObjectIDFromHex(clazzId)
 	if err != nil {
 		return nil, errors.New("无效的班级ID")
 	}

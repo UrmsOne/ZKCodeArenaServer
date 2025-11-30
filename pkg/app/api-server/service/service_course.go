@@ -67,12 +67,6 @@ func (s *CourseService) CreateCourse(ctx context.Context, req *models.CreateCour
 	return course.ID.Hex(), nil
 }
 
-// CreateClass 为课程创建班级
-func (s *CourseService) CreateClass(ctx context.Context, req *models.CreateClazzRequest, userId string) (*models.ClazzResponse, error) {
-	// 此方法已迁移到 clazz 服务中
-	return nil, errors.New("此方法已迁移到 clazz 服务中")
-}
-
 // GetCourseByID 根据ID获取课程详情
 func (s *CourseService) GetCourseByID(ctx context.Context, courseID string, userId string) (*models.CourseResponse, error) {
 	courseObjID, err := primitive.ObjectIDFromHex(courseID)
@@ -162,7 +156,7 @@ func (s *CourseService) UpdateCourseAvatar(ctx context.Context, file multipart.F
 	return nil
 }
 
-func (s *CourseService) AddCourseTask(ctx context.Context, req *models.AddTaskRequest, userId string) error {
+func (s *CourseService) AddCourseTask(ctx context.Context, clazzId string, req *models.AddTaskRequest, userId string) error {
 	courseObjId, err := primitive.ObjectIDFromHex(req.CourseId)
 	if err != nil {
 		return err
@@ -171,7 +165,7 @@ func (s *CourseService) AddCourseTask(ctx context.Context, req *models.AddTaskRe
 	if err != nil {
 		return err
 	}
-	clazzId, err := primitive.ObjectIDFromHex(req.ClazzId)
+	clazzObjId, err := primitive.ObjectIDFromHex(clazzId)
 	if err != nil {
 		return err
 	}
@@ -215,7 +209,7 @@ func (s *CourseService) AddCourseTask(ctx context.Context, req *models.AddTaskRe
 		RelationIDs: ids,
 		Status:      status,
 		CourseId:    courseObjId,
-		ClazzId:     clazzId,
+		ClazzId:     clazzObjId,
 		CTime:       now,
 		MTime:       now,
 		CID:         userObjId,
@@ -239,7 +233,7 @@ func (s *CourseService) PageQueryCourse(ctx context.Context, request *models.Pag
 
 	// 设置默认值
 	pageNum := int64(1)
-	pageSize := int64(3)
+	pageSize := int64(10)
 	if request.PageNum != nil {
 		pageNum = *request.PageNum
 	}
@@ -314,8 +308,13 @@ func (s *CourseService) PageQueryTeacherCourses(ctx context.Context, request *mo
 		pageSize = 100
 	}
 
-	// 查询条件：老师ID在teacher_ids数组中
-	filter := bson.M{"teacher_ids": bson.M{"$in": []primitive.ObjectID{userObjId}}}
+	// 查询条件：创建的课程 OR 老师ID在teacher_ids数组中
+	filter := bson.M{
+		"$or": []bson.M{
+			{"created_by": userObjId},
+			{"teacher_ids": bson.M{"$in": []primitive.ObjectID{userObjId}}},
+		},
+	}
 
 	// 只有当 name 不为 nil 且不为空时才添加 name 查询条件
 	if request.Name != nil && *request.Name != "" {
@@ -370,12 +369,12 @@ func (s *CourseService) UpdateClazzInfo(ctx context.Context, clazzID string, use
 }
 
 // UpdateCourseInfo 更新课程信息
-func (s *CourseService) UpdateCourseInfo(ctx context.Context, userId string, req *models.UpdateCourseRequest) error {
+func (s *CourseService) UpdateCourseInfo(ctx context.Context, userId string, courseId string, req *models.UpdateCourseRequest) error {
 	userObjId, err := primitive.ObjectIDFromHex(userId)
 	if err != nil {
 		return err
 	}
-	courseObjId, err := primitive.ObjectIDFromHex(req.ID)
+	courseObjId, err := primitive.ObjectIDFromHex(courseId)
 	if err != nil {
 		return err
 	}
@@ -1245,9 +1244,9 @@ func (s *CourseService) GetClassStudents(ctx context.Context, classID string) ([
 }
 
 // GetCourseStudents 分页查询课程下的学生
-func (s *CourseService) GetCourseStudents(ctx context.Context, userId string, req *models.PageQueryCourseStudentsRequest) (*models.PageQueryCourseStudentsResponse, error) {
+func (s *CourseService) GetCourseStudents(ctx context.Context, userId string, courseId string, req *models.PageQueryCourseStudentsRequest) (*models.PageQueryCourseStudentsResponse, error) {
 	// 验证课程ID格式
-	courseObjID, err := primitive.ObjectIDFromHex(req.CourseId)
+	courseObjID, err := primitive.ObjectIDFromHex(courseId)
 	if err != nil {
 		return nil, errors.New("无效的课程ID")
 	}
@@ -1388,9 +1387,9 @@ func (s *CourseService) GetCourseStudents(ctx context.Context, userId string, re
 }
 
 // GetCourseTeachers 分页查询课程下的教师
-func (s *CourseService) GetCourseTeachers(ctx context.Context, userId string, req *models.PageQueryCourseTeachersRequest) (*models.PageQueryCourseTeachersResponse, error) {
+func (s *CourseService) GetCourseTeachers(ctx context.Context, userId string, courseId string, req *models.PageQueryCourseTeachersRequest) (*models.PageQueryCourseTeachersResponse, error) {
 	// 验证课程ID格式
-	courseObjID, err := primitive.ObjectIDFromHex(req.CourseId)
+	courseObjID, err := primitive.ObjectIDFromHex(courseId)
 	if err != nil {
 		return nil, errors.New("无效的课程ID")
 	}

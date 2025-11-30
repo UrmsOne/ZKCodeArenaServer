@@ -24,41 +24,41 @@ func (s *Server) RegisterClazz(g *gin.RouterGroup) {
 		// 需要认证的路由
 		jwtGroup := clazzGroup.Use(middleware.JWTMiddleware())
 		{
+			// 班级
 			jwtGroup.POST("", s.CreateClass)
-			jwtGroup.POST("/join", s.JoinClass)
+			jwtGroup.GET("", s.GetClazzesByCourseId) // 变更: GET /course/:courseId -> GET /?course_id=xxx
 			jwtGroup.GET("/:clazzId", s.GetClazzById)
-			jwtGroup.PUT("", s.UpdateClazzInfo)
+			jwtGroup.PUT("/:clazzId", s.UpdateClazzInfo) // 变更: PUT / -> PUT /:clazzId
 			jwtGroup.DELETE("/:clazzId", s.DeleteClazz)
-			jwtGroup.POST("/members", s.AddClazzMember)
-			jwtGroup.POST("/members/remove", s.RemoveClazzMembers)
-			jwtGroup.POST("/teachers", s.addClazzTeacher)
-			jwtGroup.DELETE("/teachers", s.removeClazzTeacher)
-			jwtGroup.GET("/course/:courseId", s.GetClazzesByCourseId)
-			//二维码
-			jwtGroup.PUT("/qrcode/:courseId/:clazzId", s.refreshQrcode)
-			jwtGroup.GET("/qrcode/:clazzId", s.GetQrcodeClazzById)
-			//课程任务相关
-			jwtGroup.POST("/finishTask", s.FinishTask)
-			jwtGroup.POST("/task", s.AddTask)
-			jwtGroup.PUT("/task", s.UpdateTask)
-			jwtGroup.DELETE("/task/:taskId", s.DeleteTask)
-			jwtGroup.GET("/tasks/:clazzId", s.GetTasksByClazzId)
-			jwtGroup.GET("/task/:taskId", s.GetTaskById)
-			// 任务关系ID相关接口
-			jwtGroup.POST("/task/relationIds", s.AddTaskRelationIds)
-			jwtGroup.DELETE("/task/relationIds", s.RemoveTaskRelationIds)
-			// 检查任务完成情况接口
-			jwtGroup.POST("/task/completion", s.PageQueryTaskCompletion)
-			// 分页查询任务完成情况接口
+			jwtGroup.POST("/:clazzId/join", s.JoinClass) // 变更: POST /join -> POST /:clazzId/join
 
-			// 复制任务接口
-			jwtGroup.POST("/task/copy", s.CopyTaskToClass)
+			// 二维码管理
+			jwtGroup.GET("/:clazzId/qrcode", s.GetQrcodeClazzById) // 变更: GET /qrcode/:clazzId -> GET /:clazzId/qrcode
+			jwtGroup.PUT("/:clazzId/qrcode", s.refreshQrcode)      // 变更: PUT /qrcode/:courseId/:clazzId -> PUT /:clazzId/qrcode
 
-			// 学生班级相关接口
-			jwtGroup.POST("/student_classes", s.AddStudentToClass)
-			jwtGroup.DELETE("/student_classes", s.RemoveStudentFromClass)
-			jwtGroup.GET("/student_classes/:userId", s.GetStudentClasses)
-			jwtGroup.GET("/class_students/:classId", s.GetClassStudents)
+			// 成员管理
+			jwtGroup.POST("/:clazzId/members", s.AddClazzMember)                   // 变更: POST /members -> POST /:clazzId/members
+			jwtGroup.DELETE("/:clazzId/members/:memberId", s.RemoveClazzMembers)   // 变更: POST /members/remove -> DELETE /:clazzId/members/:memberId
+			jwtGroup.POST("/:clazzId/teachers", s.addClazzTeacher)                 // 变更: POST /teachers -> POST /:clazzId/teachers
+			jwtGroup.DELETE("/:clazzId/teachers/:teacherId", s.removeClazzTeacher) // 变更: DELETE /teachers -> DELETE /:clazzId/teachers/:teacherId
+
+			// 任务管理
+			jwtGroup.POST("/:clazzId/tasks", s.AddTask)                                   // 变更: POST /task -> POST /:clazzId/tasks
+			jwtGroup.GET("/:clazzId/tasks", s.GetTasksByClazzId)                          // 变更: GET /tasks/:clazzId -> GET /:clazzId/tasks
+			jwtGroup.GET("/:clazzId/tasks/:taskId", s.GetTaskById)                        // 变更: GET /task/:taskId -> GET /:clazzId/tasks/:taskId
+			jwtGroup.PUT("/:clazzId/tasks/:taskId", s.UpdateTask)                         // 变更: PUT /task -> PUT /:clazzId/tasks/:taskId
+			jwtGroup.DELETE("/:clazzId/tasks/:taskId", s.DeleteTask)                      // 变更: DELETE /task/:taskId -> DELETE /:clazzId/tasks/:taskId
+			jwtGroup.POST("/:clazzId/tasks/:taskId/finish", s.FinishTask)                 // 变更: POST /finishTask -> POST /:clazzId/tasks/:taskId/finish
+			jwtGroup.POST("/:clazzId/tasks/:taskId/relations", s.AddTaskRelationIds)      // 变更: POST /task/relationIds -> POST /:clazzId/tasks/:taskId/relations
+			jwtGroup.DELETE("/:clazzId/tasks/:taskId/relations", s.RemoveTaskRelationIds) // 变更: DELETE /task/relationIds -> DELETE /:clazzId/tasks/:taskId/relations
+			jwtGroup.GET("/:clazzId/tasks/:taskId/completion", s.PageQueryTaskCompletion) // 变更: POST /task/completion -> GET /:clazzId/tasks/:taskId/completion
+			jwtGroup.POST("/:clazzId/tasks/:taskId/copy", s.CopyTaskToClass)              // 变更: POST /task/copy -> POST /:clazzId/tasks/:taskId/copy
+
+			// 学生班级关系
+			jwtGroup.POST("/:clazzId/student/:studentId", s.AddStudentToClass)        // 变更: POST /student_classes -> POST /:clazzId/student/:studentId
+			jwtGroup.DELETE("/:clazzId/student/:studentId", s.RemoveStudentFromClass) // 变更: DELETE /student_classes -> DELETE /:clazzId/student/:studentId
+			jwtGroup.GET("/students/:studentId/classes", s.GetStudentClasses)         // 变更: GET /student_classes/:userId -> GET /students/:studentId/classes
+			jwtGroup.GET("/:classId/students", s.GetClassStudents)                    // 变更: GET /class_students/:classId -> GET /:classId/students
 		}
 	}
 }
@@ -75,7 +75,7 @@ func (s *Server) RegisterClazz(g *gin.RouterGroup) {
 // @Failure      403 {object} models.ErrorResponse "权限不足"
 // @Failure      404 {object} models.ErrorResponse "二维码已过期"
 // @Security     BearerAuth
-// @Router       /clazzes/qrcode/{clazzId} [get]
+// @Router       /clazzes/{clazzId}/qrcode [get]
 func (s *Server) GetQrcodeClazzById(c *gin.Context) {
 	clazzId := c.Param("clazzId")
 	if clazzId == "" {
@@ -107,24 +107,22 @@ func (s *Server) GetQrcodeClazzById(c *gin.Context) {
 // @Tags         班级
 // @Accept       json
 // @Produce      json
+// @Param        clazzId path string true "班级ID"
 // @Success      200 {object} models.SuccessResponse "更新成功"
 // @Failure      400 {object} models.ErrorResponse "请求参数错误"
 // @Security     BearerAuth
-// @Router       /clazzes/qrcode/{courseId}/{clazzId} [put]
+// @Router       /clazzes/{clazzId}/qrcode [put]
 func (s *Server) refreshQrcode(c *gin.Context) {
 	clazzId := c.Param("clazzId")
 	if clazzId == "" {
-		utils.BadRequestResponse(c, "参数为空")
-		return
-	}
-	courseId := c.Param("courseId")
-	if courseId == "" {
-		utils.BadRequestResponse(c, "参数为空")
+		utils.BadRequestResponse(c, "班级ID不能为空")
 		return
 	}
 
 	userID, _ := c.Get("user_id")
-	qrcodeBase64, err := s.svc.ClazzService.RefreshQrcode(userID.(string), courseId, clazzId, c.Request.Context())
+	// 注意：这里需要从班级信息中获取 courseId，或者修改 Service 层方法签名
+	// 暂时保留原有调用方式，但需要从数据库查询 courseId
+	qrcodeBase64, err := s.svc.ClazzService.RefreshQrcodeByClazzId(userID.(string), clazzId, c.Request.Context())
 	if err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
@@ -138,13 +136,19 @@ func (s *Server) refreshQrcode(c *gin.Context) {
 // @Tags         班级
 // @Accept       json
 // @Produce      json
-// @Param        clazz_id query string true "班级ID"
+// @Param        clazzId path string true "班级ID"
 // @Param        invite_code query string false "邀请码"
 // @Success      200 {object} utils.Response "加入成功"
 // @Failure      400 {object} models.ErrorResponse "请求参数错误"
 // @Security     BearerAuth
-// @Router       /clazzes/join [post]
+// @Router       /clazzes/{clazzId}/join [post]
 func (s *Server) JoinClass(c *gin.Context) {
+	clazzId := c.Param("clazzId")
+	if clazzId == "" {
+		utils.BadRequestResponse(c, "班级ID不能为空")
+		return
+	}
+
 	var req models.JoinClazzRequest
 	if err := c.ShouldBindQuery(&req); err != nil {
 		utils.BadRequestResponse(c, err.Error())
@@ -152,7 +156,7 @@ func (s *Server) JoinClass(c *gin.Context) {
 	}
 
 	userID, _ := c.Get("user_id")
-	if err := s.svc.ClazzService.JoinClazz(c.Request.Context(), req, userID.(string)); err != nil {
+	if err := s.svc.ClazzService.JoinClazz(c.Request.Context(), clazzId, req, userID.(string)); err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
 	}
@@ -166,15 +170,17 @@ func (s *Server) JoinClass(c *gin.Context) {
 // @Tags         班级
 // @Accept       json
 // @Produce      json
+// @Param        clazzId path string true "班级ID"
 // @Param        taskId path string true "任务ID"
 // @Success      200 {object} utils.Response "删除成功"
 // @Failure      400 {object} models.ErrorResponse "请求参数错误"
 // @Security     BearerAuth
-// @Router       /clazzes/task/{taskId} [delete]
+// @Router       /clazzes/{clazzId}/tasks/{taskId} [delete]
 func (s *Server) DeleteTask(c *gin.Context) {
+	clazzId := c.Param("clazzId")
 	taskId := c.Param("taskId")
-	if taskId == "" {
-		utils.BadRequestResponse(c, "参数为空")
+	if clazzId == "" || taskId == "" {
+		utils.BadRequestResponse(c, "班级ID或任务ID不能为空")
 		return
 	}
 	userID, _ := c.Get("user_id")
@@ -191,19 +197,28 @@ func (s *Server) DeleteTask(c *gin.Context) {
 // @Tags         班级
 // @Accept       json
 // @Produce      json
+// @Param        clazzId path string true "班级ID"
+// @Param        taskId path string true "任务ID"
 // @Param        request body models.UpdateTaskRequest true "更新的任务信息"
 // @Success      200 {object} utils.Response "更新成功"
 // @Failure      400 {object} models.ErrorResponse "请求参数错误"
 // @Security     BearerAuth
-// @Router       /clazzes/task [put]
+// @Router       /clazzes/{clazzId}/tasks/{taskId} [put]
 func (s *Server) UpdateTask(c *gin.Context) {
+	clazzId := c.Param("clazzId")
+	taskId := c.Param("taskId")
+	if clazzId == "" || taskId == "" {
+		utils.BadRequestResponse(c, "班级ID或任务ID不能为空")
+		return
+	}
+
 	var req models.UpdateTaskRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
 	}
 	userID, _ := c.Get("user_id")
-	if err := s.svc.ClazzService.UpdateTask(c.Request.Context(), userID.(string), req); err != nil {
+	if err := s.svc.ClazzService.UpdateTask(c.Request.Context(), userID.(string), clazzId, taskId, req); err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
 	}
@@ -216,19 +231,28 @@ func (s *Server) UpdateTask(c *gin.Context) {
 // @Tags         班级
 // @Accept       json
 // @Produce      json
+// @Param        clazzId path string true "班级ID"
+// @Param        taskId path string true "任务ID"
 // @Param        request body models.AddTaskRelationIdsRequest true "添加的关系ID信息"
 // @Success      200 {object} utils.Response "添加成功"
 // @Failure      400 {object} models.ErrorResponse "请求参数错误"
 // @Security     BearerAuth
-// @Router       /clazzes/task/relationIds [post]
+// @Router       /clazzes/{clazzId}/tasks/{taskId}/relations [post]
 func (s *Server) AddTaskRelationIds(c *gin.Context) {
+	clazzId := c.Param("clazzId")
+	taskId := c.Param("taskId")
+	if clazzId == "" || taskId == "" {
+		utils.BadRequestResponse(c, "班级ID或任务ID不能为空")
+		return
+	}
+
 	var req models.AddTaskRelationIdsRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
 	}
 	userID, _ := c.Get("user_id")
-	if err := s.svc.ClazzService.AddTaskRelationIds(c.Request.Context(), userID.(string), req); err != nil {
+	if err := s.svc.ClazzService.AddTaskRelationIds(c.Request.Context(), userID.(string), taskId, req); err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
 	}
@@ -241,19 +265,28 @@ func (s *Server) AddTaskRelationIds(c *gin.Context) {
 // @Tags         班级
 // @Accept       json
 // @Produce      json
+// @Param        clazzId path string true "班级ID"
+// @Param        taskId path string true "任务ID"
 // @Param        request body models.RemoveTaskRelationIdsRequest true "删除的关系ID信息"
 // @Success      200 {object} utils.Response "删除成功"
 // @Failure      400 {object} models.ErrorResponse "请求参数错误"
 // @Security     BearerAuth
-// @Router       /clazzes/task/relationIds [delete]
+// @Router       /clazzes/{clazzId}/tasks/{taskId}/relations [delete]
 func (s *Server) RemoveTaskRelationIds(c *gin.Context) {
+	clazzId := c.Param("clazzId")
+	taskId := c.Param("taskId")
+	if clazzId == "" || taskId == "" {
+		utils.BadRequestResponse(c, "班级ID或任务ID不能为空")
+		return
+	}
+
 	var req models.RemoveTaskRelationIdsRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
 	}
 	userID, _ := c.Get("user_id")
-	if err := s.svc.ClazzService.RemoveTaskRelationIds(c.Request.Context(), userID.(string), req); err != nil {
+	if err := s.svc.ClazzService.RemoveTaskRelationIds(c.Request.Context(), userID.(string), taskId, req); err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
 	}
@@ -266,12 +299,19 @@ func (s *Server) RemoveTaskRelationIds(c *gin.Context) {
 // @Tags         班级
 // @Accept       json
 // @Produce      json
+// @Param        clazzId path string true "班级ID"
 // @Param        request body models.AddTaskRequest true "任务信息"
 // @Success      200 {object} utils.Response "添加成功"
 // @Failure      400 {object} models.ErrorResponse "请求参数错误"
 // @Security     BearerAuth
-// @Router       /clazzes/task [post]
+// @Router       /clazzes/{clazzId}/tasks [post]
 func (s *Server) AddTask(c *gin.Context) {
+	clazzId := c.Param("clazzId")
+	if clazzId == "" {
+		utils.BadRequestResponse(c, "班级ID不能为空")
+		return
+	}
+
 	var req models.AddTaskRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.BadRequestResponse(c, err.Error())
@@ -279,7 +319,7 @@ func (s *Server) AddTask(c *gin.Context) {
 	}
 
 	userID, _ := c.Get("user_id")
-	if err := s.svc.CourseService.AddCourseTask(c.Request.Context(), &req, userID.(string)); err != nil {
+	if err := s.svc.CourseService.AddCourseTask(c.Request.Context(), clazzId, &req, userID.(string)); err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
 	}
@@ -293,19 +333,28 @@ func (s *Server) AddTask(c *gin.Context) {
 // @Tags         班级
 // @Accept       json
 // @Produce      json
+// @Param        clazzId path string true "班级ID"
+// @Param        taskId path string true "任务ID"
 // @Param        request body models.FinishTaskRequest true "完成任务信息"
 // @Success      200 {object} utils.Response "完成成功"
 // @Failure      400 {object} models.ErrorResponse "请求参数错误"
 // @Security     BearerAuth
-// @Router       /clazzes/finishTask [post]
+// @Router       /clazzes/{clazzId}/tasks/{taskId}/finish [post]
 func (s *Server) FinishTask(c *gin.Context) {
+	clazzId := c.Param("clazzId")
+	taskId := c.Param("taskId")
+	if clazzId == "" || taskId == "" {
+		utils.BadRequestResponse(c, "班级ID或任务ID不能为空")
+		return
+	}
+
 	var req models.FinishTaskRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.BadRequestResponse(c, "请求参数错误: "+err.Error())
 		return
 	}
 	userID, _ := c.Get("user_id")
-	if err := s.svc.ClazzService.FinishTask(c.Request.Context(), req, userID.(string)); err != nil {
+	if err := s.svc.ClazzService.FinishTask(c.Request.Context(), clazzId, taskId, req, userID.(string)); err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
 	}
@@ -406,8 +455,14 @@ func (s *Server) GetClazzById(c *gin.Context) {
 // @Success      200 {object} utils.Response "更新成功"
 // @Failure      400 {object} models.ErrorResponse "请求参数错误"
 // @Security     BearerAuth
-// @Router       /clazzes [put]
+// @Router       /clazzes/{clazzId} [put]
 func (s *Server) UpdateClazzInfo(c *gin.Context) {
+	clazzId := c.Param("clazzId")
+	if clazzId == "" {
+		utils.BadRequestResponse(c, "班级ID不能为空")
+		return
+	}
+
 	var req models.UpdateClazzRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.BadRequestResponse(c, err.Error())
@@ -415,7 +470,7 @@ func (s *Server) UpdateClazzInfo(c *gin.Context) {
 	}
 
 	userID, _ := c.Get("user_id")
-	if err := s.svc.ClazzService.UpdateClazzInfo(c.Request.Context(), req.ClazzID, userID.(string), &req); err != nil {
+	if err := s.svc.ClazzService.UpdateClazzInfo(c.Request.Context(), clazzId, userID.(string), &req); err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
 	}
@@ -459,10 +514,15 @@ func (s *Server) DeleteClazz(c *gin.Context) {
 // @Success      200 {object} utils.Response "添加成功"
 // @Failure      400 {object} models.ErrorResponse "请求参数错误"
 // @Security     BearerAuth
-// @Router       /clazzes/members [post]
+// @Router       /clazzes/{clazzId}/members [post]
 func (s *Server) AddClazzMember(c *gin.Context) {
-	var req models.AddClazzMemberRequest
+	clazzId := c.Param("clazzId")
+	if clazzId == "" {
+		utils.BadRequestResponse(c, "班级ID不能为空")
+		return
+	}
 
+	var req models.AddClazzMemberRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.BadRequestResponse(c, "请求参数错误: "+err.Error())
 		return
@@ -473,7 +533,7 @@ func (s *Server) AddClazzMember(c *gin.Context) {
 		return
 	}
 	userID, _ := c.Get("user_id")
-	if err := s.svc.ClazzService.AddClazzMember(c.Request.Context(), req.ClazzID, req.MemberID, userID.(string)); err != nil {
+	if err := s.svc.ClazzService.AddClazzMember(c.Request.Context(), clazzId, req.MemberID, userID.(string)); err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
 	}
@@ -482,24 +542,27 @@ func (s *Server) AddClazzMember(c *gin.Context) {
 
 // RemoveClazzMembers godoc
 // @Summary      移除班级成员
-// @Description  批量移除班级成员
+// @Description  移除班级成员
 // @Tags         班级
 // @Accept       json
 // @Produce      json
 // @Param        clazzId path string true "班级ID"
-// @Param        request body models.RemoveClazzMembersRequest true "成员ID列表"
+// @Param        memberId path string true "成员ID"
 // @Success      200 {object} utils.Response "移除成功"
 // @Failure      400 {object} models.ErrorResponse "请求参数错误"
 // @Security     BearerAuth
-// @Router       /clazzes/members/remove [post]
+// @Router       /clazzes/{clazzId}/members/{memberId} [delete]
 func (s *Server) RemoveClazzMembers(c *gin.Context) {
-	var req models.RemoveClazzMembersRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.BadRequestResponse(c, err.Error())
+	clazzId := c.Param("clazzId")
+	memberId := c.Param("memberId")
+
+	if clazzId == "" || memberId == "" {
+		utils.BadRequestResponse(c, "班级ID或成员ID不能为空")
 		return
 	}
+
 	userID, _ := c.Get("user_id")
-	if err := s.svc.ClazzService.RemoveClazzMembers(c.Request.Context(), req, userID.(string)); err != nil {
+	if err := s.svc.ClazzService.RemoveClazzMember(c.Request.Context(), clazzId, memberId, userID.(string)); err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
 	}
@@ -511,12 +574,19 @@ func (s *Server) RemoveClazzMembers(c *gin.Context) {
 // @Tags         班级
 // @Accept       json
 // @Produce      json
+// @Param        clazzId path string true "班级ID"
 // @Param        request body models.AddClazzTeachersRequest true "添加教师请求"
 // @Success      200 {object} utils.Response "添加成功"
 // @Failure      400 {object} models.ErrorResponse "请求参数错误"
 // @Security     BearerAuth
-// @Router       /clazzes/teachers [post]
+// @Router       /clazzes/{clazzId}/teachers [post]
 func (s *Server) addClazzTeacher(c *gin.Context) {
+	clazzId := c.Param("clazzId")
+	if clazzId == "" {
+		utils.BadRequestResponse(c, "班级ID不能为空")
+		return
+	}
+
 	var req models.AddClazzTeachersRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.BadRequestResponse(c, err.Error())
@@ -529,7 +599,7 @@ func (s *Server) addClazzTeacher(c *gin.Context) {
 	}
 
 	userID, _ := c.Get("user_id")
-	if err := s.svc.ClazzService.AddClazzTeacher(c.Request.Context(), req.ClazzId, req.TeacherIds[0], userID.(string)); err != nil {
+	if err := s.svc.ClazzService.AddClazzTeacher(c.Request.Context(), clazzId, req.TeacherIds[0], userID.(string)); err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
 	}
@@ -538,33 +608,27 @@ func (s *Server) addClazzTeacher(c *gin.Context) {
 }
 
 // @Summary      班级删除老师
-// @Description  班级删除老师（支持批量删除，只有课程创建者可以操作）
+// @Description  班级删除老师（只有课程创建者可以操作）
 // @Tags         班级
 // @Accept       json
 // @Produce      json
-// @Param        request body models.RemoveClazzTeachersRequest true "移除教师请求"
+// @Param        clazzId path string true "班级ID"
+// @Param        teacherId path string true "教师ID"
 // @Success      200 {object} utils.Response "移除成功"
 // @Failure      400 {object} models.ErrorResponse "请求参数错误"
 // @Security     BearerAuth
-// @Router       /clazzes/teachers [delete]
+// @Router       /clazzes/{clazzId}/teachers/{teacherId} [delete]
 func (s *Server) removeClazzTeacher(c *gin.Context) {
-	var req models.RemoveClazzTeachersRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.BadRequestResponse(c, err.Error())
-		return
-	}
-	if req.ClazzId == "" {
-		utils.BadRequestResponse(c, "班级ID不能为空")
-		return
-	}
+	clazzId := c.Param("clazzId")
+	teacherId := c.Param("teacherId")
 
-	if len(req.TeacherIds) == 0 {
-		utils.BadRequestResponse(c, "教师ID列表不能为空")
+	if clazzId == "" || teacherId == "" {
+		utils.BadRequestResponse(c, "班级ID或教师ID不能为空")
 		return
 	}
 
 	userID, _ := c.Get("user_id")
-	if err := s.svc.ClazzService.RemoveClazzTeacher(c.Request.Context(), req.ClazzId, req.TeacherIds[0], userID.(string)); err != nil {
+	if err := s.svc.ClazzService.RemoveClazzTeacher(c.Request.Context(), clazzId, teacherId, userID.(string)); err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
 	}
@@ -578,13 +642,13 @@ func (s *Server) removeClazzTeacher(c *gin.Context) {
 // @Tags         班级
 // @Accept       json
 // @Produce      json
-// @Param        courseId path string true "课程ID"
+// @Param        course_id query string true "课程ID"
 // @Success      200 {object} utils.Response{data=[]models.Clazz} "班级列表"
 // @Failure      400 {object} models.ErrorResponse "请求参数错误"
 // @Security     BearerAuth
-// @Router       /clazzes/course/{courseId} [get]
+// @Router       /clazzes [get]
 func (s *Server) GetClazzesByCourseId(c *gin.Context) {
-	courseId := c.Param("courseId")
+	courseId := c.Query("course_id")
 	if courseId == "" {
 		utils.BadRequestResponse(c, "课程ID不能为空")
 		return
@@ -608,7 +672,7 @@ func (s *Server) GetClazzesByCourseId(c *gin.Context) {
 // @Success      200 {object} []models.Task "任务列表"
 // @Failure      400 {object} models.ErrorResponse "请求参数错误"
 // @Security     BearerAuth
-// @Router       /clazzes/tasks/{clazzId} [get]
+// @Router       /clazzes/{clazzId}/tasks [get]
 func (s *Server) GetTasksByClazzId(c *gin.Context) {
 	clazzId := c.Param("clazzId")
 	if clazzId == "" {
@@ -632,15 +696,17 @@ func (s *Server) GetTasksByClazzId(c *gin.Context) {
 // @Tags         班级
 // @Accept       json
 // @Produce      json
+// @Param        clazzId path string true "班级ID"
 // @Param        taskId path string true "任务ID"
 // @Success      200 {object} utils.Response{data=models.TaskResponse} "任务详情"
 // @Failure      400 {object} models.ErrorResponse "请求参数错误"
 // @Security     BearerAuth
-// @Router       /clazzes/task/{taskId} [get]
+// @Router       /clazzes/{clazzId}/tasks/{taskId} [get]
 func (s *Server) GetTaskById(c *gin.Context) {
+	clazzId := c.Param("clazzId")
 	taskId := c.Param("taskId")
-	if taskId == "" {
-		utils.BadRequestResponse(c, "任务ID不能为空")
+	if clazzId == "" || taskId == "" {
+		utils.BadRequestResponse(c, "班级ID或任务ID不能为空")
 		return
 	}
 
@@ -660,19 +726,29 @@ func (s *Server) GetTaskById(c *gin.Context) {
 // @Tags         班级
 // @Accept       json
 // @Produce      json
+// @Param        clazzId path string true "班级ID"
+// @Param        studentId path string true "学生ID"
 // @Param        request body models.AddStudentToClassRequest true "添加学生到班级请求"
 // @Success      200 {object} utils.Response "添加成功"
 // @Failure      400 {object} models.ErrorResponse "请求参数错误"
 // @Security     BearerAuth
-// @Router       /clazzes/student_classes [post]
+// @Router       /clazzes/{clazzId}/student/{studentId} [post]
 func (s *Server) AddStudentToClass(c *gin.Context) {
+	clazzId := c.Param("clazzId")
+	studentId := c.Param("studentId")
+
+	if clazzId == "" || studentId == "" {
+		utils.BadRequestResponse(c, "班级ID或学生ID不能为空")
+		return
+	}
+
 	var req models.AddStudentToClassRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
 	}
 
-	if err := s.svc.ClazzService.AddStudentToClass(c.Request.Context(), req.StudentID, req.ClassID, req.CourseID); err != nil {
+	if err := s.svc.ClazzService.AddStudentToClass(c.Request.Context(), studentId, clazzId, req.CourseID); err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
 	}
@@ -686,19 +762,29 @@ func (s *Server) AddStudentToClass(c *gin.Context) {
 // @Tags         班级
 // @Accept       json
 // @Produce      json
+// @Param        clazzId path string true "班级ID"
+// @Param        studentId path string true "学生ID"
 // @Param        request body models.RemoveStudentFromClassRequest true "从班级移除学生请求"
 // @Success      200 {object} utils.Response "移除成功"
 // @Failure      400 {object} models.ErrorResponse "请求参数错误"
 // @Security     BearerAuth
-// @Router       /clazzes/student_classes [delete]
+// @Router       /clazzes/{clazzId}/student/{studentId} [delete]
 func (s *Server) RemoveStudentFromClass(c *gin.Context) {
+	clazzId := c.Param("clazzId")
+	studentId := c.Param("studentId")
+
+	if clazzId == "" || studentId == "" {
+		utils.BadRequestResponse(c, "班级ID或学生ID不能为空")
+		return
+	}
+
 	var req models.RemoveStudentFromClassRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
 	}
 
-	if err := s.svc.ClazzService.RemoveStudentFromClass(c.Request.Context(), req.StudentID, req.ClassID, req.CourseID); err != nil {
+	if err := s.svc.ClazzService.RemoveStudentFromClass(c.Request.Context(), studentId, clazzId, req.CourseID); err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
 	}
@@ -716,9 +802,9 @@ func (s *Server) RemoveStudentFromClass(c *gin.Context) {
 // @Success      200 {object} []models.StudentClassResponse "学生班级列表"
 // @Failure      400 {object} models.ErrorResponse "请求参数错误"
 // @Security     BearerAuth
-// @Router       /clazzes/student_classes/{userId} [get]
+// @Router       /clazzes/students/{studentId}/classes [get]
 func (s *Server) GetStudentClasses(c *gin.Context) {
-	studentId := c.Param("userId")
+	studentId := c.Param("studentId")
 	if studentId == "" {
 		utils.BadRequestResponse(c, "学生ID不能为空")
 		return
@@ -750,7 +836,7 @@ func (s *Server) GetStudentClasses(c *gin.Context) {
 // @Success      200 {object} []models.UserProfile "班级学生列表"
 // @Failure      400 {object} models.ErrorResponse "请求参数错误"
 // @Security     BearerAuth
-// @Router       /clazzes/class_students/{classId} [get]
+// @Router       /clazzes/{classId}/students [get]
 func (s *Server) GetClassStudents(c *gin.Context) {
 	classId := c.Param("classId")
 	if classId == "" {
@@ -780,12 +866,21 @@ func (s *Server) GetClassStudents(c *gin.Context) {
 // @Tags         班级
 // @Accept       json
 // @Produce      json
+// @Param        clazzId path string true "班级ID"
+// @Param        taskId path string true "任务ID"
 // @Param        request body models.CopyTaskToClassRequest true "复制任务请求"
 // @Success      200 {object} utils.Response "复制成功"
 // @Failure      400 {object} models.ErrorResponse "请求参数错误"
 // @Security     BearerAuth
-// @Router       /clazzes/task/copy [post]
+// @Router       /clazzes/{clazzId}/tasks/{taskId}/copy [post]
 func (s *Server) CopyTaskToClass(c *gin.Context) {
+	clazzId := c.Param("clazzId")
+	taskId := c.Param("taskId")
+	if clazzId == "" || taskId == "" {
+		utils.BadRequestResponse(c, "班级ID或任务ID不能为空")
+		return
+	}
+
 	var req models.CopyTaskToClassRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.BadRequestResponse(c, err.Error())
@@ -793,7 +888,7 @@ func (s *Server) CopyTaskToClass(c *gin.Context) {
 	}
 
 	userID, _ := c.Get("user_id")
-	if err := s.svc.ClazzService.CopyTaskToClass(c.Request.Context(), userID.(string), req); err != nil {
+	if err := s.svc.ClazzService.CopyTaskToClass(c.Request.Context(), userID.(string), taskId, req); err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
 	}
@@ -807,20 +902,32 @@ func (s *Server) CopyTaskToClass(c *gin.Context) {
 // @Tags         班级
 // @Accept       json
 // @Produce      json
-// @Param        request body models.PageQueryTaskCompletionRequest true "分页查询参数"
+// @Param        clazzId path string true "班级ID"
+// @Param        taskId path string true "任务ID"
+// @Param        page_num query int false "页码"
+// @Param        page_size query int false "每页数量"
+// @Param        real_name query string false "真实姓名"
+// @Param        user_id query string false "用户ID"
 // @Success      200 {object} utils.Response{data=models.PageQueryTaskCompletionResponse} "任务完成情况列表"
 // @Failure      400 {object} models.ErrorResponse "请求参数错误"
 // @Failure      403 {object} models.ErrorResponse "权限不足"
 // @Security     BearerAuth
-// @Router       /clazzes/task/completion [POST]
+// @Router       /clazzes/{clazzId}/tasks/{taskId}/completion [get]
 func (s *Server) PageQueryTaskCompletion(c *gin.Context) {
+	clazzId := c.Param("clazzId")
+	taskId := c.Param("taskId")
+	if clazzId == "" || taskId == "" {
+		utils.BadRequestResponse(c, "班级ID或任务ID不能为空")
+		return
+	}
+
 	var req models.PageQueryTaskCompletionRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
+	if err := c.ShouldBindQuery(&req); err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
 	}
 
-	response, err := s.svc.ClazzService.PageQueryTaskCompletion(c.Request.Context(), &req)
+	response, err := s.svc.ClazzService.PageQueryTaskCompletion(c.Request.Context(), clazzId, taskId, &req)
 	if err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return

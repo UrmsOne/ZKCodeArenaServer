@@ -21,35 +21,41 @@ func (s *Server) RegisterCourse(g *gin.RouterGroup) {
 		// 需要认证的路由
 		jwtGroup := courseGroup.Use(middleware.JWTMiddleware())
 		{
+			// 课程 CRUD
+			jwtGroup.POST("", s.CreateCourse)
+			jwtGroup.GET("", s.PageQueryCourse)                  // 查询创建的课程
+			jwtGroup.GET("/teaching", s.PageQueryTeacherCourses) // 查询教学的课程（作为教师加入的）
 			jwtGroup.GET("/:courseId", s.GetCourseById)
 			jwtGroup.PUT("/:courseId", s.UpdateCourse)
 			jwtGroup.DELETE("/:courseId", s.RemoveCourse)
 			jwtGroup.PUT("/:courseId/avatar", s.UpdateCourseAvatar)
-			jwtGroup.POST("/students", s.GetCourseStudents) // 添加获取课程学生列表
-			jwtGroup.POST("/teachers", s.GetCourseTeachers) // 添加获取课程教师列表
-			jwtGroup.POST("/teacher/query", s.PageQueryTeacherCourses)
-			jwtGroup.POST("/query", s.PageQueryCourse)
-			jwtGroup.POST("/add/teachers", s.addCourseTeacher)
-			jwtGroup.DELETE("/teachers", s.removeCourseTeacher)
-			jwtGroup.POST("", s.CreateCourse)
+
+			// 课程成员管理
+			jwtGroup.GET("/:courseId/students", s.GetCourseStudents)                 // 变更: POST /students -> GET /:courseId/students
+			jwtGroup.GET("/:courseId/teachers", s.GetCourseTeachers)                 // 变更: POST /teachers -> GET /:courseId/teachers
+			jwtGroup.POST("/:courseId/teachers", s.addCourseTeacher)                 // 变更: POST /add/teachers -> POST /:courseId/teachers
+			jwtGroup.DELETE("/:courseId/teachers/:teacherId", s.removeCourseTeacher) // 变更: DELETE /teachers -> DELETE /:courseId/teachers/:teacherId
 		}
 	}
 }
 
 // PageQueryCourse godoc
-// @Summary      分页查询课程
-// @Description  分页查询用户相关的课程列表
+// @Summary      分页查询创建的课程
+// @Description  分页查询当前用户创建的课程列表
 // @Tags         课程
 // @Accept       json
 // @Produce      json
-// @Param        request body models.PageQueryCourseRequest true "分页查询参数"
+// @Param        page_num query int false "页码"
+// @Param        page_size query int false "每页数量"
+// @Param        status query int false "课程状态"
+// @Param        name query string false "课程名称"
 // @Success      200 {object} models.CourseListResponse "课程列表"
 // @Failure      400 {object} models.ErrorResponse "请求参数错误"
 // @Security     BearerAuth
-// @Router       /courses/query [post]
+// @Router       /courses [get]
 func (s *Server) PageQueryCourse(c *gin.Context) {
 	var PageQueryCourseRequest models.PageQueryCourseRequest
-	if err := c.ShouldBindJSON(&PageQueryCourseRequest); err != nil {
+	if err := c.ShouldBindQuery(&PageQueryCourseRequest); err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
 	}
@@ -67,20 +73,22 @@ func (s *Server) PageQueryCourse(c *gin.Context) {
 // @Tags         课程
 // @Accept       json
 // @Produce      json
+// @Param        courseId path string true "课程ID"
 // @Param        request body models.AddCourseTeachersRequest true "添加教师请求"
 // @Success      200 {object} utils.Response "添加成功"
 // @Failure      400 {object} models.ErrorResponse "请求参数错误"
 // @Security     BearerAuth
-// @Router       /add/teachers [post]
+// @Router       /courses/{courseId}/teachers [post]
 func (s *Server) addCourseTeacher(c *gin.Context) {
-	var req models.AddCourseTeachersRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.BadRequestResponse(c, err.Error())
+	courseId := c.Param("courseId")
+	if courseId == "" {
+		utils.BadRequestResponse(c, "课程ID不能为空")
 		return
 	}
 
-	if req.CourseId == "" {
-		utils.BadRequestResponse(c, "课程ID不能为空")
+	var req models.AddCourseTeachersRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.BadRequestResponse(c, err.Error())
 		return
 	}
 
@@ -90,7 +98,7 @@ func (s *Server) addCourseTeacher(c *gin.Context) {
 	}
 
 	userID, _ := c.Get("user_id")
-	if err := s.svc.CourseService.AddCourseTeachers(c.Request.Context(), req.CourseId, req.TeacherIds, userID.(string)); err != nil {
+	if err := s.svc.CourseService.AddCourseTeachers(c.Request.Context(), courseId, req.TeacherIds, userID.(string)); err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
 	}
@@ -99,34 +107,27 @@ func (s *Server) addCourseTeacher(c *gin.Context) {
 }
 
 // @Summary      课程创建者删除课程老师
-// @Description  课程创建者删除课程老师（支持批量删除，只有课程创建者可以操作）
+// @Description  课程创建者删除课程老师（只有课程创建者可以操作）
 // @Tags         课程
 // @Accept       json
 // @Produce      json
-// @Param        request body models.RemoveCourseTeachersRequest true "删除教师请求"
+// @Param        courseId path string true "课程ID"
+// @Param        teacherId path string true "教师ID"
 // @Success      200 {object} utils.Response "删除成功"
 // @Failure      400 {object} models.ErrorResponse "请求参数错误"
 // @Security     BearerAuth
-// @Router       /courses/teachers [delete]
+// @Router       /courses/{courseId}/teachers/{teacherId} [delete]
 func (s *Server) removeCourseTeacher(c *gin.Context) {
-	var req models.RemoveCourseTeachersRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.BadRequestResponse(c, err.Error())
-		return
-	}
+	courseId := c.Param("courseId")
+	teacherId := c.Param("teacherId")
 
-	if req.CourseId == "" {
-		utils.BadRequestResponse(c, "课程ID不能为空")
-		return
-	}
-
-	if len(req.TeacherIds) == 0 {
-		utils.BadRequestResponse(c, "教师ID列表不能为空")
+	if courseId == "" || teacherId == "" {
+		utils.BadRequestResponse(c, "课程ID或教师ID不能为空")
 		return
 	}
 
 	userID, _ := c.Get("user_id")
-	if err := s.svc.CourseService.RemoveCourseTeachers(c.Request.Context(), req.CourseId, req.TeacherIds, userID.(string)); err != nil {
+	if err := s.svc.CourseService.RemoveCourseTeachers(c.Request.Context(), courseId, []string{teacherId}, userID.(string)); err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
 	}
@@ -205,20 +206,27 @@ func (s *Server) GetCourseById(c *gin.Context) {
 // @Tags         课程
 // @Accept       json
 // @Produce      json
+// @Param        courseId path string true "课程ID"
 // @Param        request body models.UpdateCourseRequest true "更新的课程信息"
 // @Success      200 {object} utils.Response "更新成功"
 // @Failure      400 {object} models.ErrorResponse "请求参数错误"
 // @Security     BearerAuth
-// @Router       /courses [put]
+// @Router       /courses/{courseId} [put]
 func (s *Server) UpdateCourse(c *gin.Context) {
+	courseId := c.Param("courseId")
+	if courseId == "" {
+		utils.BadRequestResponse(c, "课程ID不能为空")
+		return
+	}
+
 	var req models.UpdateCourseRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.BadRequestResponse(c, "课程id为空")
+		utils.BadRequestResponse(c, err.Error())
 		return
 	}
 	userID, _ := c.Get("user_id")
 
-	if err := s.svc.CourseService.UpdateCourseInfo(c.Request.Context(), userID.(string), &req); err != nil {
+	if err := s.svc.CourseService.UpdateCourseInfo(c.Request.Context(), userID.(string), courseId, &req); err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
 	}
@@ -295,22 +303,30 @@ func (s *Server) RemoveCourse(c *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Param        courseId path string true "课程ID"
-// @Param        request body models.PageQueryCourseStudentsRequest true "分页查询参数"
+// @Param        page_num query int false "页码"
+// @Param        page_size query int false "每页数量"
+// @Param        real_name query string false "真实姓名"
+// @Param        student_id query string false "学号"
 // @Success      200 {object} models.PageQueryCourseStudentsResponse "学生列表"
 // @Failure      400 {object} models.ErrorResponse "请求参数错误"
 // @Failure      403 {object} models.ErrorResponse "权限不足"
 // @Security     BearerAuth
-// @Router       /courses/students [POST]
+// @Router       /courses/{courseId}/students [get]
 func (s *Server) GetCourseStudents(c *gin.Context) {
+	courseId := c.Param("courseId")
+	if courseId == "" {
+		utils.BadRequestResponse(c, "课程ID不能为空")
+		return
+	}
 
 	var req models.PageQueryCourseStudentsRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
+	if err := c.ShouldBindQuery(&req); err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
 	}
 
 	userID, _ := c.Get("user_id")
-	students, err := s.svc.CourseService.GetCourseStudents(c.Request.Context(), userID.(string), &req)
+	students, err := s.svc.CourseService.GetCourseStudents(c.Request.Context(), userID.(string), courseId, &req)
 	if err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
@@ -325,21 +341,31 @@ func (s *Server) GetCourseStudents(c *gin.Context) {
 // @Tags         课程
 // @Accept       json
 // @Produce      json
-// @Param        request body models.PageQueryCourseTeachersRequest true "分页查询参数"
+// @Param        courseId path string true "课程ID"
+// @Param        page_num query int false "页码"
+// @Param        page_size query int false "每页数量"
+// @Param        real_name query string false "真实姓名"
+// @Param        teacher_id query string false "教师ID"
 // @Success      200 {object} models.PageQueryCourseTeachersResponse "教师列表"
 // @Failure      400 {object} models.ErrorResponse "请求参数错误"
 // @Failure      403 {object} models.ErrorResponse "权限不足"
 // @Security     BearerAuth
-// @Router       /courses/teachers [POST]
+// @Router       /courses/{courseId}/teachers [get]
 func (s *Server) GetCourseTeachers(c *gin.Context) {
+	courseId := c.Param("courseId")
+	if courseId == "" {
+		utils.BadRequestResponse(c, "课程ID不能为空")
+		return
+	}
+
 	var req models.PageQueryCourseTeachersRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
+	if err := c.ShouldBindQuery(&req); err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
 	}
 
 	userID, _ := c.Get("user_id")
-	teachers, err := s.svc.CourseService.GetCourseTeachers(c.Request.Context(), userID.(string), &req)
+	teachers, err := s.svc.CourseService.GetCourseTeachers(c.Request.Context(), userID.(string), courseId, &req)
 	if err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
@@ -349,19 +375,22 @@ func (s *Server) GetCourseTeachers(c *gin.Context) {
 }
 
 // PageQueryTeacherCourses godoc
-// @Summary      分页查询老师加入的课程
-// @Description  分页查询当前老师加入的课程列表
+// @Summary      分页查询教学的课程
+// @Description  分页查询当前用户教学的所有课程（包括创建的课程和作为教师加入的课程）
 // @Tags         课程
 // @Accept       json
 // @Produce      json
-// @Param        request body models.PageQueryTeacherCoursesRequest true "分页查询参数"
+// @Param        page_num query int false "页码"
+// @Param        page_size query int false "每页数量"
+// @Param        status query int false "课程状态"
+// @Param        name query string false "课程名称"
 // @Success      200 {object} models.CourseListResponse "课程列表"
 // @Failure      400 {object} models.ErrorResponse "请求参数错误"
 // @Security     BearerAuth
-// @Router       /courses/teacher/query [post]
+// @Router       /courses/teaching [get]
 func (s *Server) PageQueryTeacherCourses(c *gin.Context) {
 	var req models.PageQueryTeacherCoursesRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
+	if err := c.ShouldBindQuery(&req); err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
 	}
