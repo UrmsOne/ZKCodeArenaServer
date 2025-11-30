@@ -32,7 +32,7 @@ type ChannelQueue struct {
 
 // SubmitService 提交服务接口（用于解耦）
 type SubmitService interface {
-	GetSubmitsByStatus(ctx context.Context, status models.SubmitStatus) ([]*models.Submit, error)
+	GetSubmitsByStatus(ctx context.Context, status models.SubmitStatus, page, pageSize int) ([]*models.Submit, int64, error)
 	UpdateSubmitStatus(ctx context.Context, submitID primitive.ObjectID, status models.SubmitStatus) error
 }
 

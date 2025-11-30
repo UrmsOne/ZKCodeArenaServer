@@ -223,6 +223,14 @@ func (js *JudgeService) judgeTask(ctx context.Context, task *queue.JudgeTask) er
 		return err
 	}
 
+	// 9. 更新题目统计信息（提交次数和通过次数）
+	isAC := finalStatus == models.StatusAccepted
+	if err := js.problemService.UpdateProblemStats(ctx, task.ProblemID, isAC); err != nil {
+		// 记录错误但不影响判题流程
+		logger := utils.GetLogger(ctx)
+		logger.Error(fmt.Sprintf("更新题目统计失败: ProblemID=%s, Error=%v", task.ProblemID.Hex(), err))
+	}
+
 	// WebSocket推送：判题完成
 	wsManager.BroadcastSubmitStatusUpdate(task.SubmitID, task.UserID, finalStatus, nil, result)
 
