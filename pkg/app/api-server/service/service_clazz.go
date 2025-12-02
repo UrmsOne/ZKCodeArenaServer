@@ -1,5 +1,5 @@
 /*
-@Author:
+@Author:sir
 @Date: 2025/10/25
 @Name: service_clazz.go
 @Description: 班级服务层实现
@@ -70,7 +70,7 @@ func (s2 *ClazzService) RefreshQrcode(userId string, courseId string, clazzId st
 	return base64QRCode, nil
 }
 
-// RefreshQrcodeByClazzId 通过班级ID刷新二维码（新的RESTful接口使用）
+// RefreshQrcodeByClazzId 通过班级ID刷新二维码
 func (s2 *ClazzService) RefreshQrcodeByClazzId(userId string, clazzId string, ctx context.Context) (interface{}, error) {
 	// 验证用户ID
 	userObjId, err := primitive.ObjectIDFromHex(userId)
@@ -139,7 +139,7 @@ func (s *ClazzService) CreateClass(ctx context.Context, req *models.CreateClazzR
 	// 执行查询
 	err = coll.FindOne(ctx, filter, options.FindOne().SetProjection(projection)).Decode(&result)
 	if err != nil {
-		if err == mongo.ErrNoDocuments {
+		if errors.Is(err, mongo.ErrNoDocuments) {
 			return nil, errors.New("课程不存在")
 		}
 		return nil, err

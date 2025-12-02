@@ -120,8 +120,7 @@ func (s *Server) refreshQrcode(c *gin.Context) {
 	}
 
 	userID, _ := c.Get("user_id")
-	// 注意：这里需要从班级信息中获取 courseId，或者修改 Service 层方法签名
-	// 暂时保留原有调用方式，但需要从数据库查询 courseId
+
 	qrcodeBase64, err := s.svc.ClazzService.RefreshQrcodeByClazzId(userID.(string), clazzId, c.Request.Context())
 	if err != nil {
 		utils.BadRequestResponse(c, err.Error())
