@@ -356,18 +356,6 @@ func (s *CourseService) PageQueryTeacherCourses(ctx context.Context, request *mo
 	return res, nil
 }
 
-// GetClazzesByCourseId 通过课程ID查询所有班级
-func (s *CourseService) GetClazzesByCourseId(ctx context.Context, courseId string, userId string) ([]models.Clazz, error) {
-	// 此方法已迁移到 clazz 服务中
-	return nil, errors.New("此方法已迁移到 clazz 服务中")
-}
-
-// UpdateClazzInfo 更新班级信息（不包括教师和成员）
-func (s *CourseService) UpdateClazzInfo(ctx context.Context, clazzID string, userId string, req *models.UpdateClazzRequest) error {
-	// 此方法已迁移到 clazz 服务中
-	return errors.New("此方法已迁移到 clazz 服务中")
-}
-
 // UpdateCourseInfo 更新课程信息
 func (s *CourseService) UpdateCourseInfo(ctx context.Context, userId string, courseId string, req *models.UpdateCourseRequest) error {
 	userObjId, err := primitive.ObjectIDFromHex(userId)

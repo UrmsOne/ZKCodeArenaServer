@@ -26,39 +26,39 @@ func (s *Server) RegisterClazz(g *gin.RouterGroup) {
 		{
 			// 班级
 			jwtGroup.POST("", s.CreateClass)
-			jwtGroup.GET("", s.GetClazzesByCourseId) // 变更: GET /course/:courseId -> GET /?course_id=xxx
+			jwtGroup.GET("", s.GetClazzesByCourseId)
 			jwtGroup.GET("/:clazzId", s.GetClazzById)
-			jwtGroup.PUT("/:clazzId", s.UpdateClazzInfo) // 变更: PUT / -> PUT /:clazzId
+			jwtGroup.PUT("/:clazzId", s.UpdateClazzInfo)
 			jwtGroup.DELETE("/:clazzId", s.DeleteClazz)
-			jwtGroup.POST("/:clazzId/join", s.JoinClass) // 变更: POST /join -> POST /:clazzId/join
+			jwtGroup.POST("/:clazzId/join", s.JoinClass)
 
 			// 二维码管理
-			jwtGroup.GET("/:clazzId/qrcode", s.GetQrcodeClazzById) // 变更: GET /qrcode/:clazzId -> GET /:clazzId/qrcode
-			jwtGroup.PUT("/:clazzId/qrcode", s.refreshQrcode)      // 变更: PUT /qrcode/:courseId/:clazzId -> PUT /:clazzId/qrcode
+			jwtGroup.GET("/:clazzId/qrcode", s.GetQrcodeClazzById)
+			jwtGroup.PUT("/:clazzId/qrcode", s.refreshQrcode)
 
 			// 成员管理
-			jwtGroup.POST("/:clazzId/members", s.AddClazzMember)                   // 变更: POST /members -> POST /:clazzId/members
-			jwtGroup.DELETE("/:clazzId/members/:memberId", s.RemoveClazzMembers)   // 变更: POST /members/remove -> DELETE /:clazzId/members/:memberId
-			jwtGroup.POST("/:clazzId/teachers", s.addClazzTeacher)                 // 变更: POST /teachers -> POST /:clazzId/teachers
-			jwtGroup.DELETE("/:clazzId/teachers/:teacherId", s.removeClazzTeacher) // 变更: DELETE /teachers -> DELETE /:clazzId/teachers/:teacherId
+			jwtGroup.POST("/:clazzId/members", s.AddClazzMember)
+			jwtGroup.DELETE("/:clazzId/members/:memberId", s.RemoveClazzMembers)
+			jwtGroup.POST("/:clazzId/teachers", s.addClazzTeacher)
+			jwtGroup.DELETE("/:clazzId/teachers/:teacherId", s.removeClazzTeacher)
 
 			// 任务管理
-			jwtGroup.POST("/:clazzId/tasks", s.AddTask)                                   // 变更: POST /task -> POST /:clazzId/tasks
-			jwtGroup.GET("/:clazzId/tasks", s.GetTasksByClazzId)                          // 变更: GET /tasks/:clazzId -> GET /:clazzId/tasks
-			jwtGroup.GET("/:clazzId/tasks/:taskId", s.GetTaskById)                        // 变更: GET /task/:taskId -> GET /:clazzId/tasks/:taskId
-			jwtGroup.PUT("/:clazzId/tasks/:taskId", s.UpdateTask)                         // 变更: PUT /task -> PUT /:clazzId/tasks/:taskId
-			jwtGroup.DELETE("/:clazzId/tasks/:taskId", s.DeleteTask)                      // 变更: DELETE /task/:taskId -> DELETE /:clazzId/tasks/:taskId
-			jwtGroup.POST("/:clazzId/tasks/:taskId/finish", s.FinishTask)                 // 变更: POST /finishTask -> POST /:clazzId/tasks/:taskId/finish
-			jwtGroup.POST("/:clazzId/tasks/:taskId/relations", s.AddTaskRelationIds)      // 变更: POST /task/relationIds -> POST /:clazzId/tasks/:taskId/relations
-			jwtGroup.DELETE("/:clazzId/tasks/:taskId/relations", s.RemoveTaskRelationIds) // 变更: DELETE /task/relationIds -> DELETE /:clazzId/tasks/:taskId/relations
-			jwtGroup.GET("/:clazzId/tasks/:taskId/completion", s.PageQueryTaskCompletion) // 变更: POST /task/completion -> GET /:clazzId/tasks/:taskId/completion
-			jwtGroup.POST("/:clazzId/tasks/:taskId/copy", s.CopyTaskToClass)              // 变更: POST /task/copy -> POST /:clazzId/tasks/:taskId/copy
+			jwtGroup.POST("/:clazzId/tasks", s.AddTask)
+			jwtGroup.GET("/:clazzId/tasks", s.GetTasksByClazzId)
+			jwtGroup.GET("/:clazzId/tasks/:taskId", s.GetTaskById)
+			jwtGroup.PUT("/:clazzId/tasks/:taskId", s.UpdateTask)
+			jwtGroup.DELETE("/:clazzId/tasks/:taskId", s.DeleteTask)
+			jwtGroup.POST("/:clazzId/tasks/:taskId/finish", s.FinishTask)
+			jwtGroup.POST("/:clazzId/tasks/:taskId/relations", s.AddTaskRelationIds)
+			jwtGroup.DELETE("/:clazzId/tasks/:taskId/relations", s.RemoveTaskRelationIds)
+			jwtGroup.GET("/:clazzId/tasks/:taskId/completion", s.PageQueryTaskCompletion)
+			jwtGroup.POST("/:clazzId/tasks/:taskId/copy", s.CopyTaskToClass)
 
 			// 学生班级关系
-			jwtGroup.POST("/:clazzId/student/:studentId", s.AddStudentToClass)        // 变更: POST /student_classes -> POST /:clazzId/student/:studentId
-			jwtGroup.DELETE("/:clazzId/student/:studentId", s.RemoveStudentFromClass) // 变更: DELETE /student_classes -> DELETE /:clazzId/student/:studentId
-			jwtGroup.GET("/students/:studentId/classes", s.GetStudentClasses)         // 变更: GET /student_classes/:userId -> GET /students/:studentId/classes
-			jwtGroup.GET("/:classId/students", s.GetClassStudents)                    // 变更: GET /class_students/:classId -> GET /:classId/students
+			jwtGroup.POST("/:clazzId/student/:studentId", s.AddStudentToClass)
+			jwtGroup.DELETE("/:clazzId/student/:studentId", s.RemoveStudentFromClass)
+			jwtGroup.GET("/students/:studentId/classes", s.GetStudentClasses)
+			jwtGroup.GET("/:classId/students", s.GetClassStudents)
 		}
 	}
 }

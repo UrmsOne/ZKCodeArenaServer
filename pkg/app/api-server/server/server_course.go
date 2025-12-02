@@ -1,5 +1,5 @@
 /*
-@Author:
+@Author:sir
 @Date: 2025/10/25
 @Name: server_course.go
 @Description: 课程服务器路由处理
@@ -31,10 +31,10 @@ func (s *Server) RegisterCourse(g *gin.RouterGroup) {
 			jwtGroup.PUT("/:courseId/avatar", s.UpdateCourseAvatar)
 
 			// 课程成员管理
-			jwtGroup.GET("/:courseId/students", s.GetCourseStudents)                 // 变更: POST /students -> GET /:courseId/students
-			jwtGroup.GET("/:courseId/teachers", s.GetCourseTeachers)                 // 变更: POST /teachers -> GET /:courseId/teachers
-			jwtGroup.POST("/:courseId/teachers", s.addCourseTeacher)                 // 变更: POST /add/teachers -> POST /:courseId/teachers
-			jwtGroup.DELETE("/:courseId/teachers/:teacherId", s.removeCourseTeacher) // 变更: DELETE /teachers -> DELETE /:courseId/teachers/:teacherId
+			jwtGroup.GET("/:courseId/students", s.GetCourseStudents)
+			jwtGroup.GET("/:courseId/teachers", s.GetCourseTeachers)
+			jwtGroup.POST("/:courseId/teachers", s.addCourseTeacher)
+			jwtGroup.DELETE("/:courseId/teachers/:teacherId", s.removeCourseTeacher)
 		}
 	}
 }
