@@ -19,47 +19,47 @@ import (
 )
 
 func (s *Server) RegisterClazz(g *gin.RouterGroup) {
-	clazzGroup := g.Group("/clazzes")
+	clazzGroup := g.Group("/clazzes").Use(middleware.JWTMiddleware())
 	{
-		// 需要认证的路由
-		jwtGroup := clazzGroup.Use(middleware.JWTMiddleware())
-		{
-			// 班级
-			jwtGroup.POST("", s.CreateClass)
-			jwtGroup.GET("", s.GetClazzesByCourseId)
-			jwtGroup.GET("/:clazzId", s.GetClazzById)
-			jwtGroup.PUT("/:clazzId", s.UpdateClazzInfo)
-			jwtGroup.DELETE("/:clazzId", s.DeleteClazz)
-			jwtGroup.POST("/:clazzId/join", s.JoinClass)
+		// 班级
+		clazzGroup.POST("", s.CreateClass)
+		clazzGroup.GET("", s.GetClazzesByCourseId)
+		clazzGroup.GET("/:clazzId", s.GetClazzById)
+		clazzGroup.PUT("/:clazzId", s.UpdateClazzInfo)
+		clazzGroup.DELETE("/:clazzId", s.DeleteClazz)
+		clazzGroup.POST("/:clazzId/join", s.JoinClass)
 
-			// 二维码管理
-			jwtGroup.GET("/:clazzId/qrcode", s.GetQrcodeClazzById)
-			jwtGroup.PUT("/:clazzId/qrcode", s.refreshQrcode)
+		// 二维码管理
+		clazzGroup.GET("/:clazzId/qrcode", s.GetQrcodeClazzById)
+		clazzGroup.PUT("/:clazzId/qrcode", s.refreshQrcode)
 
-			// 成员管理
-			jwtGroup.POST("/:clazzId/members", s.AddClazzMember)
-			jwtGroup.DELETE("/:clazzId/members/:memberId", s.RemoveClazzMembers)
-			jwtGroup.POST("/:clazzId/teachers", s.addClazzTeacher)
-			jwtGroup.DELETE("/:clazzId/teachers/:teacherId", s.removeClazzTeacher)
+		// 成员管理
+		clazzGroup.POST("/:clazzId/members", s.AddClazzMember)
+		clazzGroup.DELETE("/:clazzId/members/:memberId", s.RemoveClazzMembers)
+		clazzGroup.POST("/:clazzId/teachers", s.addClazzTeacher)
+		clazzGroup.DELETE("/:clazzId/teachers/:teacherId", s.removeClazzTeacher)
 
-			// 任务管理
-			jwtGroup.POST("/:clazzId/tasks", s.AddTask)
-			jwtGroup.GET("/:clazzId/tasks", s.GetTasksByClazzId)
-			jwtGroup.GET("/:clazzId/tasks/:taskId", s.GetTaskById)
-			jwtGroup.PUT("/:clazzId/tasks/:taskId", s.UpdateTask)
-			jwtGroup.DELETE("/:clazzId/tasks/:taskId", s.DeleteTask)
-			jwtGroup.POST("/:clazzId/tasks/:taskId/finish", s.FinishTask)
-			jwtGroup.POST("/:clazzId/tasks/:taskId/relations", s.AddTaskRelationIds)
-			jwtGroup.DELETE("/:clazzId/tasks/:taskId/relations", s.RemoveTaskRelationIds)
-			jwtGroup.GET("/:clazzId/tasks/:taskId/completion", s.PageQueryTaskCompletion)
-			jwtGroup.POST("/:clazzId/tasks/:taskId/copy", s.CopyTaskToClass)
+		// 任务管理
+		clazzGroup.POST("/:clazzId/tasks", s.AddTask)
+		clazzGroup.GET("/:clazzId/tasks", s.GetTasksByClazzId)
+		clazzGroup.GET("/:clazzId/tasks/:taskId", s.GetTaskById)
+		clazzGroup.PUT("/:clazzId/tasks/:taskId", s.UpdateTask)
+		clazzGroup.DELETE("/:clazzId/tasks/:taskId", s.DeleteTask)
+		clazzGroup.POST("/:clazzId/tasks/:taskId/finish", s.FinishTask)
+		clazzGroup.POST("/:clazzId/tasks/:taskId/relations", s.AddTaskRelationIds)
+		clazzGroup.DELETE("/:clazzId/tasks/:taskId/relations", s.RemoveTaskRelationIds)
+		clazzGroup.GET("/:clazzId/tasks/:taskId/completion", s.PageQueryTaskCompletion)
+		clazzGroup.POST("/:clazzId/tasks/:taskId/copy", s.CopyTaskToClass)
 
-			// 学生班级关系
-			jwtGroup.POST("/:clazzId/student/:studentId", s.AddStudentToClass)
-			jwtGroup.DELETE("/:clazzId/student/:studentId", s.RemoveStudentFromClass)
-			jwtGroup.GET("/students/:studentId/classes", s.GetStudentClasses)
-			jwtGroup.GET("/:classId/students", s.GetClassStudents)
-		}
+		// 学生班级关系
+		clazzGroup.POST("/:clazzId/student/:studentId", s.AddStudentToClass)
+		clazzGroup.DELETE("/:clazzId/student/:studentId", s.RemoveStudentFromClass)
+		clazzGroup.GET("/:clazzId/students", s.GetClassStudents) //
+
+	}
+	stuGroup := g.Group("/students").Use(middleware.JWTMiddleware())
+	{
+		stuGroup.GET("/:studentId/classes", s.GetStudentClasses)
 	}
 }
 
@@ -118,9 +118,7 @@ func (s *Server) refreshQrcode(c *gin.Context) {
 		utils.BadRequestResponse(c, "班级ID不能为空")
 		return
 	}
-
 	userID, _ := c.Get("user_id")
-
 	qrcodeBase64, err := s.svc.ClazzService.RefreshQrcodeByClazzId(userID.(string), clazzId, c.Request.Context())
 	if err != nil {
 		utils.BadRequestResponse(c, err.Error())
@@ -310,19 +308,16 @@ func (s *Server) AddTask(c *gin.Context) {
 		utils.BadRequestResponse(c, "班级ID不能为空")
 		return
 	}
-
 	var req models.AddTaskRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
 	}
-
 	userID, _ := c.Get("user_id")
 	if err := s.svc.CourseService.AddCourseTask(c.Request.Context(), clazzId, &req, userID.(string)); err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
 	}
-
 	utils.SuccessResponse(c, nil)
 }
 
@@ -346,7 +341,6 @@ func (s *Server) FinishTask(c *gin.Context) {
 		utils.BadRequestResponse(c, "班级ID或任务ID不能为空")
 		return
 	}
-
 	var req models.FinishTaskRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.BadRequestResponse(c, "请求参数错误: "+err.Error())
@@ -835,9 +829,9 @@ func (s *Server) GetStudentClasses(c *gin.Context) {
 // @Success      200 {object} []models.UserProfile "班级学生列表"
 // @Failure      400 {object} models.ErrorResponse "请求参数错误"
 // @Security     BearerAuth
-// @Router       /clazzes/{classId}/students [get]
+// @Router       /clazzes/{clazzId}/students [get]
 func (s *Server) GetClassStudents(c *gin.Context) {
-	classId := c.Param("classId")
+	classId := c.Param("clazzId")
 	if classId == "" {
 		utils.BadRequestResponse(c, "班级ID不能为空")
 		return
