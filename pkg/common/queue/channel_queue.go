@@ -21,18 +21,18 @@ import (
 
 // ChannelQueue 基于 Go Channel 的消息队列实现
 type ChannelQueue struct {
-	queue      chan *JudgeTask    // 任务队列
-	queueSize  int                // 队列容量
-	stopCh     chan struct{}      // 停止信号
-	wg         sync.WaitGroup     // 等待组（用于优雅关闭）
-	isRunning  bool               // 运行状态
-	mu         sync.RWMutex       // 读写锁
-	submitSvc  SubmitService      // 提交服务接口（用于恢复任务）
+	queue     chan *JudgeTask // 任务队列
+	queueSize int             // 队列容量
+	stopCh    chan struct{}   // 停止信号
+	wg        sync.WaitGroup  // 等待组（用于优雅关闭）
+	isRunning bool            // 运行状态
+	mu        sync.RWMutex    // 读写锁
+	submitSvc SubmitService   // 提交服务接口（用于恢复任务）
 }
 
 // SubmitService 提交服务接口（用于解耦）
 type SubmitService interface {
-	GetSubmitsByStatus(ctx context.Context, status models.SubmitStatus, page, pageSize int) ([]*models.Submit, int64, error)
+	GetSubmitsByStatus(ctx context.Context, status models.SubmitStatus) ([]*models.Submit, error)
 	UpdateSubmitStatus(ctx context.Context, submitID primitive.ObjectID, status models.SubmitStatus) error
 }
 
