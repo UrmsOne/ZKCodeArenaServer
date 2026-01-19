@@ -751,6 +751,105 @@ func (s *ClazzService) AddClazzTeacher(ctx context.Context, clazzId string, teac
 	return nil
 }
 
+// AddClazzTeachers 为班级批量添加教师
+func (s *ClazzService) AddClazzTeachers(ctx context.Context, clazzId string, teacherIds []string, userId string) error {
+	// 验证用户权限（只有课程创建者或课程教师才能添加班级教师）
+	clazzObjID, err := primitive.ObjectIDFromHex(clazzId)
+	if err != nil {
+		return errors.New("无效的班级ID")
+	}
+
+	userObjID, err := primitive.ObjectIDFromHex(userId)
+	if err != nil {
+		return errors.New("无效的用户ID")
+	}
+
+	// 验证所有教师ID
+	teacherObjIDs := make([]primitive.ObjectID, 0, len(teacherIds))
+	for _, teacherId := range teacherIds {
+		teacherObjID, err := primitive.ObjectIDFromHex(teacherId)
+		if err != nil {
+			return errors.New("无效的教师ID: " + teacherId)
+		}
+		teacherObjIDs = append(teacherObjIDs, teacherObjID)
+	}
+
+	// 检查班级是否存在并验证权限
+	coll := utils.GetCollection("clazzes")
+	var clazz models.Clazz
+	if err = coll.FindOne(ctx, bson.M{"_id": clazzObjID}).Decode(&clazz); err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return errors.New("班级不存在")
+		}
+		return err
+	}
+
+	// 验证操作者是否有权限添加教师
+	courseColl := utils.GetCollection("courses")
+	isAuthorized, err := authorized(ctx, courseColl, clazz.CourseId, userObjID)
+	if err != nil {
+		return err
+	}
+
+	if !isAuthorized {
+		return errors.New("权限不足，只有课程创建者或课程教师可以添加班级教师")
+	}
+
+	// 使用map快速查找已存在的教师
+	existingTeachers := make(map[primitive.ObjectID]bool)
+	for _, id := range clazz.TeacherIds {
+		existingTeachers[id] = true
+	}
+
+	// 过滤掉已经存在的教师
+	newTeacherObjIDs := make([]primitive.ObjectID, 0, len(teacherObjIDs))
+	for _, teacherObjID := range teacherObjIDs {
+		if !existingTeachers[teacherObjID] {
+			newTeacherObjIDs = append(newTeacherObjIDs, teacherObjID)
+		}
+	}
+
+	// 如果没有新教师需要添加，则直接返回
+	if len(newTeacherObjIDs) == 0 {
+		return nil
+	}
+
+	// 批量添加新教师到班级
+	filter := bson.M{"_id": clazzObjID}
+	update := bson.M{"$addToSet": bson.M{"teacher_ids": bson.M{"$each": newTeacherObjIDs}}, "$set": bson.M{"mtime": time.Now()}}
+	result, err := coll.UpdateOne(ctx, filter, update)
+	if err != nil {
+		return errors.New("批量添加班级教师失败: " + err.Error())
+	}
+
+	if result.ModifiedCount > 0 {
+		// 清除相关的缓存
+		// 获取班级相关的所有用户ID，清除他们的缓存
+		// 首先获取课程信息以找到所有课程教师
+		courseColl := utils.GetCollection("courses")
+		var course models.Course
+		if err := courseColl.FindOne(ctx, bson.M{"_id": clazz.CourseId}).Decode(&course); err != nil {
+			// 即使获取课程信息失败，也继续执行
+		} else {
+			// 清除课程创建者的缓存
+			cacheKey := "clazz_detail:" + clazzId + ":" + course.CreatedBy.Hex()
+			utils.RedisClient.Del(ctx, cacheKey)
+			// 清除课程教师的缓存
+			for _, teacherId := range course.TeacherIds {
+				cacheKey := "clazz_detail:" + clazzId + ":" + teacherId.Hex()
+				utils.RedisClient.Del(ctx, cacheKey)
+			}
+		}
+		// 清除班级成员的缓存
+		for _, memberId := range clazz.MemberIDs {
+			cacheKey := "clazz_detail:" + clazzId + ":" + memberId.Hex()
+			utils.RedisClient.Del(ctx, cacheKey)
+		}
+	}
+
+	return nil
+}
+
 // RemoveClazzTeacher 为班级移除教师
 func (s *ClazzService) RemoveClazzTeacher(ctx context.Context, clazzId string, teacherId string, userId string) error {
 	// 验证用户权限（只有课程创建者或课程教师才能移除班级教师）
@@ -811,9 +910,34 @@ func (s *ClazzService) RemoveClazzTeacher(ctx context.Context, clazzId string, t
 	// 从班级移除教师
 	filter := bson.M{"_id": clazzObjID}
 	update := bson.M{"$pull": bson.M{"teacher_ids": teacherObjID}, "$set": bson.M{"mtime": time.Now()}}
-	_, err = coll.UpdateOne(ctx, filter, update)
+	result, err := coll.UpdateOne(ctx, filter, update)
 	if err != nil {
 		return errors.New("移除班级教师失败: " + err.Error())
+	}
+
+	if result.ModifiedCount > 0 {
+		// 清除相关的缓存
+		// 获取班级相关的所有用户ID，清除他们的缓存
+		// 首先获取课程信息以找到所有课程教师
+		courseColl := utils.GetCollection("courses")
+		var course models.Course
+		if err := courseColl.FindOne(ctx, bson.M{"_id": clazz.CourseId}).Decode(&course); err != nil {
+			// 即使获取课程信息失败，也继续执行
+		} else {
+			// 清除课程创建者的缓存
+			cacheKey := "clazz_detail:" + clazzId + ":" + course.CreatedBy.Hex()
+			utils.RedisClient.Del(ctx, cacheKey)
+			// 清除课程教师的缓存
+			for _, teacherId := range course.TeacherIds {
+				cacheKey := "clazz_detail:" + clazzId + ":" + teacherId.Hex()
+				utils.RedisClient.Del(ctx, cacheKey)
+			}
+		}
+		// 清除班级成员的缓存
+		for _, memberId := range clazz.MemberIDs {
+			cacheKey := "clazz_detail:" + clazzId + ":" + memberId.Hex()
+			utils.RedisClient.Del(ctx, cacheKey)
+		}
 	}
 
 	return nil
@@ -1298,6 +1422,7 @@ func (s *ClazzService) GetTaskByID(ctx context.Context, taskID string, userID st
 		CID:         task.CID,
 		MTime:       task.MTime,
 		State:       state,
+		RelationIDs: task.RelationIDs,
 		Questions:   questions,
 	}
 
@@ -1728,6 +1853,20 @@ func (s *ClazzService) UpdateTask(ctx context.Context, userId string, clazzId st
 	if req.EndTime != nil {
 		updateFields["end_time"] = *req.EndTime
 	}
+
+	// 添加对 RelationIDs 的更新支持
+	if req.RelationIDs != nil {
+		relationObjIds := make([]primitive.ObjectID, len(*req.RelationIDs))
+		for i, id := range *req.RelationIDs {
+			hex, err := primitive.ObjectIDFromHex(id)
+			if err != nil {
+				return errors.New("无效的题目ID: " + id)
+			}
+			relationObjIds[i] = hex
+		}
+		updateFields["relation_ids"] = relationObjIds
+	}
+
 	updateFields["c_id"] = userObjId
 	updateFields["mtime"] = time.Now()
 

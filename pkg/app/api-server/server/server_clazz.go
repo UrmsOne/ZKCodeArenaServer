@@ -592,7 +592,7 @@ func (s *Server) addClazzTeacher(c *gin.Context) {
 	}
 
 	userID, _ := c.Get("user_id")
-	if err := s.svc.ClazzService.AddClazzTeacher(c.Request.Context(), clazzId, req.TeacherIds[0], userID.(string)); err != nil {
+	if err := s.svc.ClazzService.AddClazzTeachers(c.Request.Context(), clazzId, req.TeacherIds, userID.(string)); err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
 	}
