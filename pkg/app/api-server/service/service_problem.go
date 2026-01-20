@@ -507,16 +507,17 @@ func (s *ProblemService) SearchProblems(
 	tags []string,
 	page, pageSize int,
 	userID *primitive.ObjectID,
+	inFavorite bool,
 ) ([]*models.ProblemList, int64, error) {
 	// 业务逻辑：记录搜索相关日志
 	if userID != nil {
-		utils.Logger.Debugf("SearchProblems: 开始搜索, keyword=%s, userID=%s", keyword, userID.Hex())
+		utils.Logger.Debugf("SearchProblems: 开始搜索, keyword=%s, in_favorite=%v, userID=%s", keyword, inFavorite, userID.Hex())
 	} else {
-		utils.Logger.Debugf("SearchProblems: 未登录用户搜索, keyword=%s", keyword)
+		utils.Logger.Debugf("SearchProblems: 未登录用户搜索, keyword=%s, in_favorite=%v", keyword, inFavorite)
 	}
 
 	// 数据操作：委托给Repository层
-	return s.repo.SearchProblems(ctx, keyword, page, pageSize, difficulty, tags, userID)
+	return s.repo.SearchProblems(ctx, keyword, page, pageSize, difficulty, tags, userID, inFavorite)
 }
 
 // GetUserProblemStatuses 批量查询用户对多个题目的状态
@@ -643,4 +644,18 @@ func (s *ProblemService) BatchCreateProblems(ctx context.Context, problems []*mo
 		response.TotalCount, response.SuccessCount, response.FailCount)
 
 	return response, nil
+}
+
+// ToggleFavorite 切换题目收藏状态
+func (s *ProblemService) ToggleFavorite(ctx context.Context, userID, problemID primitive.ObjectID, isFavorite bool) error {
+	if isFavorite {
+		return s.repo.AddFavorite(ctx, userID, problemID)
+	} else {
+		return s.repo.RemoveFavorite(ctx, userID, problemID)
+	}
+}
+
+// GetUserFavoriteProblems 获取用户收藏的题目列表
+func (s *ProblemService) GetUserFavoriteProblems(ctx context.Context, userID primitive.ObjectID, page, pageSize int) ([]*models.ProblemList, int64, error) {
+	return s.repo.GetUserFavoriteProblems(ctx, userID, page, pageSize)
 }

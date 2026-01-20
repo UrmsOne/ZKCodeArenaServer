@@ -105,13 +105,14 @@ func (p *ProblemRepository) GetProblems(
 	var problemList []*models.ProblemList
 	for _, problem := range problems {
 		problemList = append(problemList, &models.ProblemList{
-			ID:          problem.ID,
-			UniqueID:    problem.UniqueID,
-			Title:       problem.Title,
-			Difficulty:  problem.Difficulty,
-			ACCount:     problem.ACCount,
-			SubmitCount: problem.SubmitCount,
-			CreatedAt:   problem.CreatedAt,
+			ID:            problem.ID,
+			UniqueID:      problem.UniqueID,
+			Title:         problem.Title,
+			Difficulty:    problem.Difficulty,
+			ACCount:       problem.ACCount,
+			SubmitCount:   problem.SubmitCount,
+			CreatedAt:     problem.CreatedAt,
+			FavoriteCount: problem.FavoriteCount, // 新增
 		})
 	}
 
@@ -145,16 +146,17 @@ func (p *ProblemRepository) GetProblemsWithUserStatus(
 	var problemList []*models.ProblemList
 	for _, problem := range problems {
 		problemList = append(problemList, &models.ProblemList{
-			ID:          problem.ID,
-			UniqueID:    problem.UniqueID,
-			Title:       problem.Title,
-			Difficulty:  problem.Difficulty,
-			Tags:        problem.Tags,
-			ACCount:     problem.ACCount,
-			SubmitCount: problem.SubmitCount,
-			Status:      problem.Status,
-			IsPublic:    problem.IsPublic,
-			CreatedAt:   problem.CreatedAt,
+			ID:            problem.ID,
+			UniqueID:      problem.UniqueID,
+			Title:         problem.Title,
+			Difficulty:    problem.Difficulty,
+			Tags:          problem.Tags,
+			ACCount:       problem.ACCount,
+			SubmitCount:   problem.SubmitCount,
+			Status:        problem.Status,
+			IsPublic:      problem.IsPublic,
+			CreatedAt:     problem.CreatedAt,
+			FavoriteCount: problem.FavoriteCount, // 新增
 		})
 	}
 
@@ -181,6 +183,7 @@ func (p *ProblemRepository) SearchProblems(
 	difficulty models.ProblemDifficulty,
 	tags []string,
 	userID *primitive.ObjectID,
+	inFavorite bool,
 ) ([]*models.ProblemList, int64, error) {
 	// 使用 BuildKeywordFilter 构建关键字过滤器
 	keywordFilter := p.BuildKeywordFilter(keyword, []string{"title", "description"})
@@ -204,6 +207,36 @@ func (p *ProblemRepository) SearchProblems(
 		filters = append(filters, bson.M{"tags": bson.M{"$in": tags}})
 	}
 
+	// 如果需要在收藏中搜索，且用户已登录
+	if inFavorite && userID != nil {
+		// 获取用户收藏的题目ID
+		favoriteFilter := bson.M{"user_id": userID}
+		cursor, err := p.Find(ctx, "user_favorite_problems", favoriteFilter, nil)
+		if err != nil {
+			return nil, 0, fmt.Errorf("获取收藏题目失败: %w", err)
+		}
+		defer cursor.Close(ctx)
+
+		var favorites []models.UserFavoriteProblem
+		if err := cursor.All(ctx, &favorites); err != nil {
+			return nil, 0, fmt.Errorf("解析收藏题目失败: %w", err)
+		}
+
+		if len(favorites) > 0 {
+			// 提取收藏的题目ID
+			problemIDs := make([]primitive.ObjectID, len(favorites))
+			for i, fav := range favorites {
+				problemIDs[i] = fav.ProblemID
+			}
+
+			// 添加收藏题目ID过滤
+			filters = append(filters, bson.M{"_id": bson.M{"$in": problemIDs}})
+		} else {
+			// 用户没有收藏任何题目，返回空结果
+			return []*models.ProblemList{}, 0, nil
+		}
+	}
+
 	// 使用 MergeFilters 合并所有过滤器
 	filter := p.MergeFilters(filters...)
 
@@ -221,16 +254,17 @@ func (p *ProblemRepository) SearchProblems(
 	var problemList []*models.ProblemList
 	for _, problem := range problems {
 		problemList = append(problemList, &models.ProblemList{
-			ID:          problem.ID,
-			UniqueID:    problem.UniqueID,
-			Title:       problem.Title,
-			Difficulty:  problem.Difficulty,
-			Tags:        problem.Tags,
-			ACCount:     problem.ACCount,
-			SubmitCount: problem.SubmitCount,
-			Status:      problem.Status,
-			IsPublic:    problem.IsPublic,
-			CreatedAt:   problem.CreatedAt,
+			ID:            problem.ID,
+			UniqueID:      problem.UniqueID,
+			Title:         problem.Title,
+			Difficulty:    problem.Difficulty,
+			Tags:          problem.Tags,
+			ACCount:       problem.ACCount,
+			SubmitCount:   problem.SubmitCount,
+			Status:        problem.Status,
+			IsPublic:      problem.IsPublic,
+			CreatedAt:     problem.CreatedAt,
+			FavoriteCount: problem.FavoriteCount, // 新增
 		})
 	}
 
@@ -484,6 +518,29 @@ func (p *ProblemRepository) fillUserProblemStatus(ctx context.Context, problems 
 		}
 	}
 
+	// 新增：填充收藏状态
+	if len(problems) > 0 {
+		problemIDs := make([]primitive.ObjectID, len(problems))
+		for i, problem := range problems {
+			problemIDs[i] = problem.ID
+		}
+
+		favoriteMap, err := p.GetUserFavoriteProblemIDs(ctx, userID, problemIDs)
+		if err != nil {
+			return err
+		}
+
+		for _, problem := range problems {
+			if favoriteMap[problem.ID] {
+				trueValue := true
+				problem.IsFavorite = &trueValue
+			} else {
+				falseValue := false
+				problem.IsFavorite = &falseValue
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -558,4 +615,174 @@ func (r *ProblemRepository) GetByUniqueID(ctx context.Context, uniqueID int64) (
 	}
 
 	return &problem, nil
+}
+
+// AddFavorite 添加收藏
+func (p *ProblemRepository) AddFavorite(ctx context.Context, userID, problemID primitive.ObjectID) error {
+	// 1. 检查是否已经收藏
+	count, err := p.CountDocuments(ctx, "user_favorite_problems", bson.M{
+		"user_id":    userID,
+		"problem_id": problemID,
+	})
+	if err != nil {
+		return err
+	}
+	if count > 0 {
+		return nil // 已经收藏，直接返回
+	}
+
+	// 2. 添加收藏记录
+	favorite := &models.UserFavoriteProblem{
+		ID:        primitive.NewObjectID(),
+		UserID:    userID,
+		ProblemID: problemID,
+		CreatedAt: time.Now(),
+	}
+	if _, err := p.InsertOne(ctx, "user_favorite_problems", favorite); err != nil {
+		return err
+	}
+
+	// 3. 增加题目收藏数
+	coll := p.db.Collection("problems")
+	_, err = coll.UpdateOne(ctx,
+		bson.M{"_id": problemID},
+		bson.M{"$inc": bson.M{"favorite_count": 1}, "$set": bson.M{"updated_at": time.Now()}},
+	)
+	if err != nil {
+		utils.Logger.Errorf("AddFavorite: 增加收藏数失败, problemID=%v, error=%v", problemID, err)
+		return err
+	}
+	return nil
+}
+
+// RemoveFavorite 取消收藏
+func (p *ProblemRepository) RemoveFavorite(ctx context.Context, userID, problemID primitive.ObjectID) error {
+	// 1. 删除收藏记录并检查是否成功删除
+	result, err := p.DeleteOne(ctx, "user_favorite_problems", bson.M{
+		"user_id":    userID,
+		"problem_id": problemID,
+	})
+	if err != nil {
+		return err
+	}
+
+	// 2. 只有当确实删除了一条收藏记录时，才减少题目收藏数
+	if result.DeletedCount > 0 {
+		// 3. 减少题目收藏数 - 使用原生 MongoDB 驱动方法
+		coll := p.db.Collection("problems")
+		_, err = coll.UpdateOne(ctx,
+			bson.M{"_id": problemID},
+			bson.M{
+				"$inc": bson.M{"favorite_count": -1},
+				"$set": bson.M{"updated_at": time.Now()},
+			},
+		)
+		if err != nil {
+			utils.Logger.Errorf("RemoveFavorite: 更新收藏数失败, problemID=%v, error=%v", problemID, err)
+			return err
+		}
+	}
+
+	return nil
+
+}
+
+// GetUserFavoriteProblems 获取用户收藏的题目列表
+func (p *ProblemRepository) GetUserFavoriteProblems(ctx context.Context, userID primitive.ObjectID, page, pageSize int) ([]*models.ProblemList, int64, error) {
+	// 1. 查找用户收藏的题目ID
+	favoriteFilter := bson.M{"user_id": userID}
+	favoriteSort := bson.D{{"created_at", -1}}
+	favoriteOpts := p.BuildFindOptionsWithPagination(int64(page), int64(pageSize), favoriteSort, nil)
+
+	// 使用 Find 方法获取游标
+	cursor, err := p.Find(ctx, "user_favorite_problems", favoriteFilter, favoriteOpts)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer cursor.Close(ctx)
+
+	// 解码游标到结构体切片
+	var favorites []models.UserFavoriteProblem
+	if err := cursor.All(ctx, &favorites); err != nil {
+		return nil, 0, err
+	}
+
+	// 2. 获取总收藏数
+	total, err := p.CountDocuments(ctx, "user_favorite_problems", favoriteFilter)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	if len(favorites) == 0 {
+		return []*models.ProblemList{}, total, nil
+	}
+
+	// 3. 获取收藏的题目详情
+	problemIDs := make([]primitive.ObjectID, len(favorites))
+	for i, fav := range favorites {
+		problemIDs[i] = fav.ProblemID
+	}
+
+	// 4. 查询题目详情
+	problemFilter := bson.M{"_id": bson.M{"$in": problemIDs}}
+	// 不需要分页，获取所有匹配的题目
+	problemOpts := options.Find()
+	// 按ID排序（与problemIDs顺序一致）
+	problemOpts.SetSort(bson.D{{"_id", 1}})
+
+	// 使用 FindWithPaginationTyped 获取题目列表
+	problems, _, err := FindWithPaginationTyped[models.Problem](ctx, p.BaseRepository, "problems", problemFilter, problemOpts)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// 5. 转换为 ProblemList 并设置收藏状态
+	problemList := make([]*models.ProblemList, len(problems))
+	trueValue := true
+	for i, problem := range problems {
+		problemList[i] = &models.ProblemList{
+			ID:            problem.ID,
+			UniqueID:      problem.UniqueID,
+			Title:         problem.Title,
+			Difficulty:    problem.Difficulty,
+			Tags:          problem.Tags,
+			ACCount:       problem.ACCount,
+			SubmitCount:   problem.SubmitCount,
+			Status:        problem.Status,
+			IsPublic:      problem.IsPublic,
+			CreatedAt:     problem.CreatedAt,
+			FavoriteCount: problem.FavoriteCount, // 新增
+			IsFavorite:    &trueValue,            // 已收藏
+		}
+	}
+
+	return problemList, total, nil
+}
+
+// GetUserFavoriteProblemIDs 获取用户收藏的题目ID列表
+func (p *ProblemRepository) GetUserFavoriteProblemIDs(ctx context.Context, userID primitive.ObjectID, problemIDs []primitive.ObjectID) (map[primitive.ObjectID]bool, error) {
+	filter := bson.M{
+		"user_id":    userID,
+		"problem_id": bson.M{"$in": problemIDs},
+	}
+
+	// 使用 Find 方法获取游标
+	cursor, err := p.Find(ctx, "user_favorite_problems", filter, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	// 解码游标到结构体切片
+	var favorites []models.UserFavoriteProblem
+	if err := cursor.All(ctx, &favorites); err != nil {
+		return nil, err
+	}
+
+	result := make(map[primitive.ObjectID]bool)
+	for _, fav := range favorites {
+		result[fav.ProblemID] = true
+	}
+
+	return result, nil
 }

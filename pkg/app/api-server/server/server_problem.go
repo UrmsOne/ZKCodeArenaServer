@@ -41,10 +41,12 @@ func (s *Server) RegisterProblem(g *gin.RouterGroup) {
 	// 需要认证的路由
 	securedGroup := problemGroup.Group("/").Use(middleware.JWTMiddleware())
 	{
-		securedGroup.POST("/", s.CreateProblem)            // 创建题目
-		securedGroup.POST("/batch", s.BatchCreateProblems) // 批量创建题目
-		securedGroup.PUT("/:id", s.UpdateProblem)          // 更新题目
-		securedGroup.DELETE("/:id", s.DeleteProblem)       // 删除题目
+		securedGroup.POST("/", s.CreateProblem)                  // 创建题目
+		securedGroup.POST("/batch", s.BatchCreateProblems)       // 批量创建题目
+		securedGroup.PUT("/:id", s.UpdateProblem)                // 更新题目
+		securedGroup.DELETE("/:id", s.DeleteProblem)             // 删除题目
+		securedGroup.POST("/:id/favorite", s.ToggleFavorite)     // 收藏/取消收藏题目
+		securedGroup.GET("/favorite", s.GetUserFavoriteProblems) // 获取用户收藏题目列表
 
 		securedGroup.POST("/:id/run", middleware.CodeRunRateLimitMiddleware(), s.RunCode) // 运行代码测试
 	}
@@ -690,6 +692,7 @@ func (s *Server) RunCode(c *gin.Context) {
 // @Param        tags query []string false "标签列表"
 // @Param        page query int false "页码" default(1)
 // @Param        page_size query int false "每页数量" default(10)
+// @Param        in_favorite query bool false "是否仅在收藏中搜索" default(false)
 // @Success      200 {object} utils.Response{data=object{problems=[]models.ProblemList,total=int64,page=int,page_size=int,total_page=int64}} "搜索结果"
 // @Failure      500 {object} models.ErrorResponse "搜索失败"
 // @Router       /problem/search [get]
@@ -699,6 +702,7 @@ func (s *Server) SearchProblems(c *gin.Context) {
 	tags := c.QueryArray("tags")
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "10"))
+	inFavorite, _ := strconv.ParseBool(c.DefaultQuery("in_favorite", "false"))
 
 	if page < 1 {
 		page = 1
@@ -733,6 +737,7 @@ func (s *Server) SearchProblems(c *gin.Context) {
 		page,
 		pageSize,
 		userObjectID,
+		inFavorite,
 	)
 	if err != nil {
 		utils.InternalServerErrorResponse(c, "搜索题目失败: "+err.Error())
@@ -781,5 +786,122 @@ func (s *Server) GetDailyProblem(c *gin.Context) {
 	utils.SuccessResponse(c, gin.H{
 		"daily_problem": dailyProblem,
 		"message":       "每日推荐题目获取成功",
+	})
+}
+
+// ToggleFavoriteRequest 收藏/取消收藏请求
+type ToggleFavoriteRequest struct {
+	IsFavorite *bool `json:"is_favorite" binding:"required"` // 1: 收藏, 0: 取消收藏
+}
+
+// ToggleFavorite godoc
+// @Summary      收藏或取消收藏题目
+// @Description  使用同一个接口收藏或取消收藏题目
+// @Tags         题目
+// @Accept       json
+// @Produce      json
+// @Param        id path string true "题目ID"
+// @Param        request body ToggleFavoriteRequest true "收藏状态"
+// @Success      200 {object} utils.Response "操作成功"
+// @Failure      400 {object} models.ErrorResponse "请求参数错误"
+// @Failure      401 {object} models.ErrorResponse "未授权"
+// @Failure      500 {object} models.ErrorResponse "服务器内部错误"
+// @Security     BearerAuth
+// @Router       /problem/{id}/favorite [post]
+func (s *Server) ToggleFavorite(c *gin.Context) {
+	// 1. 获取题目ID
+	problemIDStr := c.Param("id")
+	problemID, err := primitive.ObjectIDFromHex(problemIDStr)
+	if err != nil {
+		utils.BadRequestResponse(c, "无效的题目ID")
+		return
+	}
+
+	// 2. 解析请求体
+	var req ToggleFavoriteRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.BadRequestResponse(c, "无效的请求参数")
+		return
+	}
+
+	// 3. 获取当前用户ID
+	userID, exists := c.Get("user_id")
+	if !exists {
+		utils.UnauthorizedResponse(c, "未授权访问")
+		return
+	}
+
+	// 将userID从字符串转换为primitive.ObjectID
+	userIDObj, err := primitive.ObjectIDFromHex(userID.(string))
+	if err != nil {
+		utils.InternalServerErrorResponse(c, "无效的用户ID格式")
+		return
+	}
+
+	// 4. 调用服务层切换收藏状态
+	ctx := c.Request.Context()
+	err = s.svc.ProblemService.ToggleFavorite(ctx, userIDObj, problemID, *req.IsFavorite)
+	if err != nil {
+		utils.InternalServerErrorResponse(c, "操作失败: "+err.Error())
+		return
+	}
+
+	// 5. 返回成功响应
+	action := "收藏"
+	if !*req.IsFavorite {
+		action = "取消收藏"
+	}
+	utils.SuccessResponse(c, gin.H{
+		"message": fmt.Sprintf("%s成功", action),
+	})
+}
+
+// GetUserFavoriteProblems godoc
+// @Summary      获取用户收藏题目列表
+// @Description  获取当前用户收藏的所有题目
+// @Tags         题目
+// @Accept       json
+// @Produce      json
+// @Param        page query int false "页码，默认1"
+// @Param        page_size query int false "每页数量，默认10"
+// @Success      200 {object} utils.Response{data=object{problems=[]models.ProblemList,total=int64,page=int,page_size=int,total_page=int}} "收藏题目列表"
+// @Failure      401 {object} models.ErrorResponse "未授权"
+// @Failure      500 {object} models.ErrorResponse "服务器内部错误"
+// @Security     BearerAuth
+// @Router       /problem/favorite [get]
+func (s *Server) GetUserFavoriteProblems(c *gin.Context) {
+	// 1. 获取分页参数
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "10"))
+
+	// 2. 获取当前用户ID
+	userID, exists := c.Get("user_id")
+	if !exists {
+		utils.UnauthorizedResponse(c, "未授权访问")
+		return
+	}
+
+	// 将userID从字符串转换为primitive.ObjectID
+	userIDObj, err := primitive.ObjectIDFromHex(userID.(string))
+	if err != nil {
+		utils.InternalServerErrorResponse(c, "无效的用户ID格式")
+		return
+	}
+
+	// 3. 调用服务层获取收藏题目
+	ctx := c.Request.Context()
+	problems, total, err := s.svc.ProblemService.GetUserFavoriteProblems(ctx, userIDObj, page, pageSize)
+	if err != nil {
+		utils.InternalServerErrorResponse(c, "获取收藏题目失败: "+err.Error())
+		return
+	}
+
+	// 4. 构建响应
+	utils.SuccessResponse(c, gin.H{
+		"problems":   problems,
+		"total":      total,
+		"page":       page,
+		"page_size":  pageSize,
+		"total_page": (total + int64(pageSize) - 1) / int64(pageSize),
 	})
 }
