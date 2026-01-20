@@ -36,6 +36,7 @@ func (s *Server) RegisterUser(g *gin.RouterGroup) {
 		securedGroup.GET("/:id", s.GetUserByID)                // 获取指定用户
 		securedGroup.PUT("/:id", s.UpdateUser)                 // 更新用户信息
 		securedGroup.DELETE("/:id", s.DeleteUser)              // 删除用户
+		securedGroup.GET("/tasks", s.PageQueryUserTasks)       // 分页查询用户任务列表
 	}
 }
 
@@ -430,4 +431,44 @@ func (s *Server) DeleteUser(c *gin.Context) {
 	}
 
 	utils.SuccessResponse(c, gin.H{"message": "删除成功"})
+}
+
+// PageQueryUserTasks godoc
+// @Summary      分页查询用户任务列表
+// @Description  分页查询当前用户的所有班级任务，支持按任务类型和状态筛选
+// @Tags         用户
+// @Accept       json
+// @Produce      json
+// @Param        page query int false "页码，默认1"
+// @Param        pageSize query int false "每页大小，默认10"
+// @Param        type query int false "任务类型：1-题单，2-视频"
+// @Param        state query int false "任务状态：0-未完成, 1-已完成"
+// @Param        status query int false "任务状态：0-未开始, 1-进行中, 2-已结束"
+// @Success      200 {object} models.PageQueryUserTasksResponse "任务列表"
+// @Failure      400 {object} models.ErrorResponse "参数错误"
+// @Failure      401 {object} models.ErrorResponse "未授权"
+// @Failure      500 {object} models.ErrorResponse "查询失败"
+// @Security     BearerAuth
+// @Router       /user/tasks [get]
+func (s *Server) PageQueryUserTasks(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		utils.UnauthorizedResponse(c, "未授权")
+		return
+	}
+
+	var req models.PageQueryUserTasksRequest
+	if err := c.ShouldBindQuery(&req); err != nil {
+		utils.BadRequestResponse(c, "参数错误: "+err.Error())
+		return
+	}
+
+	ctx := c.Request.Context()
+	resp, err := s.svc.ClazzService.PageQueryUserTasks(ctx, userID.(string), &req)
+	if err != nil {
+		utils.InternalServerErrorResponse(c, "查询任务失败: "+err.Error())
+		return
+	}
+
+	utils.SuccessResponse(c, resp)
 }

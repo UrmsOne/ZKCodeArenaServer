@@ -402,6 +402,24 @@ type TaskCompletionResponse struct {
 	FinishedQuestions int                `json:"finished_questions"`     // 已完成题目数
 }
 
+// PageQueryUserTasksRequest 分页查询用户任务列表请求
+type PageQueryUserTasksRequest struct {
+	PageNum  *int64  `json:"page_num,omitempty" form:"page_num"`
+	PageSize *int64  `json:"page_size,omitempty" form:"page_size"`
+	State    *int    `json:"state,omitempty" form:"state"`       // 0: 未完成, 1: 已完成
+	Type     *int8   `json:"type,omitempty" form:"type"`         // 任务类型：1-题单，2-视频
+	ClazzID  *string `json:"clazz_id,omitempty" form:"clazz_id"` // 班级ID，可选
+	Status   *int8   `json:"status,omitempty" form:"status"`     // 任务状态：0-未开始, 1-进行中, 2-已结束
+}
+
+// PageQueryUserTasksResponse 分页查询用户任务列表响应
+type PageQueryUserTasksResponse struct {
+	Total    int64          `json:"total" example:"100"`
+	PageNum  int64          `json:"page_num" example:"1"`
+	PageSize int64          `json:"page_size" example:"10"`
+	Tasks    []TaskResponse `json:"tasks"`
+}
+
 // ==================== 题目详情响应模型 ====================
 
 // ProblemDetailResponse 题目详情聚合响应

@@ -2293,3 +2293,267 @@ func (s *ClazzService) PageQueryTaskCompletion(ctx context.Context, clazzId stri
 
 	return res, nil
 }
+
+// PageQueryUserTasks 分页查询用户所在所有班级的所有任务列表
+func (s *ClazzService) PageQueryUserTasks(ctx context.Context, userID string, req *models.PageQueryUserTasksRequest) (*models.PageQueryUserTasksResponse, error) {
+	userObjID, err := primitive.ObjectIDFromHex(userID)
+	if err != nil {
+		return nil, errors.New("无效的用户ID")
+	}
+
+	// 1. 获取用户所在的所有班级
+	studentClassColl := utils.GetCollection("student_classes")
+	filter := bson.M{"student_id": userObjID}
+	cursor, err := studentClassColl.Find(ctx, filter)
+	if err != nil {
+		return nil, errors.New("查询用户班级失败: " + err.Error())
+	}
+	defer cursor.Close(ctx)
+
+	var studentClasses []models.StudentClass
+	if err = cursor.All(ctx, &studentClasses); err != nil {
+		return nil, errors.New("解析用户班级失败: " + err.Error())
+	}
+
+	if len(studentClasses) == 0 {
+		return &models.PageQueryUserTasksResponse{
+			Total:    0,
+			PageNum:  1,
+			PageSize: 10,
+			Tasks:    []models.TaskResponse{},
+		}, nil
+	}
+
+	// 2. 提取所有班级ID
+	classIDs := make([]primitive.ObjectID, 0, len(studentClasses))
+	for _, sc := range studentClasses {
+		classIDs = append(classIDs, sc.ClassID)
+	}
+
+	// 3. 构建任务查询条件
+	taskFilter := bson.M{"clazz_id": bson.M{"$in": classIDs}}
+
+	// 4. 应用可选的筛选条件
+	if req.State != nil {
+		// 查询用户的任务状态
+		userTaskColl := utils.GetCollection("user_task")
+		if *req.State == 1 {
+			// 查询已完成的任务
+			userTaskFilter := bson.M{
+				"user_id": userObjID,
+				"state":   1,
+			}
+			userTaskCursor, err := userTaskColl.Find(ctx, userTaskFilter)
+			if err != nil {
+				return nil, errors.New("查询用户任务状态失败: " + err.Error())
+			}
+			defer userTaskCursor.Close(ctx)
+
+			var userTasks []models.UserTask
+			if err = userTaskCursor.All(ctx, &userTasks); err != nil {
+				return nil, errors.New("解析用户任务状态失败: " + err.Error())
+			}
+
+			if len(userTasks) == 0 {
+				return &models.PageQueryUserTasksResponse{
+					Total:    0,
+					PageNum:  1,
+					PageSize: 10,
+					Tasks:    []models.TaskResponse{},
+				}, nil
+			}
+
+			// 提取任务ID
+			taskIDs := make([]primitive.ObjectID, 0, len(userTasks))
+			for _, ut := range userTasks {
+				taskIDs = append(taskIDs, ut.TaskID)
+			}
+
+			taskFilter["_id"] = bson.M{"$in": taskIDs}
+		} else if *req.State == 0 {
+			// 查询未完成的任务：包括用户从未做过的任务和已开始但未完成的任务
+			// 先查询所有已完成的任务ID
+			userTaskFilter := bson.M{
+				"user_id": userObjID,
+				"state":   1,
+			}
+			userTaskCursor, err := userTaskColl.Find(ctx, userTaskFilter)
+			if err != nil {
+				return nil, errors.New("查询用户任务状态失败: " + err.Error())
+			}
+			defer userTaskCursor.Close(ctx)
+
+			var completedUserTasks []models.UserTask
+			if err = userTaskCursor.All(ctx, &completedUserTasks); err != nil {
+				return nil, errors.New("解析用户任务状态失败: " + err.Error())
+			}
+
+			// 提取已完成的任务ID
+			completedTaskIDs := make([]primitive.ObjectID, 0, len(completedUserTasks))
+			for _, ut := range completedUserTasks {
+				completedTaskIDs = append(completedTaskIDs, ut.TaskID)
+			}
+
+			// 如果有已完成的任务，则排除这些任务
+			if len(completedTaskIDs) > 0 {
+				taskFilter["_id"] = bson.M{"$nin": completedTaskIDs}
+			}
+		}
+	}
+
+	if req.Type != nil {
+		taskFilter["type"] = *req.Type
+	}
+
+	if req.ClazzID != nil {
+		clazzObjID, err := primitive.ObjectIDFromHex(*req.ClazzID)
+		if err != nil {
+			return nil, errors.New("无效的班级ID")
+		}
+		taskFilter["clazz_id"] = clazzObjID
+	}
+
+	// 添加对Status字段的支持
+	if req.Status != nil {
+		taskFilter["status"] = *req.Status
+	}
+
+	// 5. 执行分页查询
+	collTasks := utils.GetCollection("tasks")
+
+	// 计算总数
+	total, err := collTasks.CountDocuments(ctx, taskFilter)
+	if err != nil {
+		return nil, errors.New("计算任务总数失败: " + err.Error())
+	}
+
+	// 默认分页参数
+	pageNum := int64(1)
+	pageSize := int64(10)
+	if req.PageNum != nil && *req.PageNum > 0 {
+		pageNum = *req.PageNum
+	}
+	if req.PageSize != nil && *req.PageSize > 0 {
+		pageSize = *req.PageSize
+	}
+
+	// 计算偏移量
+	skip := (pageNum - 1) * pageSize
+
+	// 查询任务列表
+	taskCursor, err := collTasks.Find(ctx, taskFilter, options.Find().SetSkip(skip).SetLimit(pageSize))
+	if err != nil {
+		return nil, errors.New("查询任务列表失败: " + err.Error())
+	}
+	defer taskCursor.Close(ctx)
+
+	var tasks []models.Task
+	if err = taskCursor.All(ctx, &tasks); err != nil {
+		return nil, errors.New("解析任务列表失败: " + err.Error())
+	}
+
+	// 6. 构建响应
+	taskResponses := make([]models.TaskResponse, 0, len(tasks))
+	for _, task := range tasks {
+		// 查询用户的任务完成状态
+		state := 0
+		userTaskColl := utils.GetCollection("user_task")
+		var userTask models.UserTask
+		err = userTaskColl.FindOne(ctx, bson.M{
+			"task_id": task.ID,
+			"user_id": userObjID,
+		}).Decode(&userTask)
+
+		if err == nil && userTask.State == 1 {
+			state = 1
+		}
+
+		// 查询用户在每道题上的完成情况
+		completedQuestions := make(map[primitive.ObjectID]bool)
+		userRelationColl := utils.GetCollection("user_relation_question")
+		userRelationCursor, err := userRelationColl.Find(ctx, bson.M{
+			"task_id": task.ID,
+			"user_id": userObjID,
+			"state":   1, // 已完成的题目
+		})
+		if err != nil {
+			return nil, errors.New("查询用户题目完成情况失败: " + err.Error())
+		}
+		defer userRelationCursor.Close(ctx)
+
+		var userRelations []models.UserRelationQuestion
+		if err = userRelationCursor.All(ctx, &userRelations); err != nil {
+			return nil, errors.New("解析用户题目完成情况失败: " + err.Error())
+		}
+
+		for _, ur := range userRelations {
+			completedQuestions[ur.RelationID] = true
+		}
+
+		// 查询题目详情
+		questions := make([]models.QuestionDetail, 0, len(task.RelationIDs))
+		if len(task.RelationIDs) > 0 {
+			problemColl := utils.GetCollection("problems")
+			problemCursor, err := problemColl.Find(ctx, bson.M{
+				"_id": bson.M{"$in": task.RelationIDs},
+			})
+			if err != nil {
+				return nil, errors.New("查询题目详情失败: " + err.Error())
+			}
+			defer problemCursor.Close(ctx)
+
+			var problems []models.Problem
+			if err = problemCursor.All(ctx, &problems); err != nil {
+				return nil, errors.New("解析题目详情失败: " + err.Error())
+			}
+
+			// 创建题目ID到题目的映射
+			problemMap := make(map[primitive.ObjectID]models.Problem)
+			for _, p := range problems {
+				problemMap[p.ID] = p
+			}
+
+			// 按照RelationIDs的顺序构建题目详情列表
+			for _, relationID := range task.RelationIDs {
+				if problem, exists := problemMap[relationID]; exists {
+					question := models.QuestionDetail{
+						ID:         problem.ID,
+						Title:      problem.Title,
+						Difficulty: string(problem.Difficulty),
+						Completed:  completedQuestions[relationID],
+					}
+					questions = append(questions, question)
+				}
+			}
+		}
+
+		// 构建任务响应
+		taskResponse := models.TaskResponse{
+			ID:          task.ID,
+			Title:       task.Title,
+			Description: task.Description,
+			Type:        task.Type,
+			StartTime:   task.StartTime,
+			EndTime:     task.EndTime,
+			Status:      task.Status,
+			CourseId:    task.CourseId,
+			ClazzId:     task.ClazzId,
+			CTime:       task.CTime,
+			CID:         task.CID,
+			MTime:       task.MTime,
+			State:       state,
+			RelationIDs: task.RelationIDs,
+			Questions:   questions,
+		}
+
+		taskResponses = append(taskResponses, taskResponse)
+	}
+
+	// 7. 返回响应
+	return &models.PageQueryUserTasksResponse{
+		Total:    total,
+		PageNum:  pageNum,
+		PageSize: pageSize,
+		Tasks:    taskResponses,
+	}, nil
+}
