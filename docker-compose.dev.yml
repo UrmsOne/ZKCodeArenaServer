@@ -5,10 +5,10 @@ services:
   app:
     build:
       context: .
-      dockerfile: Dockerfile.dev
+      dockerfile: Dockerfile.dev.fast
     container_name: zk-code-arena-server-dev
     ports:
-      - "8080:8080"
+      - "38080:8080"
     volumes:
       - app_logs:/app/logs
     environment:
@@ -28,7 +28,7 @@ services:
     image: mongo:7.0
     container_name: zk-arena-mongo-dev
     ports:
-      - "27017:27017"
+      - "127.0.0.1:27019:27017"
     volumes:
       - ./data/mongo:/data/db
       - ./deploy/mongo/init:/docker-entrypoint-initdb.d
@@ -43,7 +43,7 @@ services:
     image: redis:7.2-alpine
     container_name: zk-arena-redis-dev
     ports:
-      - "6379:6379"
+      - "127.0.0.1:26379:6379"
     volumes:
       - ./data/redis:/data
     command: redis-server --appendonly yes --requirepass redis123
@@ -55,7 +55,7 @@ services:
     image: crpi-n330h2d2rz94g7d2.cn-hangzhou.personal.cr.aliyuncs.com/zhku-oj/zhku-oj-java:1.0
     container_name: zk-arena-judge-dev
     ports:
-      - "5050:5050"
+      - "127.0.0.1:5050:5050"
     volumes:
       - ./data/judge:/judge
     environment:

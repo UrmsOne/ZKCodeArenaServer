@@ -1,0 +1,11 @@
+FROM ubuntu:24.04
+
+WORKDIR /app
+
+# 创建必要的目录
+RUN mkdir -p /app/logs
+
+COPY ./tmp/server /app/server
+COPY . .
+# 直接运行编译后的二进制文件
+CMD ["/app/server", "run"]

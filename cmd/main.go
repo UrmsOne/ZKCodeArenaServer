@@ -32,6 +32,7 @@ import (
 	"fmt"
 	"github.com/spf13/cobra"
 	"os"
+	_ "zk-code-arena-server/docs"
 )
 
 var rootCmd = &cobra.Command{

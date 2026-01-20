@@ -10,6 +10,10 @@ package main
 import (
 	"context"
 	"errors"
+	"github.com/fsnotify/fsnotify"
+	"github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
+	"golang.org/x/sync/errgroup"
 	"os"
 	"os/signal"
 	"syscall"
@@ -18,11 +22,6 @@ import (
 	"zk-code-arena-server/pkg/app/api-server/service"
 	"zk-code-arena-server/pkg/utils"
 	"zk-code-arena-server/pkg/utils/middleware"
-
-	"github.com/fsnotify/fsnotify"
-	"github.com/sirupsen/logrus"
-	"github.com/spf13/cobra"
-	"golang.org/x/sync/errgroup"
 )
 
 var runServerCfg = struct {
