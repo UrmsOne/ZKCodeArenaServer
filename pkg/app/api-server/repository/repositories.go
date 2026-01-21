@@ -10,6 +10,7 @@ type Repositories struct {
 	ProblemRepository  *ProblemRepository
 	SubmitRepository   *SubmitRepository
 	TestCaseRepository *TestCaseRepository
+	ClazzRepository    *ClazzRepositoryImpl
 }
 
 // NewRepositories 创建Repository容器实例
@@ -18,5 +19,6 @@ func NewRepositories() *Repositories {
 		ProblemRepository:  NewProblemRepository(),
 		SubmitRepository:   NewSubmitRepository(),
 		TestCaseRepository: NewTestCaseRepository(),
+		ClazzRepository:    NewClazzRepository().(*ClazzRepositoryImpl),
 	}
 }

@@ -41,6 +41,7 @@ func NewService() *Service {
 	submitService := NewSubmitService(repos.SubmitRepository)
 	testCaseService := NewTestCaseService(repos.TestCaseRepository)
 	courseService := NewCourseService()
+	clazzService := NewClazzService(repos.ClazzRepository)
 
 	// 3. 创建沙箱客户端
 	// 将 conf.LanguageConfig 转换为 sandbox.LanguageConfig
@@ -95,7 +96,7 @@ func NewService() *Service {
 	problemService := NewProblemService(sandboxClient, testCaseService, repos.ProblemRepository)
 
 	// ClazzService 班级服务
-	clazzService := NewClazzService()
+	//clazzService := NewClazzService()
 
 	// JudgeService 需要所有基础服务的引用
 	judgeService := NewJudgeService(

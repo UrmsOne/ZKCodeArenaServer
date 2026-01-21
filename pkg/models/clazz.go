@@ -89,6 +89,7 @@ type TaskResponse struct {
 // QuestionDetail 题目详情
 type QuestionDetail struct {
 	ID         primitive.ObjectID `json:"id" swaggertype:"string"`
+	UniqueID   int64              `json:"unique_id"` // 题目在任务中的唯一ID
 	Title      string             `json:"title"`
 	Difficulty string             `json:"difficulty"`
 	Completed  bool               `json:"completed"` // 是否已完成
