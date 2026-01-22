@@ -18,7 +18,7 @@
 // @license.name  MIT
 // @license.url   https://opensource.org/licenses/MIT
 
-// @host      localhost:8080
+// @host      8.138.184.24:8080
 // @BasePath  /api/v1
 
 // @securityDefinitions.apikey BearerAuth
@@ -30,9 +30,10 @@ package main
 
 import (
 	"fmt"
-	"github.com/spf13/cobra"
 	"os"
 	_ "zk-code-arena-server/docs"
+
+	"github.com/spf13/cobra"
 )
 
 var rootCmd = &cobra.Command{
