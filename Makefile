@@ -124,6 +124,17 @@ swagger:
 	else \
 		echo "请先安装 swag: go install github.com/swaggo/swag/cmd/swag@latest"; \
 	fi
+swagger-dev:
+	@echo "📚 生成 Swagger 文档..."
+	@if command -v swag >/dev/null 2>&1; then \
+        cp cmd/main.go tmp/main.go; \
+  		sed -i.bak 's|// @host .*|// @host      localhost:8081|' cmd/main.go; \
+  		swag init -g cmd/main.go -o docs --parseDependency --parseInternal; \
+  		mv cmd/main.go.bak cmd/main.go; \
+    	echo "✅ Swagger 文档已生成"; \
+    else \
+    	echo "请先安装 swag: go install github.com/swaggo/swag/cmd/swag@latest"; \
+    fi
 
 # 生成 godoc 文档
 docs:
