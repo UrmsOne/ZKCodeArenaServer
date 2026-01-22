@@ -7,7 +7,7 @@
 @title ZK Code Arena API
 @version 1.0
 @description ZK Code Arena 在线编程平台API文档
-@host localhost:8080
+@host 8.138.184.24:8080
 @BasePath /api/v1
 
 @securityDefinitions.apikey BearerAuth
