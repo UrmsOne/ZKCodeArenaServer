@@ -10,6 +10,7 @@ package service
 import (
 	"context"
 	"errors"
+	"log"
 	"time"
 	"zk-code-arena-server/pkg/models"
 	"zk-code-arena-server/pkg/utils"
@@ -20,10 +21,14 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-type UserService struct{}
+// UserService 用户服务
+type UserService struct {
+	ClazzService *ClazzService
+}
 
-func NewUserService() *UserService {
-	return &UserService{}
+// NewUserService 创建用户服务实例
+func NewUserService(clazzService *ClazzService) *UserService {
+	return &UserService{ClazzService: clazzService}
 }
 
 // CreateUser 创建用户
@@ -59,7 +64,20 @@ func (s *UserService) CreateUser(ctx context.Context, user *models.User) error {
 	// 插入数据库
 	collection := utils.GetCollection("users")
 	_, err = collection.InsertOne(ctx, user)
-	return err
+	if err != nil {
+		return err
+	}
+
+	// 将用户添加到所选的专业班级中
+	if user.MajorClassID != "" {
+		req := models.JoinClazzRequest{}
+		if err := s.ClazzService.JoinClazz(ctx, user.MajorClassID, req, user.ID.Hex()); err != nil {
+			// 记录错误，但不影响用户注册
+			log.Printf("Failed to add user to class: %v", err)
+		}
+	}
+
+	return nil
 }
 
 // GetUserByID 根据ID获取用户

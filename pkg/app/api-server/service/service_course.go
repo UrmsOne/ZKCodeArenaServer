@@ -156,7 +156,7 @@ func (s *CourseService) UpdateCourseAvatar(ctx context.Context, file multipart.F
 	return nil
 }
 
-func (s *CourseService) AddCourseTask(ctx context.Context, clazzId string, req *models.AddTaskRequest, userId string) error {
+func (s *CourseService) AddCourseTask(ctx context.Context, req *models.AddTaskRequest, userId string) error {
 	courseObjId, err := primitive.ObjectIDFromHex(req.CourseId)
 	if err != nil {
 		return err
@@ -165,9 +165,15 @@ func (s *CourseService) AddCourseTask(ctx context.Context, clazzId string, req *
 	if err != nil {
 		return err
 	}
-	clazzObjId, err := primitive.ObjectIDFromHex(clazzId)
-	if err != nil {
-		return err
+
+	// 转换班级ID数组为ObjectID
+	clazzObjIds := make([]primitive.ObjectID, len(req.ClazzIds))
+	for i, id := range req.ClazzIds {
+		hex, err := primitive.ObjectIDFromHex(id)
+		if err != nil {
+			return err
+		}
+		clazzObjIds[i] = hex
 	}
 
 	if flag, err := authorized(ctx, utils.GetCollection("courses"), courseObjId, userObjId); !flag || err != nil {
@@ -180,7 +186,7 @@ func (s *CourseService) AddCourseTask(ctx context.Context, clazzId string, req *
 	// StartTime 是必需的，不使用指针
 	startTime := req.StartTime
 	status := models.TaskStatusNotStarted
-	// 如果开始时间小于等于当前时间，设置为活跃状态TODO,写一个定时任务将状态更改
+	// 如果开始时间小于等于当前时间，设置为活跃状态
 	if startTime.Before(time.Now()) || startTime.Equal(time.Now()) {
 		status = models.TaskStatusActive
 	}
@@ -189,6 +195,7 @@ func (s *CourseService) AddCourseTask(ctx context.Context, clazzId string, req *
 		return errors.New("无效的时间选择")
 	}
 
+	// 转换RelationIDs为ObjectID数组
 	ids := make([]primitive.ObjectID, len(req.RelationIDs))
 	for i, id := range req.RelationIDs {
 		hex, err := primitive.ObjectIDFromHex(id)
@@ -198,28 +205,46 @@ func (s *CourseService) AddCourseTask(ctx context.Context, clazzId string, req *
 		ids[i] = hex
 	}
 
-	now := time.Now()
-	task := &models.Task{
-		ID:          primitive.NewObjectID(),
-		Title:       req.Title,
-		Description: req.Description,
-		Type:        req.Type,
-		StartTime:   startTime,
-		EndTime:     req.EndTime,
-		RelationIDs: ids,
-		Status:      status,
-		CourseId:    courseObjId,
-		ClazzId:     clazzObjId,
-		CTime:       now,
-		MTime:       now,
-		CID:         userObjId,
+	// 处理专业班级ID数组
+	var majorClassIds []primitive.ObjectID
+	if len(req.MajorClassIds) > 0 {
+		majorClassIds = make([]primitive.ObjectID, len(req.MajorClassIds))
+		for i, id := range req.MajorClassIds {
+			hex, err := primitive.ObjectIDFromHex(id)
+			if err != nil {
+				return err
+			}
+			majorClassIds[i] = hex
+		}
 	}
 
-	// 插入到独立的tasks集合中
-	coll := utils.GetCollection("tasks")
-	_, err = coll.InsertOne(ctx, task)
-	if err != nil {
-		return err
+	now := time.Now()
+
+	// 对每个班级创建任务
+	for _, clazzObjId := range clazzObjIds {
+		task := &models.Task{
+			ID:            primitive.NewObjectID(),
+			Title:         req.Title,
+			Description:   req.Description,
+			Type:          req.Type,
+			StartTime:     startTime,
+			EndTime:       req.EndTime,
+			RelationIDs:   ids,
+			Status:        status,
+			CourseId:      courseObjId,
+			ClazzId:       clazzObjId,
+			MajorClassIds: majorClassIds,
+			CTime:         now,
+			MTime:         now,
+			CID:           userObjId,
+		}
+
+		// 插入到独立的tasks集合中
+		coll := utils.GetCollection("tasks")
+		_, err = coll.InsertOne(ctx, task)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -394,7 +419,7 @@ func (s *CourseService) UpdateCourseInfo(ctx context.Context, userId string, cou
 	return nil
 }
 
-// GetClazzByID 获取班级详情
+// GetClazzByID 获取课程班级详情
 func (s *CourseService) GetClazzByID(ctx context.Context, clazzID string, userID string) (*models.GetClazzResponse, error) {
 	// 此方法已迁移到 clazz 服务中
 	return nil, errors.New("此方法已迁移到 clazz 服务中")

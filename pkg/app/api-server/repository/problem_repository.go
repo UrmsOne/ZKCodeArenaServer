@@ -786,3 +786,28 @@ func (p *ProblemRepository) GetUserFavoriteProblemIDs(ctx context.Context, userI
 
 	return result, nil
 }
+
+// GetNextProblem 获取当前题目的下一题
+func (r *ProblemRepository) GetNextProblem(ctx context.Context, currentUniqueID int64) (*models.Problem, error) {
+	// 筛选条件：unique_id大于当前ID，且题目为公开且已发布
+	filter := bson.M{
+		"unique_id": bson.M{"$gt": currentUniqueID},
+		"is_public": true,
+		"status":    models.StatusPublished,
+	}
+
+	var problem models.Problem
+	// 直接使用MongoDB的Collection.FindOne方法，并设置排序选项
+	coll := r.db.Collection("problems")
+	findOneOptions := options.FindOne().SetSort(bson.M{"unique_id": 1})
+	err := coll.FindOne(ctx, filter, findOneOptions).Decode(&problem)
+
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, fmt.Errorf("未找到下一题")
+		}
+		return nil, err
+	}
+
+	return &problem, nil
+}

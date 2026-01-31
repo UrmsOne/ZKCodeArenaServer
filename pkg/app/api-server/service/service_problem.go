@@ -27,13 +27,15 @@ type ProblemService struct {
 	sandboxClient   sandbox.Client
 	testCaseService *TestCaseService
 	repo            *repository.ProblemRepository
+	clazzService    *ClazzService // 添加ClazzService支持任务列表功能
 }
 
-func NewProblemService(sandboxClient sandbox.Client, testCaseService *TestCaseService, repo *repository.ProblemRepository) *ProblemService {
+func NewProblemService(sandboxClient sandbox.Client, testCaseService *TestCaseService, repo *repository.ProblemRepository, clazzService *ClazzService) *ProblemService {
 	return &ProblemService{
 		sandboxClient:   sandboxClient,
 		testCaseService: testCaseService,
 		repo:            repo,
+		clazzService:    clazzService, // 初始化ClazzService
 	}
 }
 
@@ -658,4 +660,69 @@ func (s *ProblemService) ToggleFavorite(ctx context.Context, userID, problemID p
 // GetUserFavoriteProblems 获取用户收藏的题目列表
 func (s *ProblemService) GetUserFavoriteProblems(ctx context.Context, userID primitive.ObjectID, page, pageSize int) ([]*models.ProblemList, int64, error) {
 	return s.repo.GetUserFavoriteProblems(ctx, userID, page, pageSize)
+}
+
+// GetNextProblem 获取当前题目的下一题
+func (s *ProblemService) GetNextProblem(ctx context.Context, currentUniqueID int64, taskID string, currentIdx int) (*models.Problem, error) {
+	// 如果提供了任务列表ID，从任务列表中获取下一题
+	if taskID != "" {
+		utils.Logger.Debugf("GetNextProblem from task: task_id=%s, current_idx=%d", taskID, currentIdx)
+
+		// 转换任务ID为ObjectID
+		taskObjID, err := primitive.ObjectIDFromHex(taskID)
+		if err != nil {
+			return nil, fmt.Errorf("无效的任务ID: %w", err)
+		}
+
+		// 获取任务信息
+		task, err := s.clazzService.Repo.GetTaskByID(ctx, taskObjID)
+		if err != nil {
+			if errors.Is(err, mongo.ErrNoDocuments) {
+				return nil, fmt.Errorf("任务不存在: %w", err)
+			}
+			return nil, fmt.Errorf("获取任务信息失败: %w", err)
+		}
+
+		// 验证当前题号是否有效
+		if currentIdx < 0 || currentIdx >= len(task.RelationIDs) {
+			return nil, fmt.Errorf("无效的当前题号")
+		}
+
+		// 获取下一题的索引
+		nextIdx := currentIdx + 1
+		if nextIdx >= len(task.RelationIDs) {
+			// 已经是最后一题，返回问题不存在错误
+			return nil, models.ErrProblemNotFound
+		}
+
+		// 获取下一题的ID
+		nextProblemID := task.RelationIDs[nextIdx]
+
+		// 获取下一题的信息
+		problem, err := s.repo.GetByID(ctx, nextProblemID)
+		if err != nil {
+			if errors.Is(err, mongo.ErrNoDocuments) {
+				return nil, models.ErrProblemNotFound
+			}
+			return nil, fmt.Errorf("获取下一题失败: %w", err)
+		}
+
+		return problem, nil
+	}
+
+	// 否则使用现有逻辑，通过UniqueID获取下一题
+	utils.Logger.Debugf("GetNextProblem by uniqueID: current_unique_id=%d", currentUniqueID)
+
+	// 调用Repository层方法获取下一题
+	problem, err := s.repo.GetNextProblem(ctx, currentUniqueID)
+	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			utils.Logger.Warnf("GetNextProblem: 没有找到下一题, current_unique_id=%d", currentUniqueID)
+			return nil, models.ErrProblemNotFound
+		}
+		utils.Logger.Errorf("GetNextProblem: 查询数据库失败, current_unique_id=%d, error=%v", currentUniqueID, err)
+		return nil, fmt.Errorf("获取下一题失败: %w", err)
+	}
+
+	return problem, nil
 }

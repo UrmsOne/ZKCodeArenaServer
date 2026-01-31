@@ -37,11 +37,11 @@ func NewService() *Service {
 	repos := repository.NewRepositories()
 
 	// 2. 创建基础服务（使用 Repository）
-	userService := NewUserService()
+	clazzService := NewClazzService(repos.ClazzRepository)
+	userService := NewUserService(clazzService)
 	submitService := NewSubmitService(repos.SubmitRepository)
 	testCaseService := NewTestCaseService(repos.TestCaseRepository)
 	courseService := NewCourseService()
-	clazzService := NewClazzService(repos.ClazzRepository)
 
 	// 3. 创建沙箱客户端
 	// 将 conf.LanguageConfig 转换为 sandbox.LanguageConfig
@@ -93,7 +93,7 @@ func NewService() *Service {
 
 	// 5. 创建需要依赖注入的服务
 	// ProblemService 需要 sandboxClient、testCaseService 和 Repository
-	problemService := NewProblemService(sandboxClient, testCaseService, repos.ProblemRepository)
+	problemService := NewProblemService(sandboxClient, testCaseService, repos.ProblemRepository, clazzService)
 
 	// ClazzService 班级服务
 	//clazzService := NewClazzService()

@@ -8,6 +8,7 @@
 package server
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strconv"
@@ -33,9 +34,12 @@ func (s *Server) RegisterProblem(g *gin.RouterGroup) {
 		// 公开路由
 		problemGroup.GET("/", s.GetProblems)                    // 获取题目列表（用户端）
 		problemGroup.GET("/search", s.SearchProblems)           // 搜索题目
-		problemGroup.GET("/:id", s.GetProblem)                  // 获取题目详情
 		problemGroup.GET("/unique/:id", s.GetProblemByUniqueID) // 根据 unique_id 获取题目详情
-		problemGroup.GET("/:id/detail", s.GetProblemDetail)     // 获取题目详情聚合信息
+
+		problemGroup.GET("/:id/detail", s.GetProblemDetail) // 获取题目详情聚合信息
+		problemGroup.GET("/:id/next", s.GetNextProblem)
+
+		problemGroup.GET("/:id", s.GetProblem) // 获取题目详情
 	}
 
 	// 需要认证的路由
@@ -904,4 +908,51 @@ func (s *Server) GetUserFavoriteProblems(c *gin.Context) {
 		"page_size":  pageSize,
 		"total_page": (total + int64(pageSize) - 1) / int64(pageSize),
 	})
+}
+
+// GetNextProblem godoc
+// @Summary 获取下一题
+// @Description 获取当前题目的下一题，如果提供了任务列表ID和题号，则返回任务列表中的下一题
+// @Tags 题目
+// @Accept json
+// @Produce json
+// @Param id path int true "当前题目ID"
+// @Param task_id query string false "任务列表ID"
+// @Param current_idx query int false "当前任务列表中的题号（从0开始）"
+// @Success 200 {object} utils.Response{data=models.Problem} "下一题详情"
+// @Failure 400 {object} utils.Response "参数错误"
+// @Failure 404 {object} utils.Response "未找到下一题"
+// @Failure 500 {object} utils.Response "服务器内部错误"
+// @Router /problem/{id}/next [get]
+func (s *Server) GetNextProblem(c *gin.Context) {
+	// 1. 参数获取与校验
+	currentUniqueID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		utils.BadRequestResponse(c, "无效的题目ID")
+		return
+	}
+
+	// 获取查询参数
+	taskID := c.Query("task_id")
+	currentIdxStr := c.DefaultQuery("current_idx", "-1")
+	currentIdx, err := strconv.Atoi(currentIdxStr)
+	if err != nil {
+		utils.BadRequestResponse(c, "无效的当前题号")
+		return
+	}
+
+	// 2. 调用Service层获取下一题
+	ctx := context.Background()
+	problem, err := s.svc.ProblemService.GetNextProblem(ctx, currentUniqueID, taskID, currentIdx)
+	if err != nil {
+		if errors.Is(err, models.ErrProblemNotFound) {
+			utils.NotFoundResponse(c, "没有找到下一题")
+			return
+		}
+		utils.BadRequestResponse(c, err.Error())
+		return
+	}
+
+	// 3. 返回响应
+	utils.SuccessResponse(c, problem)
 }

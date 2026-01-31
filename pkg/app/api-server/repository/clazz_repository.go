@@ -34,6 +34,7 @@ type ClazzRepository interface {
 	UpdateClazz(ctx context.Context, clazzID primitive.ObjectID, updateFields bson.M) (bool, error)
 	DeleteClazz(ctx context.Context, clazzID primitive.ObjectID) (bool, error)
 	GetClazzesByCourseID(ctx context.Context, courseID primitive.ObjectID) ([]models.Clazz, error)
+	GetMajorClazzes(ctx context.Context) ([]models.Clazz, error) // 新增：查询所有专业班级
 
 	// 班级成员操作
 	IsClazzMember(ctx context.Context, clazzID, userID primitive.ObjectID) (bool, error)
@@ -78,6 +79,9 @@ type ClazzRepository interface {
 	GetUserTaskStatuses(ctx context.Context, taskID primitive.ObjectID, userIDs []primitive.ObjectID) ([]models.UserTask, error)
 	GetUserCompletedQuestions(ctx context.Context, taskID, userID primitive.ObjectID) (map[primitive.ObjectID]bool, error) // 新增
 	GetProblemsByIDs(ctx context.Context, problemIDs []primitive.ObjectID) ([]models.Problem, error)                       // 新增
+
+	// 专业班级关联操作
+	UpdateMajorClassAssociations(ctx context.Context, clazzID primitive.ObjectID, majorClassIDs []primitive.ObjectID) error
 }
 
 // ClazzRepositoryImpl 班级数据访问层实现
@@ -203,7 +207,7 @@ func (r *ClazzRepositoryImpl) UpdateClazz(ctx context.Context, clazzID primitive
 	return result.MatchedCount > 0, nil
 }
 
-// DeleteClazz 删除班级
+// DeleteClazz 删除课程班级
 func (r *ClazzRepositoryImpl) DeleteClazz(ctx context.Context, clazzID primitive.ObjectID) (bool, error) {
 	coll := utils.GetCollection("clazzes")
 	result, err := coll.DeleteOne(ctx, bson.M{"_id": clazzID})
@@ -243,7 +247,7 @@ func (r *ClazzRepositoryImpl) IsClazzMember(ctx context.Context, clazzID, userID
 	return count > 0, nil
 }
 
-// AddClazzMember 添加班级成员（乐观锁）
+// AddClazzMember 添加课程班级成员（乐观锁）
 func (r *ClazzRepositoryImpl) AddClazzMember(ctx context.Context, clazzID, userID primitive.ObjectID) (bool, error) {
 	// 先检查是否已存在
 	isMember, err := r.IsClazzMember(ctx, clazzID, userID)
@@ -277,7 +281,7 @@ func (r *ClazzRepositoryImpl) AddClazzMember(ctx context.Context, clazzID, userI
 	return true, nil
 }
 
-// RemoveClazzMember 移除班级成员
+// RemoveClazzMember 移除课程班级成员
 func (r *ClazzRepositoryImpl) RemoveClazzMember(ctx context.Context, clazzID, userID primitive.ObjectID) (bool, error) {
 	// 检查是否是成员
 	isMember, err := r.IsClazzMember(ctx, clazzID, userID)
@@ -304,7 +308,7 @@ func (r *ClazzRepositoryImpl) RemoveClazzMember(ctx context.Context, clazzID, us
 	return err == nil, err
 }
 
-// BatchRemoveClazzMembers 批量移除班级成员
+// BatchRemoveClazzMembers 批量移除课程班级成员
 func (r *ClazzRepositoryImpl) BatchRemoveClazzMembers(ctx context.Context, clazzID primitive.ObjectID, memberIDs []primitive.ObjectID) (int, error) {
 	// 筛选有效成员
 	validMembers := make([]primitive.ObjectID, 0)
@@ -938,4 +942,33 @@ func (r *ClazzRepositoryImpl) GetProblemsByIDs(ctx context.Context, problemIDs [
 	}
 
 	return problems, nil
+}
+
+// UpdateMajorClassAssociations 更新课程班级的专业班级关联
+func (r *ClazzRepositoryImpl) UpdateMajorClassAssociations(ctx context.Context, clazzID primitive.ObjectID, majorClassIDs []primitive.ObjectID) error {
+	coll := utils.GetCollection("clazzes")
+
+	// 更新班级的major_class_ids字段
+	_, err := coll.UpdateOne(ctx,
+		bson.M{"_id": clazzID},
+		bson.M{"$set": bson.M{"major_class_ids": majorClassIDs, "mtime": time.Now()}},
+	)
+
+	return err
+}
+
+// GetMajorClazzes 获取所有专业班级
+func (r *ClazzRepositoryImpl) GetMajorClazzes(ctx context.Context) ([]models.Clazz, error) {
+	coll := utils.GetCollection("clazzes")
+	cursor, err := coll.Find(ctx, bson.M{"class_type": models.ClassTypeMajor})
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var clazzes []models.Clazz
+	if err = cursor.All(ctx, &clazzes); err != nil {
+		return nil, err
+	}
+	return clazzes, nil
 }

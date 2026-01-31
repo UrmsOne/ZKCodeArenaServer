@@ -1,5 +1,13 @@
 basePath: /api/v1
 definitions:
+  pkg_app_api-server_server.ToggleFavoriteRequest:
+    properties:
+      is_favorite:
+        description: '1: 收藏, 0: 取消收藏'
+        type: boolean
+    required:
+    - is_favorite
+    type: object
   zk-code-arena-server_pkg_app_api-server_service.RunCodeRequest:
     properties:
       code:
@@ -15,55 +23,51 @@ definitions:
     type: object
   zk-code-arena-server_pkg_models.AddClazzMemberRequest:
     properties:
-      clazz_id:
-        type: string
       member_id:
         type: string
     required:
-    - clazz_id
     - member_id
     type: object
   zk-code-arena-server_pkg_models.AddClazzTeachersRequest:
     properties:
-      clazz_id:
-        type: string
       teacher_ids:
         items:
           type: string
         type: array
     required:
-    - clazz_id
     - teacher_ids
     type: object
   zk-code-arena-server_pkg_models.AddCourseTeachersRequest:
     properties:
-      course_id:
-        type: string
       teacher_ids:
         items:
           type: string
         type: array
     required:
-    - course_id
     - teacher_ids
     type: object
   zk-code-arena-server_pkg_models.AddStudentToClassRequest:
     properties:
-      class_id:
-        type: string
       course_id:
         type: string
-      student_id:
-        type: string
     required:
-    - class_id
     - course_id
-    - student_id
+    type: object
+  zk-code-arena-server_pkg_models.AddTaskRelationIdsRequest:
+    properties:
+      relation_ids:
+        items:
+          type: string
+        type: array
+    required:
+    - relation_ids
     type: object
   zk-code-arena-server_pkg_models.AddTaskRequest:
     properties:
-      clazz_id:
-        type: string
+      clazz_ids:
+        items:
+          type: string
+        type: array
       course_id:
         type: string
       description:
@@ -71,6 +75,11 @@ definitions:
       end_time:
         description: 如果不设置则没有结束时间
         type: string
+      major_class_ids:
+        description: 专业班级ID数组
+        items:
+          type: string
+        type: array
       relation_ids:
         items:
           type: string
@@ -83,11 +92,58 @@ definitions:
       type:
         $ref: '#/definitions/zk-code-arena-server_pkg_models.TaskType'
     required:
-    - clazz_id
+    - clazz_ids
     - course_id
     - start_time
     - title
     - type
+    type: object
+  zk-code-arena-server_pkg_models.BatchCreateProblemResult:
+    properties:
+      error:
+        description: 失败时的错误信息
+        type: string
+      index:
+        description: 题目在请求中的索引
+        type: integer
+      problem_id:
+        description: 成功时的题目ID
+        type: string
+      success:
+        description: 是否创建成功
+        type: boolean
+      title:
+        description: 题目标题
+        type: string
+    type: object
+  zk-code-arena-server_pkg_models.BatchCreateProblemsRequest:
+    properties:
+      problems:
+        description: 限制最多100个题目
+        items:
+          $ref: '#/definitions/zk-code-arena-server_pkg_models.CreateProblemRequest'
+        maxItems: 100
+        minItems: 1
+        type: array
+    required:
+    - problems
+    type: object
+  zk-code-arena-server_pkg_models.BatchCreateProblemsResponse:
+    properties:
+      fail_count:
+        description: 失败数量
+        type: integer
+      results:
+        description: 详细结果
+        items:
+          $ref: '#/definitions/zk-code-arena-server_pkg_models.BatchCreateProblemResult'
+        type: array
+      success_count:
+        description: 成功数量
+        type: integer
+      total_count:
+        description: 总数量
+        type: integer
     type: object
   zk-code-arena-server_pkg_models.BatchCreateTestCasesRequest:
     properties:
@@ -121,6 +177,21 @@ definitions:
     - ClassStatusNotStarted
     - ClassStatusActive
     - ClassStatusEnded
+  zk-code-arena-server_pkg_models.ClassType:
+    enum:
+    - 0
+    - 1
+    format: int32
+    type: integer
+    x-enum-comments:
+      ClassTypeCourse: 课程班级
+      ClassTypeMajor: 专业班级
+    x-enum-descriptions:
+    - 课程班级
+    - 专业班级
+    x-enum-varnames:
+    - ClassTypeCourse
+    - ClassTypeMajor
   zk-code-arena-server_pkg_models.Clazz:
     properties:
       add_nums:
@@ -129,6 +200,11 @@ definitions:
       c_id:
         example: 507f1f77bcf86cd799439016
         type: string
+      class_type:
+        allOf:
+        - $ref: '#/definitions/zk-code-arena-server_pkg_models.ClassType'
+        description: 新增：班级类型
+        example: 0
       course_id:
         example: 507f1f77bcf86cd799439012
         type: string
@@ -141,6 +217,11 @@ definitions:
       id:
         example: 507f1f77bcf86cd799439011
         type: string
+      major_class_ids:
+        description: 新增：关联的专业班级ID数组
+        items:
+          type: string
+        type: array
       max_members:
         example: 50
         type: integer
@@ -177,6 +258,16 @@ definitions:
     - course_id
     - name
     type: object
+  zk-code-arena-server_pkg_models.CopyTaskToClassRequest:
+    properties:
+      source_class_id:
+        type: string
+      target_class_id:
+        type: string
+    required:
+    - source_class_id
+    - target_class_id
+    type: object
   zk-code-arena-server_pkg_models.Course:
     properties:
       avatar:
@@ -195,7 +286,7 @@ definitions:
         example: 507f1f77bcf86cd799439011
         type: string
       mtime:
-        example: "2024-10-26T10:00:00Z"
+        example: "2024-10-26T10:0:00Z"
         type: string
       name:
         example: 算法与数据结构
@@ -233,22 +324,26 @@ definitions:
     type: integer
     x-enum-comments:
       CourseStatusActive: 活跃
-      CourseStatusArchived: 已归档
       CourseStatusDraft: 草稿
     x-enum-descriptions:
     - 草稿
     - 活跃
-    - 已归档
+    - ""
     x-enum-varnames:
     - CourseStatusDraft
     - CourseStatusActive
     - CourseStatusArchived
-  zk-code-arena-server_pkg_models.CreateClazzRequest:
+  zk-code-arena-server_pkg_models.CreateCourseClassRequest:
     properties:
       course_id:
         type: string
       description:
         type: string
+      major_class_ids:
+        description: 关联的专业班级ID数组
+        items:
+          type: string
+        type: array
       max_members:
         type: integer
       name:
@@ -257,10 +352,15 @@ definitions:
         type: boolean
       schedule:
         type: string
+      teacher_ids:
+        items:
+          type: string
+        type: array
     required:
     - course_id
     - name
     - require_invite
+    - teacher_ids
     type: object
   zk-code-arena-server_pkg_models.CreateCourseRequest:
     properties:
@@ -270,6 +370,22 @@ definitions:
         type: string
     required:
     - name
+    type: object
+  zk-code-arena-server_pkg_models.CreateMajorClassRequest:
+    properties:
+      description:
+        type: string
+      max_members:
+        type: integer
+      name:
+        type: string
+      teacher_ids:
+        items:
+          type: string
+        type: array
+    required:
+    - name
+    - teacher_ids
     type: object
   zk-code-arena-server_pkg_models.CreateProblemRequest:
     properties:
@@ -391,16 +507,10 @@ definitions:
     type: object
   zk-code-arena-server_pkg_models.FinishTaskRequest:
     properties:
-      clazz_id:
-        type: string
       relation_id:
         type: string
-      task_id:
-        type: string
     required:
-    - clazz_id
     - relation_id
-    - task_id
     type: object
   zk-code-arena-server_pkg_models.GetClazzResponse:
     properties:
@@ -414,12 +524,13 @@ definitions:
         type: string
       id:
         type: string
-      max_members:
-        type: integer
-      member_ids:
+      major_class_ids:
+        description: 关联的专业班级ID数组
         items:
           type: string
         type: array
+      max_members:
+        type: integer
       name:
         type: string
       require_invite:
@@ -428,9 +539,10 @@ definitions:
         type: string
       status:
         $ref: '#/definitions/zk-code-arena-server_pkg_models.ClassStatus'
-      teacher_ids:
+      teachers:
+        description: 教师完整信息列表
         items:
-          type: string
+          $ref: '#/definitions/zk-code-arena-server_pkg_models.UserProfile'
         type: array
     required:
     - course_id
@@ -503,26 +615,86 @@ definitions:
     - password
     - student_id
     type: object
-  zk-code-arena-server_pkg_models.PageQueryCourseRequest:
+  zk-code-arena-server_pkg_models.MajorClassIdsRequest:
     properties:
-      name:
-        type: string
+      major_class_ids:
+        items:
+          type: string
+        type: array
+    required:
+    - major_class_ids
+    type: object
+  zk-code-arena-server_pkg_models.PageQueryAllTeachersRequest:
+    properties:
       page_num:
         type: integer
       page_size:
         type: integer
-      status:
+      real_name:
+        type: string
+    type: object
+  zk-code-arena-server_pkg_models.PageQueryCourseStudentsResponse:
+    properties:
+      page_num:
+        example: 1
+        type: integer
+      page_size:
+        example: 10
+        type: integer
+      students:
+        items:
+          $ref: '#/definitions/zk-code-arena-server_pkg_models.UserProfile'
+        type: array
+      total:
+        example: 100
         type: integer
     type: object
-  zk-code-arena-server_pkg_models.PageQueryTeacherCoursesRequest:
+  zk-code-arena-server_pkg_models.PageQueryCourseTeachersResponse:
     properties:
-      name:
-        type: string
       page_num:
+        example: 1
         type: integer
       page_size:
+        example: 10
         type: integer
-      status:
+      teachers:
+        items:
+          $ref: '#/definitions/zk-code-arena-server_pkg_models.UserProfile'
+        type: array
+      total:
+        example: 100
+        type: integer
+    type: object
+  zk-code-arena-server_pkg_models.PageQueryTaskCompletionResponse:
+    properties:
+      completion:
+        items:
+          $ref: '#/definitions/zk-code-arena-server_pkg_models.TaskCompletionResponse'
+        type: array
+      page_num:
+        example: 1
+        type: integer
+      page_size:
+        example: 10
+        type: integer
+      total:
+        example: 100
+        type: integer
+    type: object
+  zk-code-arena-server_pkg_models.PageQueryUserTasksResponse:
+    properties:
+      page_num:
+        example: 1
+        type: integer
+      page_size:
+        example: 10
+        type: integer
+      tasks:
+        items:
+          $ref: '#/definitions/zk-code-arena-server_pkg_models.TaskResponse'
+        type: array
+      total:
+        example: 100
         type: integer
     type: object
   zk-code-arena-server_pkg_models.Problem:
@@ -547,6 +719,10 @@ definitions:
         allOf:
         - $ref: '#/definitions/zk-code-arena-server_pkg_models.ProblemDifficulty'
         example: easy
+      favorite_count:
+        description: 收藏次数
+        example: 42
+        type: integer
       hint:
         example: 可以使用哈希表来优化时间复杂度。
         type: string
@@ -600,6 +776,10 @@ definitions:
       title:
         example: 两数之和
         type: string
+      unique_id:
+        description: 题目唯一编号
+        example: 1001
+        type: integer
       updated_at:
         example: "2024-10-26T10:00:00Z"
         type: string
@@ -637,6 +817,42 @@ definitions:
     - DifficultyEasy
     - DifficultyMedium
     - DifficultyHard
+  zk-code-arena-server_pkg_models.ProblemList:
+    properties:
+      ac_count:
+        type: integer
+      created_at:
+        type: string
+      difficulty:
+        $ref: '#/definitions/zk-code-arena-server_pkg_models.ProblemDifficulty'
+      favorite_count:
+        description: 新增：题目收藏数
+        type: integer
+      id:
+        type: string
+      is_favorite:
+        description: 用户是否收藏了该题目
+        type: boolean
+      is_public:
+        type: boolean
+      status:
+        $ref: '#/definitions/zk-code-arena-server_pkg_models.ProblemStatus'
+      submit_count:
+        type: integer
+      tags:
+        items:
+          type: string
+        type: array
+      title:
+        type: string
+      unique_id:
+        example: 1001
+        type: integer
+      user_status:
+        allOf:
+        - $ref: '#/definitions/zk-code-arena-server_pkg_models.UserProblemStatus'
+        description: 用户状态（仅登录用户返回，未登录时为 nil）
+    type: object
   zk-code-arena-server_pkg_models.ProblemStatus:
     enum:
     - draft
@@ -655,54 +871,36 @@ definitions:
     - StatusDraft
     - StatusPublished
     - StatusArchived
-  zk-code-arena-server_pkg_models.RemoveClazzMembersRequest:
+  zk-code-arena-server_pkg_models.QuestionDetail:
     properties:
-      clazz_id:
+      completed:
+        description: 是否已完成
+        type: boolean
+      difficulty:
         type: string
-      member_ids:
-        items:
-          type: string
-        type: array
-    required:
-    - clazz_id
-    - member_ids
-    type: object
-  zk-code-arena-server_pkg_models.RemoveClazzTeachersRequest:
-    properties:
-      clazz_id:
+      id:
         type: string
-      teacher_ids:
-        items:
-          type: string
-        type: array
-    required:
-    - clazz_id
-    - teacher_ids
-    type: object
-  zk-code-arena-server_pkg_models.RemoveCourseTeachersRequest:
-    properties:
-      course_id:
+      title:
         type: string
-      teacher_ids:
-        items:
-          type: string
-        type: array
-    required:
-    - course_id
-    - teacher_ids
+      unique_id:
+        description: 题目在任务中的唯一ID
+        type: integer
     type: object
   zk-code-arena-server_pkg_models.RemoveStudentFromClassRequest:
     properties:
-      class_id:
-        type: string
       course_id:
         type: string
-      student_id:
-        type: string
     required:
-    - class_id
     - course_id
-    - student_id
+    type: object
+  zk-code-arena-server_pkg_models.RemoveTaskRelationIdsRequest:
+    properties:
+      relation_ids:
+        items:
+          type: string
+        type: array
+    required:
+    - relation_ids
     type: object
   zk-code-arena-server_pkg_models.RunCodeResponse:
     properties:
@@ -752,7 +950,7 @@ definitions:
       mtime:
         type: string
       status:
-        type: string
+        $ref: '#/definitions/zk-code-arena-server_pkg_models.StudentClassStatus'
       student:
         allOf:
         - $ref: '#/definitions/zk-code-arena-server_pkg_models.UserProfile'
@@ -760,6 +958,14 @@ definitions:
       student_id:
         type: string
     type: object
+  zk-code-arena-server_pkg_models.StudentClassStatus:
+    enum:
+    - active
+    - dropped
+    type: string
+    x-enum-varnames:
+    - StudentClassStatusActive
+    - StudentClassStatusDropped
   zk-code-arena-server_pkg_models.Submit:
     properties:
       code:
@@ -889,6 +1095,16 @@ definitions:
         example: "2024-10-26T10:00:00Z"
         type: string
     type: object
+  zk-code-arena-server_pkg_models.SuccessResponse:
+    properties:
+      data: {}
+      message:
+        example: 操作成功
+        type: string
+      success:
+        example: true
+        type: boolean
+    type: object
   zk-code-arena-server_pkg_models.SystemStatsResponse:
     properties:
       active_users_24h:
@@ -936,17 +1152,17 @@ definitions:
       end_time:
         example: "2024-11-02T23:59:59Z"
         type: string
-      finish_ids:
-        description: 完成任务的成员ID集合
-        example:
-        - 507f1f77bcf86cd799439013
-        - 507f1f77bcf86cd799439014
-        items:
-          type: string
-        type: array
       id:
         example: 507f1f77bcf86cd799439011
         type: string
+      major_class_ids:
+        description: 关联的专业班级ID数组
+        example:
+        - 507f1f77bcf86cd799439017
+        - 507f1f77bcf86cd799439018
+        items:
+          type: string
+        type: array
       mtime:
         example: "2024-10-26T10:00:00Z"
         type: string
@@ -960,6 +1176,91 @@ definitions:
       start_time:
         example: "2024-10-26T10:00:00Z"
         type: string
+      status:
+        allOf:
+        - $ref: '#/definitions/zk-code-arena-server_pkg_models.TaskStatus'
+        example: 1
+      title:
+        example: 第1周编程作业
+        type: string
+      type:
+        allOf:
+        - $ref: '#/definitions/zk-code-arena-server_pkg_models.TaskType'
+        example: 1
+    required:
+    - start_time
+    - title
+    - type
+    type: object
+  zk-code-arena-server_pkg_models.TaskCompletionResponse:
+    properties:
+      completed:
+        description: 是否已完成
+        type: boolean
+      completed_at:
+        description: 完成时间（如果已完成）
+        type: string
+      finished_questions:
+        description: 已完成题目数
+        type: integer
+      real_name:
+        type: string
+      student_id:
+        type: string
+      total_questions:
+        description: 总题目数
+        type: integer
+      user_id:
+        type: string
+    type: object
+  zk-code-arena-server_pkg_models.TaskResponse:
+    properties:
+      c_id:
+        example: 507f1f77bcf86cd799439017
+        type: string
+      clazz_id:
+        example: 507f1f77bcf86cd799439016
+        type: string
+      course_id:
+        example: 507f1f77bcf86cd799439015
+        type: string
+      ctime:
+        example: "2024-10-26T10:00:00Z"
+        type: string
+      description:
+        example: 本周需要完成2道编程题目，请认真阅读题目要求并提交代码。
+        type: string
+      end_time:
+        example: "2024-11-02T23:59:59Z"
+        type: string
+      id:
+        example: 507f1f77bcf86cd799439011
+        type: string
+      major_class_ids:
+        description: 专业班级ID数组
+        items:
+          type: string
+        type: array
+      mtime:
+        example: "2024-10-26T10:00:00Z"
+        type: string
+      questions:
+        description: 题目详情列表
+        items:
+          $ref: '#/definitions/zk-code-arena-server_pkg_models.QuestionDetail'
+        type: array
+      relation_ids:
+        description: 关联ID列表
+        items:
+          type: string
+        type: array
+      start_time:
+        example: "2024-10-26T10:00:00Z"
+        type: string
+      state:
+        description: '0: 未完成, 1: 已完成'
+        example: 0
+        type: integer
       status:
         allOf:
         - $ref: '#/definitions/zk-code-arena-server_pkg_models.TaskStatus'
@@ -1076,8 +1377,6 @@ definitions:
     type: object
   zk-code-arena-server_pkg_models.UpdateClazzRequest:
     properties:
-      clazz_id:
-        type: string
       description:
         type: string
       max_members:
@@ -1088,21 +1387,15 @@ definitions:
         type: boolean
       schedule:
         type: string
-    required:
-    - clazz_id
     type: object
   zk-code-arena-server_pkg_models.UpdateCourseRequest:
     properties:
       description:
         type: string
-      id:
-        type: string
       name:
         type: string
       status:
         $ref: '#/definitions/zk-code-arena-server_pkg_models.CourseStatus'
-    required:
-    - id
     type: object
   zk-code-arena-server_pkg_models.UpdateProblemRequest:
     properties:
@@ -1164,30 +1457,29 @@ definitions:
     type: object
   zk-code-arena-server_pkg_models.UpdateTaskRequest:
     properties:
-      clazz_id:
-        type: string
       course_id:
         type: string
       description:
         type: string
       end_time:
         type: string
+      major_class_ids:
+        description: 专业班级ID数组
+        items:
+          type: string
+        type: array
       relation_ids:
         items:
           type: string
         type: array
       start_time:
         type: string
-      task_id:
-        type: string
       title:
         type: string
       type:
         $ref: '#/definitions/zk-code-arena-server_pkg_models.TaskType'
     required:
-    - clazz_id
     - course_id
-    - task_id
     type: object
   zk-code-arena-server_pkg_models.UpdateTestCaseRequest:
     properties:
@@ -1243,6 +1535,9 @@ definitions:
       major:
         example: 计算机科学与技术
         type: string
+      major_class_id:
+        example: 507f1f77bcf86cd799439012
+        type: string
       password:
         example: $2a$10$N.zmdr9k7uOCQb376NoUnuTJ8imdVMaM7ZX/W3xGD.7xUlT8r2.Uy
         type: string
@@ -1270,9 +1565,28 @@ definitions:
         type: string
     required:
     - email
+    - major_class_id
     - password
     - username
     type: object
+  zk-code-arena-server_pkg_models.UserProblemStatus:
+    enum:
+    - not_attempted
+    - attempted
+    - accepted
+    type: string
+    x-enum-comments:
+      UserStatusAccepted: 已通过
+      UserStatusAttempted: 已尝试
+      UserStatusNotAttempted: 未尝试
+    x-enum-descriptions:
+    - 未尝试
+    - 已尝试
+    - 已通过
+    x-enum-varnames:
+    - UserStatusNotAttempted
+    - UserStatusAttempted
+    - UserStatusAccepted
   zk-code-arena-server_pkg_models.UserProfile:
     properties:
       avatar:
@@ -1325,10 +1639,16 @@ definitions:
     - teacher
     - student
     - contest
+    - guest
+    - external
+    - other
     type: string
     x-enum-comments:
       RoleAdmin: 系统管理员
       RoleContest: 竞赛发起者
+      RoleExternal: 校外人员
+      RoleGuest: 游客
+      RoleOther: 外校人员
       RoleStudent: 学生
       RoleTeacher: 老师
     x-enum-descriptions:
@@ -1336,11 +1656,17 @@ definitions:
     - 老师
     - 学生
     - 竞赛发起者
+    - 游客
+    - 校外人员
+    - 外校人员
     x-enum-varnames:
     - RoleAdmin
     - RoleTeacher
     - RoleStudent
     - RoleContest
+    - RoleGuest
+    - RoleExternal
+    - RoleOther
   zk-code-arena-server_pkg_models.UserStatsResponse:
     properties:
       acceptance_rate:
@@ -1387,7 +1713,7 @@ definitions:
       message:
         type: string
     type: object
-host: localhost:8080
+host: 8.138.184.24:8080
 info:
   contact:
     email: support@zkcodearena.com
@@ -1451,7 +1777,7 @@ paths:
                       type: integer
                     problems:
                       items:
-                        $ref: '#/definitions/zk-code-arena-server_pkg_models.Problem'
+                        $ref: '#/definitions/zk-code-arena-server_pkg_models.ProblemList'
                       type: array
                     total:
                       format: int64
@@ -1483,28 +1809,29 @@ paths:
       tags:
       - 题目
   /clazzes:
-    post:
+    get:
       consumes:
       - application/json
-      description: 创建新班级
+      description: 根据课程ID获取该课程的所有班级列表
       parameters:
-      - description: 班级信息
-        in: body
-        name: request
+      - description: 课程ID
+        in: query
+        name: course_id
         required: true
-        schema:
-          $ref: '#/definitions/zk-code-arena-server_pkg_models.CreateClazzRequest'
+        type: string
       produces:
       - application/json
       responses:
         "200":
-          description: 创建成功
+          description: 班级列表
           schema:
             allOf:
             - $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/zk-code-arena-server_pkg_models.GetClazzResponse'
+                  items:
+                    $ref: '#/definitions/zk-code-arena-server_pkg_models.Clazz'
+                  type: array
               type: object
         "400":
           description: 请求参数错误
@@ -1512,7 +1839,65 @@ paths:
             $ref: '#/definitions/zk-code-arena-server_pkg_models.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: 创建班级
+      summary: 获取课程的所有班级
+      tags:
+      - 班级
+  /clazzes/{clazzId}:
+    delete:
+      consumes:
+      - application/json
+      description: 删除指定班级
+      parameters:
+      - description: 班级ID
+        in: path
+        name: clazzId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 删除成功
+          schema:
+            $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/zk-code-arena-server_pkg_models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: 删除课程班级
+      tags:
+      - 班级
+    get:
+      consumes:
+      - application/json
+      description: 根据班级ID获取班级详细信息
+      parameters:
+      - description: 班级ID
+        in: path
+        name: clazzId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 班级详情
+          schema:
+            allOf:
+            - $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/zk-code-arena-server_pkg_models.Clazz'
+              type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/zk-code-arena-server_pkg_models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: 获取课程班级详情
       tags:
       - 班级
     put:
@@ -1547,170 +1932,20 @@ paths:
       summary: 更新班级信息
       tags:
       - 班级
-  /clazzes/{clazzId}:
-    delete:
-      consumes:
-      - application/json
-      description: 删除指定班级
-      parameters:
-      - description: 班级ID
-        in: path
-        name: clazzId
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 删除成功
-          schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
-        "400":
-          description: 请求参数错误
-          schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_models.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: 删除班级
-      tags:
-      - 班级
-    get:
-      consumes:
-      - application/json
-      description: 根据班级ID获取班级详细信息
-      parameters:
-      - description: 班级ID
-        in: path
-        name: clazzId
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 班级详情
-          schema:
-            allOf:
-            - $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
-            - properties:
-                data:
-                  $ref: '#/definitions/zk-code-arena-server_pkg_models.Clazz'
-              type: object
-        "400":
-          description: 请求参数错误
-          schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_models.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: 获取班级详情
-      tags:
-      - 班级
-  /clazzes/class_students/{classId}:
-    get:
-      consumes:
-      - application/json
-      description: 获取指定班级的所有学生
-      parameters:
-      - description: 班级ID
-        in: path
-        name: classId
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 班级学生列表
-          schema:
-            items:
-              $ref: '#/definitions/zk-code-arena-server_pkg_models.UserProfile'
-            type: array
-        "400":
-          description: 请求参数错误
-          schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_models.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: 获取班级的所有学生
-      tags:
-      - 班级
-  /clazzes/course/{courseId}:
-    get:
-      consumes:
-      - application/json
-      description: 根据课程ID获取该课程的所有班级列表
-      parameters:
-      - description: 课程ID
-        in: path
-        name: courseId
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 班级列表
-          schema:
-            allOf:
-            - $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
-            - properties:
-                data:
-                  items:
-                    $ref: '#/definitions/zk-code-arena-server_pkg_models.Clazz'
-                  type: array
-              type: object
-        "400":
-          description: 请求参数错误
-          schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_models.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: 获取课程的所有班级
-      tags:
-      - 班级
-  /clazzes/finishTask:
+  /clazzes/{clazzId}/join:
     post:
       consumes:
       - application/json
-      description: 标记任务为已完成
-      parameters:
-      - description: 完成任务信息
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/zk-code-arena-server_pkg_models.FinishTaskRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 完成成功
-          schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
-        "400":
-          description: 请求参数错误
-          schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_models.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: 完成任务
-      tags:
-      - 班级
-  /clazzes/join:
-    get:
-      consumes:
-      - application/json
-      description: 学生通过邀请码加入班级
+      description: 学生通过扫描二维码加入课程班级
       parameters:
       - description: 班级ID
-        in: query
+        in: path
         name: clazzId
         required: true
         type: string
       - description: 邀请码
         in: query
         name: invite_code
-        required: true
         type: string
       produces:
       - application/json
@@ -1725,10 +1960,83 @@ paths:
             $ref: '#/definitions/zk-code-arena-server_pkg_models.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: 加入班级
+      summary: 通过二维码加入课程班级
       tags:
       - 班级
-  /clazzes/members:
+  /clazzes/{clazzId}/major-classes:
+    delete:
+      consumes:
+      - application/json
+      description: 移除课程班级与一个或多个专业班级的关联
+      parameters:
+      - description: 班级ID
+        in: path
+        name: clazzId
+        required: true
+        type: string
+      - description: 专业班级ID数组
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/zk-code-arena-server_pkg_models.MajorClassIdsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 移除成功
+          schema:
+            $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/zk-code-arena-server_pkg_models.ErrorResponse'
+        "403":
+          description: 权限不足
+          schema:
+            $ref: '#/definitions/zk-code-arena-server_pkg_models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: 移除课程班级的专业班级关联
+      tags:
+      - 班级
+    post:
+      consumes:
+      - application/json
+      description: 为课程班级添加一个或多个专业班级关联
+      parameters:
+      - description: 班级ID
+        in: path
+        name: clazzId
+        required: true
+        type: string
+      - description: 专业班级ID数组
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/zk-code-arena-server_pkg_models.MajorClassIdsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 添加成功
+          schema:
+            $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/zk-code-arena-server_pkg_models.ErrorResponse'
+        "403":
+          description: 权限不足
+          schema:
+            $ref: '#/definitions/zk-code-arena-server_pkg_models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: 添加课程班级的专业班级关联
+      tags:
+      - 班级
+  /clazzes/{clazzId}/members:
     post:
       consumes:
       - application/json
@@ -1758,26 +2066,25 @@ paths:
             $ref: '#/definitions/zk-code-arena-server_pkg_models.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: 添加班级成员
+      summary: 添加课程班级成员
       tags:
       - 班级
-  /clazzes/members/remove:
-    post:
+  /clazzes/{clazzId}/members/{memberId}:
+    delete:
       consumes:
       - application/json
-      description: 批量移除班级成员
+      description: 移除课程班级成员
       parameters:
       - description: 班级ID
         in: path
         name: clazzId
         required: true
         type: string
-      - description: 成员ID列表
-        in: body
-        name: request
+      - description: 成员ID
+        in: path
+        name: memberId
         required: true
-        schema:
-          $ref: '#/definitions/zk-code-arena-server_pkg_models.RemoveClazzMembersRequest'
+        type: string
       produces:
       - application/json
       responses:
@@ -1791,15 +2098,86 @@ paths:
             $ref: '#/definitions/zk-code-arena-server_pkg_models.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: 移除班级成员
+      summary: 移除课程班级成员
       tags:
       - 班级
-  /clazzes/student_classes:
+  /clazzes/{clazzId}/qrcode:
+    get:
+      consumes:
+      - application/json
+      description: 获得班级二维码
+      parameters:
+      - description: 班级ID
+        in: path
+        name: clazzId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 获得成功
+          schema:
+            $ref: '#/definitions/zk-code-arena-server_pkg_models.SuccessResponse'
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/zk-code-arena-server_pkg_models.ErrorResponse'
+        "403":
+          description: 权限不足
+          schema:
+            $ref: '#/definitions/zk-code-arena-server_pkg_models.ErrorResponse'
+        "404":
+          description: 二维码已过期
+          schema:
+            $ref: '#/definitions/zk-code-arena-server_pkg_models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: 获得班级二维码
+      tags:
+      - 班级
+    put:
+      consumes:
+      - application/json
+      description: 更新班级二维码
+      parameters:
+      - description: 班级ID
+        in: path
+        name: clazzId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 更新成功
+          schema:
+            $ref: '#/definitions/zk-code-arena-server_pkg_models.SuccessResponse'
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/zk-code-arena-server_pkg_models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: 更新班级二维码
+      tags:
+      - 班级
+  /clazzes/{clazzId}/student/{studentId}:
     delete:
       consumes:
       - application/json
       description: 将学生从指定班级移除
       parameters:
+      - description: 班级ID
+        in: path
+        name: clazzId
+        required: true
+        type: string
+      - description: 学生ID
+        in: path
+        name: studentId
+        required: true
+        type: string
       - description: 从班级移除学生请求
         in: body
         name: request
@@ -1827,6 +2205,16 @@ paths:
       - application/json
       description: 将学生添加到指定班级
       parameters:
+      - description: 班级ID
+        in: path
+        name: clazzId
+        required: true
+        type: string
+      - description: 学生ID
+        in: path
+        name: studentId
+        required: true
+        type: string
       - description: 添加学生到班级请求
         in: body
         name: request
@@ -1849,25 +2237,25 @@ paths:
       summary: 添加学生到班级
       tags:
       - 班级
-  /clazzes/student_classes/{studentId}:
+  /clazzes/{clazzId}/students:
     get:
       consumes:
       - application/json
-      description: 获取指定学生加入的所有班级
+      description: 获取指定班级的所有学生
       parameters:
-      - description: 学生ID
+      - description: 班级ID
         in: path
-        name: studentId
+        name: classId
         required: true
         type: string
       produces:
       - application/json
       responses:
         "200":
-          description: 学生班级列表
+          description: 班级学生列表
           schema:
             items:
-              $ref: '#/definitions/zk-code-arena-server_pkg_models.StudentClassResponse'
+              $ref: '#/definitions/zk-code-arena-server_pkg_models.UserProfile'
             type: array
         "400":
           description: 请求参数错误
@@ -1875,123 +2263,10 @@ paths:
             $ref: '#/definitions/zk-code-arena-server_pkg_models.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: 获取学生的所有班级
+      summary: 获取班级的所有学生
       tags:
       - 班级
-  /clazzes/task:
-    post:
-      consumes:
-      - application/json
-      description: 为班级添加新任务
-      parameters:
-      - description: 任务信息
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/zk-code-arena-server_pkg_models.AddTaskRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 添加成功
-          schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
-        "400":
-          description: 请求参数错误
-          schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_models.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: 添加任务
-      tags:
-      - 班级
-    put:
-      consumes:
-      - application/json
-      description: 更新任务信息
-      parameters:
-      - description: 更新的任务信息
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/zk-code-arena-server_pkg_models.UpdateTaskRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 更新成功
-          schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
-        "400":
-          description: 请求参数错误
-          schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_models.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: 更新任务
-      tags:
-      - 班级
-  /clazzes/task/{taskId}:
-    delete:
-      consumes:
-      - application/json
-      description: 删除指定任务
-      parameters:
-      - description: 任务ID
-        in: path
-        name: taskId
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 删除成功
-          schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
-        "400":
-          description: 请求参数错误
-          schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_models.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: 删除任务
-      tags:
-      - 班级
-    get:
-      consumes:
-      - application/json
-      description: 根据任务ID获取任务详细信息
-      parameters:
-      - description: 任务ID
-        in: path
-        name: taskId
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 任务详情
-          schema:
-            allOf:
-            - $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
-            - properties:
-                data:
-                  $ref: '#/definitions/zk-code-arena-server_pkg_models.Task'
-              type: object
-        "400":
-          description: 请求参数错误
-          schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_models.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: 获取任务详情
-      tags:
-      - 班级
-  /clazzes/tasks/{clazzId}:
+  /clazzes/{clazzId}/tasks:
     get:
       consumes:
       - application/json
@@ -2020,23 +2295,27 @@ paths:
       summary: 获取班级任务列表
       tags:
       - 班级
-  /clazzes/teachers:
+  /clazzes/{clazzId}/tasks/{taskId}:
     delete:
       consumes:
       - application/json
-      description: 班级删除老师（支持批量删除，只有课程创建者可以操作）
+      description: 删除指定任务
       parameters:
-      - description: 移除教师请求
-        in: body
-        name: request
+      - description: 班级ID
+        in: path
+        name: clazzId
         required: true
-        schema:
-          $ref: '#/definitions/zk-code-arena-server_pkg_models.RemoveClazzTeachersRequest'
+        type: string
+      - description: 任务ID
+        in: path
+        name: taskId
+        required: true
+        type: string
       produces:
       - application/json
       responses:
         "200":
-          description: 移除成功
+          description: 删除成功
           schema:
             $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
         "400":
@@ -2045,14 +2324,301 @@ paths:
             $ref: '#/definitions/zk-code-arena-server_pkg_models.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: 班级删除老师
+      summary: 删除任务
+      tags:
+      - 班级
+    get:
+      consumes:
+      - application/json
+      description: 根据任务ID获取任务详细信息
+      parameters:
+      - description: 班级ID
+        in: path
+        name: clazzId
+        required: true
+        type: string
+      - description: 任务ID
+        in: path
+        name: taskId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 任务详情
+          schema:
+            allOf:
+            - $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/zk-code-arena-server_pkg_models.TaskResponse'
+              type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/zk-code-arena-server_pkg_models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: 获取任务详情
+      tags:
+      - 班级
+    put:
+      consumes:
+      - application/json
+      description: 更新任务信息
+      parameters:
+      - description: 班级ID
+        in: path
+        name: clazzId
+        required: true
+        type: string
+      - description: 任务ID
+        in: path
+        name: taskId
+        required: true
+        type: string
+      - description: 更新的任务信息
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/zk-code-arena-server_pkg_models.UpdateTaskRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 更新成功
+          schema:
+            $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/zk-code-arena-server_pkg_models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: 更新任务
+      tags:
+      - 班级
+  /clazzes/{clazzId}/tasks/{taskId}/completion:
+    get:
+      consumes:
+      - application/json
+      description: 分页查询指定班级下所有学生的任务完成情况，支持按学生姓名和学号搜索
+      parameters:
+      - description: 班级ID
+        in: path
+        name: clazzId
+        required: true
+        type: string
+      - description: 任务ID
+        in: path
+        name: taskId
+        required: true
+        type: string
+      - description: 页码
+        in: query
+        name: page_num
+        type: integer
+      - description: 每页数量
+        in: query
+        name: page_size
+        type: integer
+      - description: 真实姓名
+        in: query
+        name: real_name
+        type: string
+      - description: 用户ID
+        in: query
+        name: user_id
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 任务完成情况列表
+          schema:
+            allOf:
+            - $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/zk-code-arena-server_pkg_models.PageQueryTaskCompletionResponse'
+              type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/zk-code-arena-server_pkg_models.ErrorResponse'
+        "403":
+          description: 权限不足
+          schema:
+            $ref: '#/definitions/zk-code-arena-server_pkg_models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: 分页查询班级任务完成情况
+      tags:
+      - 班级
+  /clazzes/{clazzId}/tasks/{taskId}/copy:
+    post:
+      consumes:
+      - application/json
+      description: 将一个班级的任务复制到另一个班级
+      parameters:
+      - description: 班级ID
+        in: path
+        name: clazzId
+        required: true
+        type: string
+      - description: 任务ID
+        in: path
+        name: taskId
+        required: true
+        type: string
+      - description: 复制任务请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/zk-code-arena-server_pkg_models.CopyTaskToClassRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 复制成功
+          schema:
+            $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/zk-code-arena-server_pkg_models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: 复制任务到班级
+      tags:
+      - 班级
+  /clazzes/{clazzId}/tasks/{taskId}/finish:
+    post:
+      consumes:
+      - application/json
+      description: 标记任务为已完成
+      parameters:
+      - description: 班级ID
+        in: path
+        name: clazzId
+        required: true
+        type: string
+      - description: 任务ID
+        in: path
+        name: taskId
+        required: true
+        type: string
+      - description: 完成任务信息
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/zk-code-arena-server_pkg_models.FinishTaskRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 完成成功
+          schema:
+            $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/zk-code-arena-server_pkg_models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: 完成任务
+      tags:
+      - 班级
+  /clazzes/{clazzId}/tasks/{taskId}/relations:
+    delete:
+      consumes:
+      - application/json
+      description: 从任务中删除关系ID
+      parameters:
+      - description: 班级ID
+        in: path
+        name: clazzId
+        required: true
+        type: string
+      - description: 任务ID
+        in: path
+        name: taskId
+        required: true
+        type: string
+      - description: 删除的关系ID信息
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/zk-code-arena-server_pkg_models.RemoveTaskRelationIdsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 删除成功
+          schema:
+            $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/zk-code-arena-server_pkg_models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: 删除任务关系ID
       tags:
       - 班级
     post:
       consumes:
       - application/json
+      description: 为任务添加关系ID
+      parameters:
+      - description: 班级ID
+        in: path
+        name: clazzId
+        required: true
+        type: string
+      - description: 任务ID
+        in: path
+        name: taskId
+        required: true
+        type: string
+      - description: 添加的关系ID信息
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/zk-code-arena-server_pkg_models.AddTaskRelationIdsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 添加成功
+          schema:
+            $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/zk-code-arena-server_pkg_models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: 添加任务关系ID
+      tags:
+      - 班级
+  /clazzes/{clazzId}/teachers:
+    post:
+      consumes:
+      - application/json
       description: 班级添加老师（支持批量添加，只有课程创建者可以操作，且教师必须已加入课程）
       parameters:
+      - description: 班级ID
+        in: path
+        name: clazzId
+        required: true
+        type: string
       - description: 添加教师请求
         in: body
         name: request
@@ -2075,7 +2641,197 @@ paths:
       summary: 班级添加老师
       tags:
       - 班级
+  /clazzes/{clazzId}/teachers/{teacherId}:
+    delete:
+      consumes:
+      - application/json
+      description: 班级删除老师（只有课程创建者可以操作）
+      parameters:
+      - description: 班级ID
+        in: path
+        name: clazzId
+        required: true
+        type: string
+      - description: 教师ID
+        in: path
+        name: teacherId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 移除成功
+          schema:
+            $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/zk-code-arena-server_pkg_models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: 班级删除老师
+      tags:
+      - 班级
+  /clazzes/course:
+    post:
+      consumes:
+      - application/json
+      description: 创建新的课程班级
+      parameters:
+      - description: 课程班级信息
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/zk-code-arena-server_pkg_models.CreateCourseClassRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 创建成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/zk-code-arena-server_pkg_models.GetClazzResponse'
+              type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/zk-code-arena-server_pkg_models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: 创建课程班级
+      tags:
+      - 班级
+  /clazzes/major:
+    get:
+      consumes:
+      - application/json
+      description: 获取系统中所有的专业班级列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 专业班级列表
+          schema:
+            allOf:
+            - $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/zk-code-arena-server_pkg_models.Clazz'
+                  type: array
+              type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/zk-code-arena-server_pkg_models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: 获取所有专业班级
+      tags:
+      - 班级
+    post:
+      consumes:
+      - application/json
+      description: 创建新的专业班级
+      parameters:
+      - description: 专业班级信息
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/zk-code-arena-server_pkg_models.CreateMajorClassRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 创建成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/zk-code-arena-server_pkg_models.GetClazzResponse'
+              type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/zk-code-arena-server_pkg_models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: 创建专业班级
+      tags:
+      - 班级
+  /clazzes/tasks:
+    post:
+      consumes:
+      - application/json
+      description: 为多个班级添加相同的新任务
+      parameters:
+      - description: 任务信息，包含要添加任务的班级ID数组
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/zk-code-arena-server_pkg_models.AddTaskRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 添加成功
+          schema:
+            $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/zk-code-arena-server_pkg_models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: 添加任务
+      tags:
+      - 班级
   /courses:
+    get:
+      consumes:
+      - application/json
+      description: 分页查询当前用户创建的课程列表
+      parameters:
+      - description: 页码
+        in: query
+        name: page_num
+        type: integer
+      - description: 每页数量
+        in: query
+        name: page_size
+        type: integer
+      - description: 课程状态
+        in: query
+        name: status
+        type: integer
+      - description: 课程名称
+        in: query
+        name: name
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 课程列表
+          schema:
+            $ref: '#/definitions/zk-code-arena-server_pkg_models.CourseListResponse'
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/zk-code-arena-server_pkg_models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: 分页查询创建的课程
+      tags:
+      - 课程
     post:
       consumes:
       - application/json
@@ -2103,36 +2859,13 @@ paths:
           description: 请求参数错误
           schema:
             $ref: '#/definitions/zk-code-arena-server_pkg_models.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: 创建课程（教师）
-      tags:
-      - 课程
-    put:
-      consumes:
-      - application/json
-      description: 更新课程的基本信息
-      parameters:
-      - description: 更新的课程信息
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/zk-code-arena-server_pkg_models.UpdateCourseRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 更新成功
-          schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
-        "400":
-          description: 请求参数错误
+        "403":
+          description: 权限不足
           schema:
             $ref: '#/definitions/zk-code-arena-server_pkg_models.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: 更新课程信息
+      summary: 创建课程（教师）
       tags:
       - 课程
   /courses/{courseId}:
@@ -2193,6 +2926,38 @@ paths:
       summary: 获取课程详情
       tags:
       - 课程
+    put:
+      consumes:
+      - application/json
+      description: 更新课程的基本信息
+      parameters:
+      - description: 课程ID
+        in: path
+        name: courseId
+        required: true
+        type: string
+      - description: 更新的课程信息
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/zk-code-arena-server_pkg_models.UpdateCourseRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 更新成功
+          schema:
+            $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/zk-code-arena-server_pkg_models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: 更新课程信息
+      tags:
+      - 课程
   /courses/{courseId}/avatar:
     put:
       consumes:
@@ -2225,88 +2990,98 @@ paths:
       summary: 更新课程头像
       tags:
       - 课程
-  /courses/query:
-    post:
+  /courses/{courseId}/students:
+    get:
       consumes:
       - application/json
-      description: 分页查询用户相关的课程列表
+      description: 分页查询指定课程下的学生信息，支持按真实姓名搜索（课程成员可访问）
       parameters:
-      - description: 分页查询参数
-        in: body
-        name: request
+      - description: 课程ID
+        in: path
+        name: courseId
         required: true
-        schema:
-          $ref: '#/definitions/zk-code-arena-server_pkg_models.PageQueryCourseRequest'
+        type: string
+      - description: 页码
+        in: query
+        name: page_num
+        type: integer
+      - description: 每页数量
+        in: query
+        name: page_size
+        type: integer
+      - description: 真实姓名
+        in: query
+        name: real_name
+        type: string
+      - description: 学号
+        in: query
+        name: student_id
+        type: string
       produces:
       - application/json
       responses:
         "200":
-          description: 课程列表
+          description: 学生列表
           schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_models.CourseListResponse'
+            $ref: '#/definitions/zk-code-arena-server_pkg_models.PageQueryCourseStudentsResponse'
         "400":
           description: 请求参数错误
           schema:
             $ref: '#/definitions/zk-code-arena-server_pkg_models.ErrorResponse'
+        "403":
+          description: 权限不足
+          schema:
+            $ref: '#/definitions/zk-code-arena-server_pkg_models.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: 分页查询课程
+      summary: 分页查询课程下的学生
       tags:
       - 课程
-  /courses/teacher/query:
-    post:
+  /courses/{courseId}/teachers:
+    get:
       consumes:
       - application/json
-      description: 分页查询当前老师加入的课程列表
+      description: 分页查询指定课程下的教师信息，支持按真实姓名和教师ID搜索（课程成员可访问）
       parameters:
-      - description: 分页查询参数
-        in: body
-        name: request
+      - description: 课程ID
+        in: path
+        name: courseId
         required: true
-        schema:
-          $ref: '#/definitions/zk-code-arena-server_pkg_models.PageQueryTeacherCoursesRequest'
+        type: string
+      - description: 页码
+        in: query
+        name: page_num
+        type: integer
+      - description: 每页数量
+        in: query
+        name: page_size
+        type: integer
+      - description: 真实姓名
+        in: query
+        name: real_name
+        type: string
+      - description: 教师ID
+        in: query
+        name: teacher_id
+        type: string
       produces:
       - application/json
       responses:
         "200":
-          description: 课程列表
+          description: 教师列表
           schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_models.CourseListResponse'
+            $ref: '#/definitions/zk-code-arena-server_pkg_models.PageQueryCourseTeachersResponse'
         "400":
           description: 请求参数错误
           schema:
             $ref: '#/definitions/zk-code-arena-server_pkg_models.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: 分页查询老师加入的课程
-      tags:
-      - 课程
-  /courses/teachers:
-    delete:
-      consumes:
-      - application/json
-      description: 课程创建者删除课程老师（支持批量删除，只有课程创建者可以操作）
-      parameters:
-      - description: 删除教师请求
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/zk-code-arena-server_pkg_models.RemoveCourseTeachersRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 删除成功
-          schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
-        "400":
-          description: 请求参数错误
+        "403":
+          description: 权限不足
           schema:
             $ref: '#/definitions/zk-code-arena-server_pkg_models.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: 课程创建者删除课程老师
+      summary: 分页查询课程下的教师
       tags:
       - 课程
     post:
@@ -2314,6 +3089,11 @@ paths:
       - application/json
       description: 课程创建者添加老师（支持批量添加，只有课程创建者可以操作）
       parameters:
+      - description: 课程ID
+        in: path
+        name: courseId
+        required: true
+        type: string
       - description: 添加教师请求
         in: body
         name: request
@@ -2334,6 +3114,76 @@ paths:
       security:
       - BearerAuth: []
       summary: 课程创建者添加老师
+      tags:
+      - 课程
+  /courses/{courseId}/teachers/{teacherId}:
+    delete:
+      consumes:
+      - application/json
+      description: 课程创建者删除课程老师（只有课程创建者可以操作）
+      parameters:
+      - description: 课程ID
+        in: path
+        name: courseId
+        required: true
+        type: string
+      - description: 教师ID
+        in: path
+        name: teacherId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 删除成功
+          schema:
+            $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/zk-code-arena-server_pkg_models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: 课程创建者删除课程老师
+      tags:
+      - 课程
+  /courses/teaching:
+    get:
+      consumes:
+      - application/json
+      description: 分页查询当前用户教学的所有课程（包括创建的课程和作为教师加入的课程）
+      parameters:
+      - description: 页码
+        in: query
+        name: page_num
+        type: integer
+      - description: 每页数量
+        in: query
+        name: page_size
+        type: integer
+      - description: 课程状态
+        in: query
+        name: status
+        type: integer
+      - description: 课程名称
+        in: query
+        name: name
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 课程列表
+          schema:
+            $ref: '#/definitions/zk-code-arena-server_pkg_models.CourseListResponse'
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/zk-code-arena-server_pkg_models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: 分页查询教学的课程
       tags:
       - 课程
   /daily-problem:
@@ -2413,7 +3263,7 @@ paths:
                       type: integer
                     problems:
                       items:
-                        $ref: '#/definitions/zk-code-arena-server_pkg_models.Problem'
+                        $ref: '#/definitions/zk-code-arena-server_pkg_models.ProblemList'
                       type: array
                     total:
                       format: int64
@@ -2665,6 +3515,93 @@ paths:
       summary: 获取题目详情聚合信息
       tags:
       - 题目
+  /problem/{id}/favorite:
+    post:
+      consumes:
+      - application/json
+      description: 使用同一个接口收藏或取消收藏题目
+      parameters:
+      - description: 题目ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 收藏状态
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/pkg_app_api-server_server.ToggleFavoriteRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 操作成功
+          schema:
+            $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/zk-code-arena-server_pkg_models.ErrorResponse'
+        "401":
+          description: 未授权
+          schema:
+            $ref: '#/definitions/zk-code-arena-server_pkg_models.ErrorResponse'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/zk-code-arena-server_pkg_models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: 收藏或取消收藏题目
+      tags:
+      - 题目
+  /problem/{id}/next:
+    get:
+      consumes:
+      - application/json
+      description: 获取当前题目的下一题，如果提供了任务列表ID和题号，则返回任务列表中的下一题
+      parameters:
+      - description: 当前题目ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 任务列表ID
+        in: query
+        name: task_id
+        type: string
+      - description: 当前任务列表中的题号（从0开始）
+        in: query
+        name: current_idx
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 下一题详情
+          schema:
+            allOf:
+            - $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/zk-code-arena-server_pkg_models.Problem'
+              type: object
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
+        "404":
+          description: 未找到下一题
+          schema:
+            $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
+      summary: 获取下一题
+      tags:
+      - 题目
   /problem/{id}/run:
     post:
       consumes:
@@ -2711,6 +3648,59 @@ paths:
       summary: 运行代码测试
       tags:
       - 题目
+  /problem/favorite:
+    get:
+      consumes:
+      - application/json
+      description: 获取当前用户收藏的所有题目
+      parameters:
+      - description: 页码，默认1
+        in: query
+        name: page
+        type: integer
+      - description: 每页数量，默认10
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 收藏题目列表
+          schema:
+            allOf:
+            - $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
+            - properties:
+                data:
+                  properties:
+                    page:
+                      type: integer
+                    page_size:
+                      type: integer
+                    problems:
+                      items:
+                        $ref: '#/definitions/zk-code-arena-server_pkg_models.ProblemList'
+                      type: array
+                    total:
+                      format: int64
+                      type: integer
+                    total_page:
+                      type: integer
+                  type: object
+              type: object
+        "401":
+          description: 未授权
+          schema:
+            $ref: '#/definitions/zk-code-arena-server_pkg_models.ErrorResponse'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/zk-code-arena-server_pkg_models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: 获取用户收藏题目列表
+      tags:
+      - 题目
   /problem/search:
     get:
       consumes:
@@ -2746,6 +3736,11 @@ paths:
         in: query
         name: page_size
         type: integer
+      - default: false
+        description: 是否仅在收藏中搜索
+        in: query
+        name: in_favorite
+        type: boolean
       produces:
       - application/json
       responses:
@@ -2763,7 +3758,7 @@ paths:
                       type: integer
                     problems:
                       items:
-                        $ref: '#/definitions/zk-code-arena-server_pkg_models.Problem'
+                        $ref: '#/definitions/zk-code-arena-server_pkg_models.ProblemList'
                       type: array
                     total:
                       format: int64
@@ -2778,6 +3773,93 @@ paths:
           schema:
             $ref: '#/definitions/zk-code-arena-server_pkg_models.ErrorResponse'
       summary: 搜索题目
+      tags:
+      - 题目
+  /problem/unique/{id}:
+    get:
+      consumes:
+      - application/json
+      description: 根据题目唯一编号（如 1001）获取完整题目信息
+      parameters:
+      - description: 题目编号
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 题目详情
+          schema:
+            allOf:
+            - $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/zk-code-arena-server_pkg_models.Problem'
+              type: object
+        "400":
+          description: 无效的题目编号
+          schema:
+            $ref: '#/definitions/zk-code-arena-server_pkg_models.ErrorResponse'
+        "404":
+          description: 题目不存在
+          schema:
+            $ref: '#/definitions/zk-code-arena-server_pkg_models.ErrorResponse'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/zk-code-arena-server_pkg_models.ErrorResponse'
+      summary: 通过题号获取题目详情
+      tags:
+      - 题目
+  /problems/batch:
+    post:
+      consumes:
+      - application/json
+      description: 批量创建多个题目，单次最多50个，部分失败不影响整体创建
+      parameters:
+      - description: 批量题目信息
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/zk-code-arena-server_pkg_models.BatchCreateProblemsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 批量创建结果
+          schema:
+            allOf:
+            - $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/zk-code-arena-server_pkg_models.BatchCreateProblemsResponse'
+              type: object
+        "400":
+          description: 请求参数错误或业务规则错误
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 需要登录
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: 权限不足
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 创建失败
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 批量创建题目（教师/管理员）
       tags:
       - 题目
   /problems/difficulty-stats:
@@ -2908,6 +3990,35 @@ paths:
       summary: 获取指定用户统计（管理员）
       tags:
       - 统计
+  /students/{studentId}/classes:
+    get:
+      consumes:
+      - application/json
+      description: 获取指定学生加入的所有班级
+      parameters:
+      - description: 学生ID
+        in: path
+        name: studentId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 学生班级列表
+          schema:
+            items:
+              $ref: '#/definitions/zk-code-arena-server_pkg_models.StudentClassResponse'
+            type: array
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/zk-code-arena-server_pkg_models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: 获取学生的所有班级
+      tags:
+      - 班级
   /submit:
     get:
       consumes:
@@ -3744,6 +4855,93 @@ paths:
           schema:
             $ref: '#/definitions/zk-code-arena-server_pkg_models.ErrorResponse'
       summary: 用户注册
+      tags:
+      - 用户
+  /user/tasks:
+    get:
+      consumes:
+      - application/json
+      description: 分页查询当前用户的所有班级任务，支持按任务类型和状态筛选
+      parameters:
+      - description: 页码，默认1
+        in: query
+        name: page
+        type: integer
+      - description: 每页大小，默认10
+        in: query
+        name: pageSize
+        type: integer
+      - description: 任务类型：1-题单，2-视频
+        in: query
+        name: type
+        type: integer
+      - description: 任务状态：0-未完成, 1-已完成
+        in: query
+        name: state
+        type: integer
+      - description: 任务状态：0-未开始, 1-进行中, 2-已结束
+        in: query
+        name: status
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 任务列表
+          schema:
+            $ref: '#/definitions/zk-code-arena-server_pkg_models.PageQueryUserTasksResponse'
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/zk-code-arena-server_pkg_models.ErrorResponse'
+        "401":
+          description: 未授权
+          schema:
+            $ref: '#/definitions/zk-code-arena-server_pkg_models.ErrorResponse'
+        "500":
+          description: 查询失败
+          schema:
+            $ref: '#/definitions/zk-code-arena-server_pkg_models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: 分页查询用户任务列表
+      tags:
+      - 用户
+  /user/teachers:
+    post:
+      consumes:
+      - application/json
+      description: 分页查询所有教师信息，支持按姓名模糊查询
+      parameters:
+      - description: 分页查询参数
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/zk-code-arena-server_pkg_models.PageQueryAllTeachersRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 教师列表
+          schema:
+            allOf:
+            - $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/zk-code-arena-server_pkg_models.PageQueryCourseTeachersResponse'
+              type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/zk-code-arena-server_pkg_models.ErrorResponse'
+        "500":
+          description: 查询失败
+          schema:
+            $ref: '#/definitions/zk-code-arena-server_pkg_models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: 分页查询所有教师信息
       tags:
       - 用户
   /ws/submit/{id}:

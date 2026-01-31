@@ -96,7 +96,7 @@
                                                 "problems": {
                                                     "type": "array",
                                                     "items": {
-                                                        "$ref": "#/definitions/zk-code-arena-server_pkg_models.Problem"
+                                                        "$ref": "#/definitions/zk-code-arena-server_pkg_models.ProblemList"
                                                     }
                                                 },
                                                 "total": {
@@ -142,6 +142,323 @@
             }
         },
         "/clazzes": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "根据课程ID获取该课程的所有班级列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "班级"
+                ],
+                "summary": "获取课程的所有班级",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "课程ID",
+                        "name": "course_id",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "班级列表",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/zk-code-arena-server_pkg_models.Clazz"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "请求参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/clazzes/course": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "创建新的课程班级",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "班级"
+                ],
+                "summary": "创建课程班级",
+                "parameters": [
+                    {
+                        "description": "课程班级信息",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.CreateCourseClassRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "创建成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.GetClazzResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "请求参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/clazzes/major": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "获取系统中所有的专业班级列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "班级"
+                ],
+                "summary": "获取所有专业班级",
+                "responses": {
+                    "200": {
+                        "description": "专业班级列表",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/zk-code-arena-server_pkg_models.Clazz"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "请求参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "创建新的专业班级",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "班级"
+                ],
+                "summary": "创建专业班级",
+                "parameters": [
+                    {
+                        "description": "专业班级信息",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.CreateMajorClassRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "创建成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.GetClazzResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "请求参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/clazzes/tasks": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "为多个班级添加相同的新任务",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "班级"
+                ],
+                "summary": "添加任务",
+                "parameters": [
+                    {
+                        "description": "任务信息，包含要添加任务的班级ID数组",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.AddTaskRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "添加成功",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "请求参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/clazzes/{clazzId}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "根据班级ID获取班级详细信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "班级"
+                ],
+                "summary": "获取课程班级详情",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "班级ID",
+                        "name": "clazzId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "班级详情",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.Clazz"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "请求参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
+                        }
+                    }
+                }
+            },
             "put": {
                 "security": [
                     {
@@ -192,13 +509,13 @@
                     }
                 }
             },
-            "post": {
+            "delete": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "创建新班级",
+                "description": "删除指定班级",
                 "consumes": [
                     "application/json"
                 ],
@@ -208,35 +525,21 @@
                 "tags": [
                     "班级"
                 ],
-                "summary": "创建班级",
+                "summary": "删除课程班级",
                 "parameters": [
                     {
-                        "description": "班级信息",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.CreateClazzRequest"
-                        }
+                        "type": "string",
+                        "description": "班级ID",
+                        "name": "clazzId",
+                        "in": "path",
+                        "required": true
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "创建成功",
+                        "description": "删除成功",
                         "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.GetClazzResponse"
-                                        }
-                                    }
-                                }
-                            ]
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
                         }
                     },
                     "400": {
@@ -248,7 +551,484 @@
                 }
             }
         },
-        "/clazzes/class_students/{classId}": {
+        "/clazzes/{clazzId}/join": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "学生通过扫描二维码加入课程班级",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "班级"
+                ],
+                "summary": "通过二维码加入课程班级",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "班级ID",
+                        "name": "clazzId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "邀请码",
+                        "name": "invite_code",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "加入成功",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "请求参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/clazzes/{clazzId}/major-classes": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "为课程班级添加一个或多个专业班级关联",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "班级"
+                ],
+                "summary": "添加课程班级的专业班级关联",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "班级ID",
+                        "name": "clazzId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "专业班级ID数组",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.MajorClassIdsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "添加成功",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "请求参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "权限不足",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "移除课程班级与一个或多个专业班级的关联",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "班级"
+                ],
+                "summary": "移除课程班级的专业班级关联",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "班级ID",
+                        "name": "clazzId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "专业班级ID数组",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.MajorClassIdsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "移除成功",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "请求参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "权限不足",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/clazzes/{clazzId}/members": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "手动添加成员到班级",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "班级"
+                ],
+                "summary": "添加课程班级成员",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "班级ID",
+                        "name": "clazzId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "成员ID",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.AddClazzMemberRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "添加成功",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "请求参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/clazzes/{clazzId}/members/{memberId}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "移除课程班级成员",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "班级"
+                ],
+                "summary": "移除课程班级成员",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "班级ID",
+                        "name": "clazzId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "成员ID",
+                        "name": "memberId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "移除成功",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "请求参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/clazzes/{clazzId}/qrcode": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "获得班级二维码",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "班级"
+                ],
+                "summary": "获得班级二维码",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "班级ID",
+                        "name": "clazzId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "获得成功",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.SuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "请求参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "权限不足",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "二维码已过期",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "更新班级二维码",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "班级"
+                ],
+                "summary": "更新班级二维码",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "班级ID",
+                        "name": "clazzId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "更新成功",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.SuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "请求参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/clazzes/{clazzId}/student/{studentId}": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "将学生添加到指定班级",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "班级"
+                ],
+                "summary": "添加学生到班级",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "班级ID",
+                        "name": "clazzId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "学生ID",
+                        "name": "studentId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "添加学生到班级请求",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.AddStudentToClassRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "添加成功",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "请求参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "将学生从指定班级移除",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "班级"
+                ],
+                "summary": "从班级移除学生",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "班级ID",
+                        "name": "clazzId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "学生ID",
+                        "name": "studentId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "从班级移除学生请求",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.RemoveStudentFromClassRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "移除成功",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "请求参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/clazzes/{clazzId}/students": {
             "get": {
                 "security": [
                     {
@@ -294,582 +1074,7 @@
                 }
             }
         },
-        "/clazzes/course/{courseId}": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "根据课程ID获取该课程的所有班级列表",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "班级"
-                ],
-                "summary": "获取课程的所有班级",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "课程ID",
-                        "name": "courseId",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "班级列表",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "type": "array",
-                                            "items": {
-                                                "$ref": "#/definitions/zk-code-arena-server_pkg_models.Clazz"
-                                            }
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "400": {
-                        "description": "请求参数错误",
-                        "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/clazzes/finishTask": {
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "标记任务为已完成",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "班级"
-                ],
-                "summary": "完成任务",
-                "parameters": [
-                    {
-                        "description": "完成任务信息",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.FinishTaskRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "完成成功",
-                        "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
-                        }
-                    },
-                    "400": {
-                        "description": "请求参数错误",
-                        "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/clazzes/join": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "学生通过邀请码加入班级",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "班级"
-                ],
-                "summary": "加入班级",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "班级ID",
-                        "name": "clazzId",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "邀请码",
-                        "name": "invite_code",
-                        "in": "query",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "加入成功",
-                        "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
-                        }
-                    },
-                    "400": {
-                        "description": "请求参数错误",
-                        "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/clazzes/members": {
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "手动添加成员到班级",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "班级"
-                ],
-                "summary": "添加班级成员",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "班级ID",
-                        "name": "clazzId",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "成员ID",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.AddClazzMemberRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "添加成功",
-                        "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
-                        }
-                    },
-                    "400": {
-                        "description": "请求参数错误",
-                        "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/clazzes/members/remove": {
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "批量移除班级成员",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "班级"
-                ],
-                "summary": "移除班级成员",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "班级ID",
-                        "name": "clazzId",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "成员ID列表",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.RemoveClazzMembersRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "移除成功",
-                        "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
-                        }
-                    },
-                    "400": {
-                        "description": "请求参数错误",
-                        "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/clazzes/student_classes": {
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "将学生添加到指定班级",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "班级"
-                ],
-                "summary": "添加学生到班级",
-                "parameters": [
-                    {
-                        "description": "添加学生到班级请求",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.AddStudentToClassRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "添加成功",
-                        "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
-                        }
-                    },
-                    "400": {
-                        "description": "请求参数错误",
-                        "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
-                        }
-                    }
-                }
-            },
-            "delete": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "将学生从指定班级移除",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "班级"
-                ],
-                "summary": "从班级移除学生",
-                "parameters": [
-                    {
-                        "description": "从班级移除学生请求",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.RemoveStudentFromClassRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "移除成功",
-                        "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
-                        }
-                    },
-                    "400": {
-                        "description": "请求参数错误",
-                        "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/clazzes/student_classes/{studentId}": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "获取指定学生加入的所有班级",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "班级"
-                ],
-                "summary": "获取学生的所有班级",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "学生ID",
-                        "name": "studentId",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "学生班级列表",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/zk-code-arena-server_pkg_models.StudentClassResponse"
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "请求参数错误",
-                        "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/clazzes/task": {
-            "put": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "更新任务信息",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "班级"
-                ],
-                "summary": "更新任务",
-                "parameters": [
-                    {
-                        "description": "更新的任务信息",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.UpdateTaskRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "更新成功",
-                        "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
-                        }
-                    },
-                    "400": {
-                        "description": "请求参数错误",
-                        "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
-                        }
-                    }
-                }
-            },
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "为班级添加新任务",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "班级"
-                ],
-                "summary": "添加任务",
-                "parameters": [
-                    {
-                        "description": "任务信息",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.AddTaskRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "添加成功",
-                        "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
-                        }
-                    },
-                    "400": {
-                        "description": "请求参数错误",
-                        "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/clazzes/task/{taskId}": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "根据任务ID获取任务详细信息",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "班级"
-                ],
-                "summary": "获取任务详情",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "任务ID",
-                        "name": "taskId",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "任务详情",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.Task"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "400": {
-                        "description": "请求参数错误",
-                        "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
-                        }
-                    }
-                }
-            },
-            "delete": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "删除指定任务",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "班级"
-                ],
-                "summary": "删除任务",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "任务ID",
-                        "name": "taskId",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "删除成功",
-                        "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
-                        }
-                    },
-                    "400": {
-                        "description": "请求参数错误",
-                        "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/clazzes/tasks/{clazzId}": {
+        "/clazzes/{clazzId}/tasks": {
             "get": {
                 "security": [
                     {
@@ -915,14 +1120,14 @@
                 }
             }
         },
-        "/clazzes/teachers": {
-            "post": {
+        "/clazzes/{clazzId}/tasks/{taskId}": {
+            "get": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "班级添加老师（支持批量添加，只有课程创建者可以操作，且教师必须已加入课程）",
+                "description": "根据任务ID获取任务详细信息",
                 "consumes": [
                     "application/json"
                 ],
@@ -932,15 +1137,406 @@
                 "tags": [
                     "班级"
                 ],
-                "summary": "班级添加老师",
+                "summary": "获取任务详情",
                 "parameters": [
                     {
-                        "description": "添加教师请求",
+                        "type": "string",
+                        "description": "班级ID",
+                        "name": "clazzId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "任务ID",
+                        "name": "taskId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "任务详情",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.TaskResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "请求参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "更新任务信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "班级"
+                ],
+                "summary": "更新任务",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "班级ID",
+                        "name": "clazzId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "任务ID",
+                        "name": "taskId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "更新的任务信息",
                         "name": "request",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.AddClazzTeachersRequest"
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.UpdateTaskRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "更新成功",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "请求参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "删除指定任务",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "班级"
+                ],
+                "summary": "删除任务",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "班级ID",
+                        "name": "clazzId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "任务ID",
+                        "name": "taskId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "删除成功",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "请求参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/clazzes/{clazzId}/tasks/{taskId}/completion": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "分页查询指定班级下所有学生的任务完成情况，支持按学生姓名和学号搜索",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "班级"
+                ],
+                "summary": "分页查询班级任务完成情况",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "班级ID",
+                        "name": "clazzId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "任务ID",
+                        "name": "taskId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "页码",
+                        "name": "page_num",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页数量",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "真实姓名",
+                        "name": "real_name",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "用户ID",
+                        "name": "user_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "任务完成情况列表",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.PageQueryTaskCompletionResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "请求参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "权限不足",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/clazzes/{clazzId}/tasks/{taskId}/copy": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "将一个班级的任务复制到另一个班级",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "班级"
+                ],
+                "summary": "复制任务到班级",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "班级ID",
+                        "name": "clazzId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "任务ID",
+                        "name": "taskId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "复制任务请求",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.CopyTaskToClassRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "复制成功",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "请求参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/clazzes/{clazzId}/tasks/{taskId}/finish": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "标记任务为已完成",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "班级"
+                ],
+                "summary": "完成任务",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "班级ID",
+                        "name": "clazzId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "任务ID",
+                        "name": "taskId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "完成任务信息",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.FinishTaskRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "完成成功",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "请求参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/clazzes/{clazzId}/tasks/{taskId}/relations": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "为任务添加关系ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "班级"
+                ],
+                "summary": "添加任务关系ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "班级ID",
+                        "name": "clazzId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "任务ID",
+                        "name": "taskId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "添加的关系ID信息",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.AddTaskRelationIdsRequest"
                         }
                     }
                 ],
@@ -965,7 +1561,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "班级删除老师（支持批量删除，只有课程创建者可以操作）",
+                "description": "从任务中删除关系ID",
                 "consumes": [
                     "application/json"
                 ],
@@ -975,112 +1571,30 @@
                 "tags": [
                     "班级"
                 ],
-                "summary": "班级删除老师",
+                "summary": "删除任务关系ID",
                 "parameters": [
                     {
-                        "description": "移除教师请求",
+                        "type": "string",
+                        "description": "班级ID",
+                        "name": "clazzId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "任务ID",
+                        "name": "taskId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "删除的关系ID信息",
                         "name": "request",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.RemoveClazzTeachersRequest"
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.RemoveTaskRelationIdsRequest"
                         }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "移除成功",
-                        "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
-                        }
-                    },
-                    "400": {
-                        "description": "请求参数错误",
-                        "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/clazzes/{clazzId}": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "根据班级ID获取班级详细信息",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "班级"
-                ],
-                "summary": "获取班级详情",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "班级ID",
-                        "name": "clazzId",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "班级详情",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.Clazz"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "400": {
-                        "description": "请求参数错误",
-                        "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
-                        }
-                    }
-                }
-            },
-            "delete": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "删除指定班级",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "班级"
-                ],
-                "summary": "删除班级",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "班级ID",
-                        "name": "clazzId",
-                        "in": "path",
-                        "required": true
                     }
                 ],
                 "responses": {
@@ -1099,14 +1613,116 @@
                 }
             }
         },
-        "/courses": {
-            "put": {
+        "/clazzes/{clazzId}/teachers": {
+            "post": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "更新课程的基本信息",
+                "description": "班级添加老师（支持批量添加，只有课程创建者可以操作，且教师必须已加入课程）",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "班级"
+                ],
+                "summary": "班级添加老师",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "班级ID",
+                        "name": "clazzId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "添加教师请求",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.AddClazzTeachersRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "添加成功",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "请求参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/clazzes/{clazzId}/teachers/{teacherId}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "班级删除老师（只有课程创建者可以操作）",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "班级"
+                ],
+                "summary": "班级删除老师",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "班级ID",
+                        "name": "clazzId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "教师ID",
+                        "name": "teacherId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "移除成功",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "请求参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/courses": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "分页查询当前用户创建的课程列表",
                 "consumes": [
                     "application/json"
                 ],
@@ -1116,23 +1732,38 @@
                 "tags": [
                     "课程"
                 ],
-                "summary": "更新课程信息",
+                "summary": "分页查询创建的课程",
                 "parameters": [
                     {
-                        "description": "更新的课程信息",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.UpdateCourseRequest"
-                        }
+                        "type": "integer",
+                        "description": "页码",
+                        "name": "page_num",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页数量",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "课程状态",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "课程名称",
+                        "name": "name",
+                        "in": "query"
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "更新成功",
+                        "description": "课程列表",
                         "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.CourseListResponse"
                         }
                     },
                     "400": {
@@ -1195,18 +1826,24 @@
                         "schema": {
                             "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
                         }
+                    },
+                    "403": {
+                        "description": "权限不足",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
+                        }
                     }
                 }
             }
         },
-        "/courses/query": {
-            "post": {
+        "/courses/teaching": {
+            "get": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "分页查询用户相关的课程列表",
+                "description": "分页查询当前用户教学的所有课程（包括创建的课程和作为教师加入的课程）",
                 "consumes": [
                     "application/json"
                 ],
@@ -1216,16 +1853,31 @@
                 "tags": [
                     "课程"
                 ],
-                "summary": "分页查询课程",
+                "summary": "分页查询教学的课程",
                 "parameters": [
                     {
-                        "description": "分页查询参数",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.PageQueryCourseRequest"
-                        }
+                        "type": "integer",
+                        "description": "页码",
+                        "name": "page_num",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页数量",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "课程状态",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "课程名称",
+                        "name": "name",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -1233,139 +1885,6 @@
                         "description": "课程列表",
                         "schema": {
                             "$ref": "#/definitions/zk-code-arena-server_pkg_models.CourseListResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "请求参数错误",
-                        "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/courses/teacher/query": {
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "分页查询当前老师加入的课程列表",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "课程"
-                ],
-                "summary": "分页查询老师加入的课程",
-                "parameters": [
-                    {
-                        "description": "分页查询参数",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.PageQueryTeacherCoursesRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "课程列表",
-                        "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.CourseListResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "请求参数错误",
-                        "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/courses/teachers": {
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "课程创建者添加老师（支持批量添加，只有课程创建者可以操作）",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "课程"
-                ],
-                "summary": "课程创建者添加老师",
-                "parameters": [
-                    {
-                        "description": "添加教师请求",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.AddCourseTeachersRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "添加成功",
-                        "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
-                        }
-                    },
-                    "400": {
-                        "description": "请求参数错误",
-                        "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
-                        }
-                    }
-                }
-            },
-            "delete": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "课程创建者删除课程老师（支持批量删除，只有课程创建者可以操作）",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "课程"
-                ],
-                "summary": "课程创建者删除课程老师",
-                "parameters": [
-                    {
-                        "description": "删除教师请求",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.RemoveCourseTeachersRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "删除成功",
-                        "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
                         }
                     },
                     "400": {
@@ -1421,6 +1940,56 @@
                                     }
                                 }
                             ]
+                        }
+                    },
+                    "400": {
+                        "description": "请求参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "更新课程的基本信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "课程"
+                ],
+                "summary": "更新课程信息",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "课程ID",
+                        "name": "courseId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "更新的课程信息",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.UpdateCourseRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "更新成功",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
                         }
                     },
                     "400": {
@@ -1510,6 +2079,252 @@
                 "responses": {
                     "200": {
                         "description": "更新成功",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "请求参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/courses/{courseId}/students": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "分页查询指定课程下的学生信息，支持按真实姓名搜索（课程成员可访问）",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "课程"
+                ],
+                "summary": "分页查询课程下的学生",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "课程ID",
+                        "name": "courseId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "页码",
+                        "name": "page_num",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页数量",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "真实姓名",
+                        "name": "real_name",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "学号",
+                        "name": "student_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "学生列表",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.PageQueryCourseStudentsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "请求参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "权限不足",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/courses/{courseId}/teachers": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "分页查询指定课程下的教师信息，支持按真实姓名和教师ID搜索（课程成员可访问）",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "课程"
+                ],
+                "summary": "分页查询课程下的教师",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "课程ID",
+                        "name": "courseId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "页码",
+                        "name": "page_num",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页数量",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "真实姓名",
+                        "name": "real_name",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "教师ID",
+                        "name": "teacher_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "教师列表",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.PageQueryCourseTeachersResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "请求参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "权限不足",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "课程创建者添加老师（支持批量添加，只有课程创建者可以操作）",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "课程"
+                ],
+                "summary": "课程创建者添加老师",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "课程ID",
+                        "name": "courseId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "添加教师请求",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.AddCourseTeachersRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "添加成功",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "请求参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/courses/{courseId}/teachers/{teacherId}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "课程创建者删除课程老师（只有课程创建者可以操作）",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "课程"
+                ],
+                "summary": "课程创建者删除课程老师",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "课程ID",
+                        "name": "courseId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "教师ID",
+                        "name": "teacherId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "删除成功",
                         "schema": {
                             "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
                         }
@@ -1645,7 +2460,7 @@
                                                 "problems": {
                                                     "type": "array",
                                                     "items": {
-                                                        "$ref": "#/definitions/zk-code-arena-server_pkg_models.Problem"
+                                                        "$ref": "#/definitions/zk-code-arena-server_pkg_models.ProblemList"
                                                     }
                                                 },
                                                 "total": {
@@ -1755,6 +2570,93 @@
                 }
             }
         },
+        "/problem/favorite": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "获取当前用户收藏的所有题目",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "题目"
+                ],
+                "summary": "获取用户收藏题目列表",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "页码，默认1",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页数量，默认10",
+                        "name": "page_size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "收藏题目列表",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "page": {
+                                                    "type": "integer"
+                                                },
+                                                "page_size": {
+                                                    "type": "integer"
+                                                },
+                                                "problems": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "$ref": "#/definitions/zk-code-arena-server_pkg_models.ProblemList"
+                                                    }
+                                                },
+                                                "total": {
+                                                    "type": "integer",
+                                                    "format": "int64"
+                                                },
+                                                "total_page": {
+                                                    "type": "integer"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "未授权",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "服务器内部错误",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/problem/search": {
             "get": {
                 "description": "根据关键词、难度、标签搜索题目",
@@ -1809,6 +2711,13 @@
                         "description": "每页数量",
                         "name": "page_size",
                         "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "default": false,
+                        "description": "是否仅在收藏中搜索",
+                        "name": "in_favorite",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -1834,7 +2743,7 @@
                                                 "problems": {
                                                     "type": "array",
                                                     "items": {
-                                                        "$ref": "#/definitions/zk-code-arena-server_pkg_models.Problem"
+                                                        "$ref": "#/definitions/zk-code-arena-server_pkg_models.ProblemList"
                                                     }
                                                 },
                                                 "total": {
@@ -1854,6 +2763,68 @@
                     },
                     "500": {
                         "description": "搜索失败",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/problem/unique/{id}": {
+            "get": {
+                "description": "根据题目唯一编号（如 1001）获取完整题目信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "题目"
+                ],
+                "summary": "通过题号获取题目详情",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "题目编号",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "题目详情",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.Problem"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "无效的题目编号",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "题目不存在",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "服务器内部错误",
                         "schema": {
                             "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
                         }
@@ -2155,6 +3126,144 @@
                 }
             }
         },
+        "/problem/{id}/favorite": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "使用同一个接口收藏或取消收藏题目",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "题目"
+                ],
+                "summary": "收藏或取消收藏题目",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "题目ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "收藏状态",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/pkg_app_api-server_server.ToggleFavoriteRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "操作成功",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "请求参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "未授权",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "服务器内部错误",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/problem/{id}/next": {
+            "get": {
+                "description": "获取当前题目的下一题，如果提供了任务列表ID和题号，则返回任务列表中的下一题",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "题目"
+                ],
+                "summary": "获取下一题",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "当前题目ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "任务列表ID",
+                        "name": "task_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "当前任务列表中的题号（从0开始）",
+                        "name": "current_idx",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "下一题详情",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.Problem"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "未找到下一题",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "服务器内部错误",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/problem/{id}/run": {
             "post": {
                 "security": [
@@ -2226,6 +3335,85 @@
                         "description": "运行失败",
                         "schema": {
                             "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/problems/batch": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "批量创建多个题目，单次最多50个，部分失败不影响整体创建",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "题目"
+                ],
+                "summary": "批量创建题目（教师/管理员）",
+                "parameters": [
+                    {
+                        "description": "批量题目信息",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.BatchCreateProblemsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "批量创建结果",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.BatchCreateProblemsResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "请求参数错误或业务规则错误",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "需要登录",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "权限不足",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "创建失败",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
                         }
                     }
                 }
@@ -2442,6 +3630,52 @@
                     },
                     "500": {
                         "description": "获取失败",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/students/{studentId}/classes": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "获取指定学生加入的所有班级",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "班级"
+                ],
+                "summary": "获取学生的所有班级",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "学生ID",
+                        "name": "studentId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "学生班级列表",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/zk-code-arena-server_pkg_models.StudentClassResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "请求参数错误",
                         "schema": {
                             "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
                         }
@@ -3601,6 +4835,147 @@
                 }
             }
         },
+        "/user/tasks": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "分页查询当前用户的所有班级任务，支持按任务类型和状态筛选",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "用户"
+                ],
+                "summary": "分页查询用户任务列表",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "页码，默认1",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页大小，默认10",
+                        "name": "pageSize",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "任务类型：1-题单，2-视频",
+                        "name": "type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "任务状态：0-未完成, 1-已完成",
+                        "name": "state",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "任务状态：0-未开始, 1-进行中, 2-已结束",
+                        "name": "status",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "任务列表",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.PageQueryUserTasksResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "未授权",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "查询失败",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/user/teachers": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "分页查询所有教师信息，支持按姓名模糊查询",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "用户"
+                ],
+                "summary": "分页查询所有教师信息",
+                "parameters": [
+                    {
+                        "description": "分页查询参数",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.PageQueryAllTeachersRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "教师列表",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.PageQueryCourseTeachersResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "请求参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "查询失败",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/user/{id}": {
             "get": {
                 "security": [
@@ -3893,6 +5268,18 @@
         }
     },
     "definitions": {
+        "pkg_app_api-server_server.ToggleFavoriteRequest": {
+            "type": "object",
+            "required": [
+                "is_favorite"
+            ],
+            "properties": {
+                "is_favorite": {
+                    "description": "1: 收藏, 0: 取消收藏",
+                    "type": "boolean"
+                }
+            }
+        },
         "zk-code-arena-server_pkg_app_api-server_service.RunCodeRequest": {
             "type": "object",
             "required": [
@@ -3915,13 +5302,9 @@
         "zk-code-arena-server_pkg_models.AddClazzMemberRequest": {
             "type": "object",
             "required": [
-                "clazz_id",
                 "member_id"
             ],
             "properties": {
-                "clazz_id": {
-                    "type": "string"
-                },
                 "member_id": {
                     "type": "string"
                 }
@@ -3930,13 +5313,9 @@
         "zk-code-arena-server_pkg_models.AddClazzTeachersRequest": {
             "type": "object",
             "required": [
-                "clazz_id",
                 "teacher_ids"
             ],
             "properties": {
-                "clazz_id": {
-                    "type": "string"
-                },
                 "teacher_ids": {
                     "type": "array",
                     "items": {
@@ -3948,13 +5327,9 @@
         "zk-code-arena-server_pkg_models.AddCourseTeachersRequest": {
             "type": "object",
             "required": [
-                "course_id",
                 "teacher_ids"
             ],
             "properties": {
-                "course_id": {
-                    "type": "string"
-                },
                 "teacher_ids": {
                     "type": "array",
                     "items": {
@@ -3966,34 +5341,43 @@
         "zk-code-arena-server_pkg_models.AddStudentToClassRequest": {
             "type": "object",
             "required": [
-                "class_id",
-                "course_id",
-                "student_id"
+                "course_id"
             ],
             "properties": {
-                "class_id": {
-                    "type": "string"
-                },
                 "course_id": {
                     "type": "string"
-                },
-                "student_id": {
-                    "type": "string"
+                }
+            }
+        },
+        "zk-code-arena-server_pkg_models.AddTaskRelationIdsRequest": {
+            "type": "object",
+            "required": [
+                "relation_ids"
+            ],
+            "properties": {
+                "relation_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },
         "zk-code-arena-server_pkg_models.AddTaskRequest": {
             "type": "object",
             "required": [
-                "clazz_id",
+                "clazz_ids",
                 "course_id",
                 "start_time",
                 "title",
                 "type"
             ],
             "properties": {
-                "clazz_id": {
-                    "type": "string"
+                "clazz_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "course_id": {
                     "type": "string"
@@ -4004,6 +5388,13 @@
                 "end_time": {
                     "description": "如果不设置则没有结束时间",
                     "type": "string"
+                },
+                "major_class_ids": {
+                    "description": "专业班级ID数组",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "relation_ids": {
                     "type": "array",
@@ -4020,6 +5411,72 @@
                 },
                 "type": {
                     "$ref": "#/definitions/zk-code-arena-server_pkg_models.TaskType"
+                }
+            }
+        },
+        "zk-code-arena-server_pkg_models.BatchCreateProblemResult": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "description": "失败时的错误信息",
+                    "type": "string"
+                },
+                "index": {
+                    "description": "题目在请求中的索引",
+                    "type": "integer"
+                },
+                "problem_id": {
+                    "description": "成功时的题目ID",
+                    "type": "string"
+                },
+                "success": {
+                    "description": "是否创建成功",
+                    "type": "boolean"
+                },
+                "title": {
+                    "description": "题目标题",
+                    "type": "string"
+                }
+            }
+        },
+        "zk-code-arena-server_pkg_models.BatchCreateProblemsRequest": {
+            "type": "object",
+            "required": [
+                "problems"
+            ],
+            "properties": {
+                "problems": {
+                    "description": "限制最多100个题目",
+                    "type": "array",
+                    "maxItems": 100,
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/zk-code-arena-server_pkg_models.CreateProblemRequest"
+                    }
+                }
+            }
+        },
+        "zk-code-arena-server_pkg_models.BatchCreateProblemsResponse": {
+            "type": "object",
+            "properties": {
+                "fail_count": {
+                    "description": "失败数量",
+                    "type": "integer"
+                },
+                "results": {
+                    "description": "详细结果",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/zk-code-arena-server_pkg_models.BatchCreateProblemResult"
+                    }
+                },
+                "success_count": {
+                    "description": "成功数量",
+                    "type": "integer"
+                },
+                "total_count": {
+                    "description": "总数量",
+                    "type": "integer"
                 }
             }
         },
@@ -4066,6 +5523,26 @@
                 "ClassStatusEnded"
             ]
         },
+        "zk-code-arena-server_pkg_models.ClassType": {
+            "type": "integer",
+            "format": "int32",
+            "enum": [
+                0,
+                1
+            ],
+            "x-enum-comments": {
+                "ClassTypeCourse": "课程班级",
+                "ClassTypeMajor": "专业班级"
+            },
+            "x-enum-descriptions": [
+                "课程班级",
+                "专业班级"
+            ],
+            "x-enum-varnames": [
+                "ClassTypeCourse",
+                "ClassTypeMajor"
+            ]
+        },
         "zk-code-arena-server_pkg_models.Clazz": {
             "type": "object",
             "required": [
@@ -4080,6 +5557,15 @@
                 "c_id": {
                     "type": "string",
                     "example": "507f1f77bcf86cd799439016"
+                },
+                "class_type": {
+                    "description": "新增：班级类型",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ClassType"
+                        }
+                    ],
+                    "example": 0
                 },
                 "course_id": {
                     "type": "string",
@@ -4096,6 +5582,13 @@
                 "id": {
                     "type": "string",
                     "example": "507f1f77bcf86cd799439011"
+                },
+                "major_class_ids": {
+                    "description": "新增：关联的专业班级ID数组",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "max_members": {
                     "type": "integer",
@@ -4146,6 +5639,21 @@
                 }
             }
         },
+        "zk-code-arena-server_pkg_models.CopyTaskToClassRequest": {
+            "type": "object",
+            "required": [
+                "source_class_id",
+                "target_class_id"
+            ],
+            "properties": {
+                "source_class_id": {
+                    "type": "string"
+                },
+                "target_class_id": {
+                    "type": "string"
+                }
+            }
+        },
         "zk-code-arena-server_pkg_models.Course": {
             "type": "object",
             "required": [
@@ -4174,7 +5682,7 @@
                 },
                 "mtime": {
                     "type": "string",
-                    "example": "2024-10-26T10:00:00Z"
+                    "example": "2024-10-26T10:0:00Z"
                 },
                 "name": {
                     "type": "string",
@@ -4225,13 +5733,12 @@
             ],
             "x-enum-comments": {
                 "CourseStatusActive": "活跃",
-                "CourseStatusArchived": "已归档",
                 "CourseStatusDraft": "草稿"
             },
             "x-enum-descriptions": [
                 "草稿",
                 "活跃",
-                "已归档"
+                ""
             ],
             "x-enum-varnames": [
                 "CourseStatusDraft",
@@ -4239,12 +5746,13 @@
                 "CourseStatusArchived"
             ]
         },
-        "zk-code-arena-server_pkg_models.CreateClazzRequest": {
+        "zk-code-arena-server_pkg_models.CreateCourseClassRequest": {
             "type": "object",
             "required": [
                 "course_id",
                 "name",
-                "require_invite"
+                "require_invite",
+                "teacher_ids"
             ],
             "properties": {
                 "course_id": {
@@ -4252,6 +5760,13 @@
                 },
                 "description": {
                     "type": "string"
+                },
+                "major_class_ids": {
+                    "description": "关联的专业班级ID数组",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "max_members": {
                     "type": "integer"
@@ -4264,6 +5779,12 @@
                 },
                 "schedule": {
                     "type": "string"
+                },
+                "teacher_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },
@@ -4278,6 +5799,30 @@
                 },
                 "name": {
                     "type": "string"
+                }
+            }
+        },
+        "zk-code-arena-server_pkg_models.CreateMajorClassRequest": {
+            "type": "object",
+            "required": [
+                "name",
+                "teacher_ids"
+            ],
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "max_members": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "teacher_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },
@@ -4453,18 +5998,10 @@
         "zk-code-arena-server_pkg_models.FinishTaskRequest": {
             "type": "object",
             "required": [
-                "clazz_id",
-                "relation_id",
-                "task_id"
+                "relation_id"
             ],
             "properties": {
-                "clazz_id": {
-                    "type": "string"
-                },
                 "relation_id": {
-                    "type": "string"
-                },
-                "task_id": {
                     "type": "string"
                 }
             }
@@ -4491,14 +6028,15 @@
                 "id": {
                     "type": "string"
                 },
-                "max_members": {
-                    "type": "integer"
-                },
-                "member_ids": {
+                "major_class_ids": {
+                    "description": "关联的专业班级ID数组",
                     "type": "array",
                     "items": {
                         "type": "string"
                     }
+                },
+                "max_members": {
+                    "type": "integer"
                 },
                 "name": {
                     "type": "string"
@@ -4512,10 +6050,11 @@
                 "status": {
                     "$ref": "#/definitions/zk-code-arena-server_pkg_models.ClassStatus"
                 },
-                "teacher_ids": {
+                "teachers": {
+                    "description": "教师完整信息列表",
                     "type": "array",
                     "items": {
-                        "type": "string"
+                        "$ref": "#/definitions/zk-code-arena-server_pkg_models.UserProfile"
                     }
                 }
             }
@@ -4612,37 +6151,123 @@
                 }
             }
         },
-        "zk-code-arena-server_pkg_models.PageQueryCourseRequest": {
+        "zk-code-arena-server_pkg_models.MajorClassIdsRequest": {
             "type": "object",
+            "required": [
+                "major_class_ids"
+            ],
             "properties": {
-                "name": {
-                    "type": "string"
-                },
-                "page_num": {
-                    "type": "integer"
-                },
-                "page_size": {
-                    "type": "integer"
-                },
-                "status": {
-                    "type": "integer"
+                "major_class_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },
-        "zk-code-arena-server_pkg_models.PageQueryTeacherCoursesRequest": {
+        "zk-code-arena-server_pkg_models.PageQueryAllTeachersRequest": {
             "type": "object",
             "properties": {
-                "name": {
-                    "type": "string"
-                },
                 "page_num": {
                     "type": "integer"
                 },
                 "page_size": {
                     "type": "integer"
                 },
-                "status": {
-                    "type": "integer"
+                "real_name": {
+                    "type": "string"
+                }
+            }
+        },
+        "zk-code-arena-server_pkg_models.PageQueryCourseStudentsResponse": {
+            "type": "object",
+            "properties": {
+                "page_num": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "page_size": {
+                    "type": "integer",
+                    "example": 10
+                },
+                "students": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/zk-code-arena-server_pkg_models.UserProfile"
+                    }
+                },
+                "total": {
+                    "type": "integer",
+                    "example": 100
+                }
+            }
+        },
+        "zk-code-arena-server_pkg_models.PageQueryCourseTeachersResponse": {
+            "type": "object",
+            "properties": {
+                "page_num": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "page_size": {
+                    "type": "integer",
+                    "example": 10
+                },
+                "teachers": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/zk-code-arena-server_pkg_models.UserProfile"
+                    }
+                },
+                "total": {
+                    "type": "integer",
+                    "example": 100
+                }
+            }
+        },
+        "zk-code-arena-server_pkg_models.PageQueryTaskCompletionResponse": {
+            "type": "object",
+            "properties": {
+                "completion": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/zk-code-arena-server_pkg_models.TaskCompletionResponse"
+                    }
+                },
+                "page_num": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "page_size": {
+                    "type": "integer",
+                    "example": 10
+                },
+                "total": {
+                    "type": "integer",
+                    "example": 100
+                }
+            }
+        },
+        "zk-code-arena-server_pkg_models.PageQueryUserTasksResponse": {
+            "type": "object",
+            "properties": {
+                "page_num": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "page_size": {
+                    "type": "integer",
+                    "example": 10
+                },
+                "tasks": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/zk-code-arena-server_pkg_models.TaskResponse"
+                    }
+                },
+                "total": {
+                    "type": "integer",
+                    "example": 100
                 }
             }
         },
@@ -4681,6 +6306,11 @@
                         }
                     ],
                     "example": "easy"
+                },
+                "favorite_count": {
+                    "description": "收藏次数",
+                    "type": "integer",
+                    "example": 42
                 },
                 "hint": {
                     "type": "string",
@@ -4751,6 +6381,11 @@
                     "type": "string",
                     "example": "两数之和"
                 },
+                "unique_id": {
+                    "description": "题目唯一编号",
+                    "type": "integer",
+                    "example": 1001
+                },
                 "updated_at": {
                     "type": "string",
                     "example": "2024-10-26T10:00:00Z"
@@ -4800,6 +6435,61 @@
                 "DifficultyHard"
             ]
         },
+        "zk-code-arena-server_pkg_models.ProblemList": {
+            "type": "object",
+            "properties": {
+                "ac_count": {
+                    "type": "integer"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "difficulty": {
+                    "$ref": "#/definitions/zk-code-arena-server_pkg_models.ProblemDifficulty"
+                },
+                "favorite_count": {
+                    "description": "新增：题目收藏数",
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "is_favorite": {
+                    "description": "用户是否收藏了该题目",
+                    "type": "boolean"
+                },
+                "is_public": {
+                    "type": "boolean"
+                },
+                "status": {
+                    "$ref": "#/definitions/zk-code-arena-server_pkg_models.ProblemStatus"
+                },
+                "submit_count": {
+                    "type": "integer"
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "title": {
+                    "type": "string"
+                },
+                "unique_id": {
+                    "type": "integer",
+                    "example": 1001
+                },
+                "user_status": {
+                    "description": "用户状态（仅登录用户返回，未登录时为 nil）",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.UserProblemStatus"
+                        }
+                    ]
+                }
+            }
+        },
         "zk-code-arena-server_pkg_models.ProblemStatus": {
             "type": "string",
             "enum": [
@@ -4823,76 +6513,50 @@
                 "StatusArchived"
             ]
         },
-        "zk-code-arena-server_pkg_models.RemoveClazzMembersRequest": {
+        "zk-code-arena-server_pkg_models.QuestionDetail": {
             "type": "object",
-            "required": [
-                "clazz_id",
-                "member_ids"
-            ],
             "properties": {
-                "clazz_id": {
+                "completed": {
+                    "description": "是否已完成",
+                    "type": "boolean"
+                },
+                "difficulty": {
                     "type": "string"
                 },
-                "member_ids": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                }
-            }
-        },
-        "zk-code-arena-server_pkg_models.RemoveClazzTeachersRequest": {
-            "type": "object",
-            "required": [
-                "clazz_id",
-                "teacher_ids"
-            ],
-            "properties": {
-                "clazz_id": {
+                "id": {
                     "type": "string"
                 },
-                "teacher_ids": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                }
-            }
-        },
-        "zk-code-arena-server_pkg_models.RemoveCourseTeachersRequest": {
-            "type": "object",
-            "required": [
-                "course_id",
-                "teacher_ids"
-            ],
-            "properties": {
-                "course_id": {
+                "title": {
                     "type": "string"
                 },
-                "teacher_ids": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
+                "unique_id": {
+                    "description": "题目在任务中的唯一ID",
+                    "type": "integer"
                 }
             }
         },
         "zk-code-arena-server_pkg_models.RemoveStudentFromClassRequest": {
             "type": "object",
             "required": [
-                "class_id",
-                "course_id",
-                "student_id"
+                "course_id"
             ],
             "properties": {
-                "class_id": {
-                    "type": "string"
-                },
                 "course_id": {
                     "type": "string"
-                },
-                "student_id": {
-                    "type": "string"
+                }
+            }
+        },
+        "zk-code-arena-server_pkg_models.RemoveTaskRelationIdsRequest": {
+            "type": "object",
+            "required": [
+                "relation_ids"
+            ],
+            "properties": {
+                "relation_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },
@@ -4969,7 +6633,7 @@
                     "type": "string"
                 },
                 "status": {
-                    "type": "string"
+                    "$ref": "#/definitions/zk-code-arena-server_pkg_models.StudentClassStatus"
                 },
                 "student": {
                     "description": "学生信息",
@@ -4983,6 +6647,17 @@
                     "type": "string"
                 }
             }
+        },
+        "zk-code-arena-server_pkg_models.StudentClassStatus": {
+            "type": "string",
+            "enum": [
+                "active",
+                "dropped"
+            ],
+            "x-enum-varnames": [
+                "StudentClassStatusActive",
+                "StudentClassStatusDropped"
+            ]
         },
         "zk-code-arena-server_pkg_models.Submit": {
             "type": "object",
@@ -5151,6 +6826,20 @@
                 }
             }
         },
+        "zk-code-arena-server_pkg_models.SuccessResponse": {
+            "type": "object",
+            "properties": {
+                "data": {},
+                "message": {
+                    "type": "string",
+                    "example": "操作成功"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
         "zk-code-arena-server_pkg_models.SystemStatsResponse": {
             "type": "object",
             "properties": {
@@ -5220,20 +6909,20 @@
                     "type": "string",
                     "example": "2024-11-02T23:59:59Z"
                 },
-                "finish_ids": {
-                    "description": "完成任务的成员ID集合",
+                "id": {
+                    "type": "string",
+                    "example": "507f1f77bcf86cd799439011"
+                },
+                "major_class_ids": {
+                    "description": "关联的专业班级ID数组",
                     "type": "array",
                     "items": {
                         "type": "string"
                     },
                     "example": [
-                        "507f1f77bcf86cd799439013",
-                        "507f1f77bcf86cd799439014"
+                        "507f1f77bcf86cd799439017",
+                        "507f1f77bcf86cd799439018"
                     ]
-                },
-                "id": {
-                    "type": "string",
-                    "example": "507f1f77bcf86cd799439011"
                 },
                 "mtime": {
                     "type": "string",
@@ -5252,6 +6941,128 @@
                 "start_time": {
                     "type": "string",
                     "example": "2024-10-26T10:00:00Z"
+                },
+                "status": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.TaskStatus"
+                        }
+                    ],
+                    "example": 1
+                },
+                "title": {
+                    "type": "string",
+                    "example": "第1周编程作业"
+                },
+                "type": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.TaskType"
+                        }
+                    ],
+                    "example": 1
+                }
+            }
+        },
+        "zk-code-arena-server_pkg_models.TaskCompletionResponse": {
+            "type": "object",
+            "properties": {
+                "completed": {
+                    "description": "是否已完成",
+                    "type": "boolean"
+                },
+                "completed_at": {
+                    "description": "完成时间（如果已完成）",
+                    "type": "string"
+                },
+                "finished_questions": {
+                    "description": "已完成题目数",
+                    "type": "integer"
+                },
+                "real_name": {
+                    "type": "string"
+                },
+                "student_id": {
+                    "type": "string"
+                },
+                "total_questions": {
+                    "description": "总题目数",
+                    "type": "integer"
+                },
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "zk-code-arena-server_pkg_models.TaskResponse": {
+            "type": "object",
+            "required": [
+                "start_time",
+                "title",
+                "type"
+            ],
+            "properties": {
+                "c_id": {
+                    "type": "string",
+                    "example": "507f1f77bcf86cd799439017"
+                },
+                "clazz_id": {
+                    "type": "string",
+                    "example": "507f1f77bcf86cd799439016"
+                },
+                "course_id": {
+                    "type": "string",
+                    "example": "507f1f77bcf86cd799439015"
+                },
+                "ctime": {
+                    "type": "string",
+                    "example": "2024-10-26T10:00:00Z"
+                },
+                "description": {
+                    "type": "string",
+                    "example": "本周需要完成2道编程题目，请认真阅读题目要求并提交代码。"
+                },
+                "end_time": {
+                    "type": "string",
+                    "example": "2024-11-02T23:59:59Z"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "507f1f77bcf86cd799439011"
+                },
+                "major_class_ids": {
+                    "description": "专业班级ID数组",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "mtime": {
+                    "type": "string",
+                    "example": "2024-10-26T10:00:00Z"
+                },
+                "questions": {
+                    "description": "题目详情列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/zk-code-arena-server_pkg_models.QuestionDetail"
+                    }
+                },
+                "relation_ids": {
+                    "description": "关联ID列表",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "start_time": {
+                    "type": "string",
+                    "example": "2024-10-26T10:00:00Z"
+                },
+                "state": {
+                    "description": "0: 未完成, 1: 已完成",
+                    "type": "integer",
+                    "example": 0
                 },
                 "status": {
                     "allOf": [
@@ -5404,13 +7215,7 @@
         },
         "zk-code-arena-server_pkg_models.UpdateClazzRequest": {
             "type": "object",
-            "required": [
-                "clazz_id"
-            ],
             "properties": {
-                "clazz_id": {
-                    "type": "string"
-                },
                 "description": {
                     "type": "string"
                 },
@@ -5430,14 +7235,8 @@
         },
         "zk-code-arena-server_pkg_models.UpdateCourseRequest": {
             "type": "object",
-            "required": [
-                "id"
-            ],
             "properties": {
                 "description": {
-                    "type": "string"
-                },
-                "id": {
                     "type": "string"
                 },
                 "name": {
@@ -5535,14 +7334,9 @@
         "zk-code-arena-server_pkg_models.UpdateTaskRequest": {
             "type": "object",
             "required": [
-                "clazz_id",
-                "course_id",
-                "task_id"
+                "course_id"
             ],
             "properties": {
-                "clazz_id": {
-                    "type": "string"
-                },
                 "course_id": {
                     "type": "string"
                 },
@@ -5552,6 +7346,13 @@
                 "end_time": {
                     "type": "string"
                 },
+                "major_class_ids": {
+                    "description": "专业班级ID数组",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
                 "relation_ids": {
                     "type": "array",
                     "items": {
@@ -5559,9 +7360,6 @@
                     }
                 },
                 "start_time": {
-                    "type": "string"
-                },
-                "task_id": {
                     "type": "string"
                 },
                 "title": {
@@ -5610,6 +7408,7 @@
             "type": "object",
             "required": [
                 "email",
+                "major_class_id",
                 "password",
                 "username"
             ],
@@ -5654,6 +7453,10 @@
                     "type": "string",
                     "example": "计算机科学与技术"
                 },
+                "major_class_id": {
+                    "type": "string",
+                    "example": "507f1f77bcf86cd799439012"
+                },
                 "password": {
                     "type": "string",
                     "example": "$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8imdVMaM7ZX/W3xGD.7xUlT8r2.Uy"
@@ -5691,6 +7494,29 @@
                     "example": "student1"
                 }
             }
+        },
+        "zk-code-arena-server_pkg_models.UserProblemStatus": {
+            "type": "string",
+            "enum": [
+                "not_attempted",
+                "attempted",
+                "accepted"
+            ],
+            "x-enum-comments": {
+                "UserStatusAccepted": "已通过",
+                "UserStatusAttempted": "已尝试",
+                "UserStatusNotAttempted": "未尝试"
+            },
+            "x-enum-descriptions": [
+                "未尝试",
+                "已尝试",
+                "已通过"
+            ],
+            "x-enum-varnames": [
+                "UserStatusNotAttempted",
+                "UserStatusAttempted",
+                "UserStatusAccepted"
+            ]
         },
         "zk-code-arena-server_pkg_models.UserProfile": {
             "type": "object",
@@ -5763,11 +7589,17 @@
                 "admin",
                 "teacher",
                 "student",
-                "contest"
+                "contest",
+                "guest",
+                "external",
+                "other"
             ],
             "x-enum-comments": {
                 "RoleAdmin": "系统管理员",
                 "RoleContest": "竞赛发起者",
+                "RoleExternal": "校外人员",
+                "RoleGuest": "游客",
+                "RoleOther": "外校人员",
                 "RoleStudent": "学生",
                 "RoleTeacher": "老师"
             },
@@ -5775,13 +7607,19 @@
                 "系统管理员",
                 "老师",
                 "学生",
-                "竞赛发起者"
+                "竞赛发起者",
+                "游客",
+                "校外人员",
+                "外校人员"
             ],
             "x-enum-varnames": [
                 "RoleAdmin",
                 "RoleTeacher",
                 "RoleStudent",
-                "RoleContest"
+                "RoleContest",
+                "RoleGuest",
+                "RoleExternal",
+                "RoleOther"
             ]
         },
         "zk-code-arena-server_pkg_models.UserStatsResponse": {

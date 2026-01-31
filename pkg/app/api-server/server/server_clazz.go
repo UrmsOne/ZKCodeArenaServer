@@ -22,8 +22,12 @@ func (s *Server) RegisterClazz(g *gin.RouterGroup) {
 	clazzGroup := g.Group("/clazzes").Use(middleware.JWTMiddleware())
 	{
 		// 班级
-		clazzGroup.POST("", s.CreateClass)
+		clazzGroup.POST("/major", s.CreateMajorClass)   // 创建专业班级
+		clazzGroup.POST("/course", s.CreateCourseClass) // 创建课程班级
+		clazzGroup.POST("/:clazzId/major-classes", s.AddMajorClassAssociations)
+		clazzGroup.DELETE("/:clazzId/major-classes", s.RemoveMajorClassAssociations)
 		clazzGroup.GET("", s.GetClazzesByCourseId)
+		clazzGroup.GET("/major", s.GetMajorClazzes) // 获取所有专业班级
 		clazzGroup.GET("/:clazzId", s.GetClazzById)
 		clazzGroup.PUT("/:clazzId", s.UpdateClazzInfo)
 		clazzGroup.DELETE("/:clazzId", s.DeleteClazz)
@@ -40,7 +44,7 @@ func (s *Server) RegisterClazz(g *gin.RouterGroup) {
 		clazzGroup.DELETE("/:clazzId/teachers/:teacherId", s.removeClazzTeacher)
 
 		// 任务管理
-		clazzGroup.POST("/:clazzId/tasks", s.AddTask)
+		clazzGroup.POST("/tasks", s.AddTask)
 		clazzGroup.GET("/:clazzId/tasks", s.GetTasksByClazzId)
 		clazzGroup.GET("/:clazzId/tasks/:taskId", s.GetTaskById)
 		clazzGroup.PUT("/:clazzId/tasks/:taskId", s.UpdateTask)
@@ -128,8 +132,8 @@ func (s *Server) refreshQrcode(c *gin.Context) {
 }
 
 // JoinClass godoc
-// @Summary      通过二维码加入班级
-// @Description  学生通过扫描二维码加入班级
+// @Summary      通过二维码加入课程班级
+// @Description  学生通过扫描二维码加入课程班级
 // @Tags         班级
 // @Accept       json
 // @Produce      json
@@ -292,29 +296,23 @@ func (s *Server) RemoveTaskRelationIds(c *gin.Context) {
 
 // AddTask godoc
 // @Summary      添加任务
-// @Description  为班级添加新任务
+// @Description  为多个班级添加相同的新任务
 // @Tags         班级
 // @Accept       json
 // @Produce      json
-// @Param        clazzId path string true "班级ID"
-// @Param        request body models.AddTaskRequest true "任务信息"
+// @Param        request body models.AddTaskRequest true "任务信息，包含要添加任务的班级ID数组"
 // @Success      200 {object} utils.Response "添加成功"
 // @Failure      400 {object} models.ErrorResponse "请求参数错误"
 // @Security     BearerAuth
-// @Router       /clazzes/{clazzId}/tasks [post]
+// @Router       /clazzes/tasks [post]
 func (s *Server) AddTask(c *gin.Context) {
-	clazzId := c.Param("clazzId")
-	if clazzId == "" {
-		utils.BadRequestResponse(c, "班级ID不能为空")
-		return
-	}
 	var req models.AddTaskRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
 	}
 	userID, _ := c.Get("user_id")
-	if err := s.svc.CourseService.AddCourseTask(c.Request.Context(), clazzId, &req, userID.(string)); err != nil {
+	if err := s.svc.CourseService.AddCourseTask(c.Request.Context(), &req, userID.(string)); err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
 	}
@@ -354,25 +352,51 @@ func (s *Server) FinishTask(c *gin.Context) {
 	utils.SuccessResponse(c, nil)
 }
 
-// CreateClass godoc
-// @Summary      创建班级
-// @Description  创建新班级
+// CreateMajorClass godoc
+// @Summary      创建专业班级
+// @Description  创建新的专业班级
 // @Tags         班级
 // @Accept       json
 // @Produce      json
-// @Param        request body models.CreateClazzRequest true "班级信息"
+// @Param        request body models.CreateMajorClassRequest true "专业班级信息"
 // @Success      200 {object} utils.Response{data=models.GetClazzResponse} "创建成功"
 // @Failure      400 {object} models.ErrorResponse "请求参数错误"
 // @Security     BearerAuth
-// @Router       /clazzes [post]
-func (s *Server) CreateClass(c *gin.Context) {
-	var req models.CreateClazzRequest
+// @Router       /clazzes/major [post]
+func (s *Server) CreateMajorClass(c *gin.Context) {
+	var req models.CreateMajorClassRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
 	}
 	userID, _ := c.Get("user_id")
-	response, err := s.svc.ClazzService.CreateClass(c.Request.Context(), &req, userID.(string))
+	response, err := s.svc.ClazzService.CreateMajorClass(c.Request.Context(), &req, userID.(string))
+	if err != nil {
+		utils.BadRequestResponse(c, err.Error())
+		return
+	}
+	utils.SuccessResponse(c, response)
+}
+
+// CreateCourseClass godoc
+// @Summary      创建课程班级
+// @Description  创建新的课程班级
+// @Tags         班级
+// @Accept       json
+// @Produce      json
+// @Param        request body models.CreateCourseClassRequest true "课程班级信息"
+// @Success      200 {object} utils.Response{data=models.GetClazzResponse} "创建成功"
+// @Failure      400 {object} models.ErrorResponse "请求参数错误"
+// @Security     BearerAuth
+// @Router       /clazzes/course [post]
+func (s *Server) CreateCourseClass(c *gin.Context) {
+	var req models.CreateCourseClassRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.BadRequestResponse(c, err.Error())
+		return
+	}
+	userID, _ := c.Get("user_id")
+	response, err := s.svc.ClazzService.CreateCourseClass(c.Request.Context(), &req, userID.(string))
 	if err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
@@ -412,7 +436,7 @@ func (s *Server) CreateClass(c *gin.Context) {
 //}
 
 // GetClazzById godoc
-// @Summary      获取班级详情
+// @Summary      获取课程班级详情
 // @Description  根据班级ID获取班级详细信息
 // @Tags         班级
 // @Accept       json
@@ -472,7 +496,7 @@ func (s *Server) UpdateClazzInfo(c *gin.Context) {
 }
 
 // DeleteClazz godoc
-// @Summary      删除班级
+// @Summary      删除课程班级
 // @Description  删除指定班级
 // @Tags         班级
 // @Accept       json
@@ -497,7 +521,7 @@ func (s *Server) DeleteClazz(c *gin.Context) {
 }
 
 // AddClazzMember godoc
-// @Summary      添加班级成员
+// @Summary      添加课程班级成员
 // @Description  手动添加成员到班级
 // @Tags         班级
 // @Accept       json
@@ -534,8 +558,8 @@ func (s *Server) AddClazzMember(c *gin.Context) {
 }
 
 // RemoveClazzMembers godoc
-// @Summary      移除班级成员
-// @Description  移除班级成员
+// @Summary      移除课程班级成员
+// @Description  移除课程班级成员
 // @Tags         班级
 // @Accept       json
 // @Produce      json
@@ -927,4 +951,94 @@ func (s *Server) PageQueryTaskCompletion(c *gin.Context) {
 	}
 
 	utils.SuccessResponse(c, response)
+}
+
+// GetMajorClazzes godoc
+// @Summary      获取所有专业班级
+// @Description  获取系统中所有的专业班级列表
+// @Tags         班级
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} utils.Response{data=[]models.Clazz} "专业班级列表"
+// @Failure      400 {object} models.ErrorResponse "请求参数错误"
+// @Security     BearerAuth
+// @Router       /clazzes/major [get]
+func (s *Server) GetMajorClazzes(c *gin.Context) {
+	userID, _ := c.Get("user_id")
+	clazzes, err := s.svc.ClazzService.GetMajorClazzes(c.Request.Context(), userID.(string))
+	if err != nil {
+		utils.BadRequestResponse(c, err.Error())
+		return
+	}
+	utils.SuccessResponse(c, clazzes)
+}
+
+// AddMajorClassAssociations godoc
+// @Summary      添加课程班级的专业班级关联
+// @Description  为课程班级添加一个或多个专业班级关联
+// @Tags         班级
+// @Accept       json
+// @Produce      json
+// @Param        clazzId path string true "班级ID"
+// @Param        request body models.MajorClassIdsRequest true "专业班级ID数组"
+// @Success      200 {object} utils.Response "添加成功"
+// @Failure      400 {object} models.ErrorResponse "请求参数错误"
+// @Failure      403 {object} models.ErrorResponse "权限不足"
+// @Security     BearerAuth
+// @Router       /clazzes/{clazzId}/major-classes [post]
+func (s *Server) AddMajorClassAssociations(c *gin.Context) {
+	clazzId := c.Param("clazzId")
+	if clazzId == "" {
+		utils.BadRequestResponse(c, "班级ID不能为空")
+		return
+	}
+
+	var req models.MajorClassIdsRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.BadRequestResponse(c, err.Error())
+		return
+	}
+
+	userID, _ := c.Get("user_id")
+	if err := s.svc.ClazzService.AddMajorClassAssociations(c.Request.Context(), clazzId, userID.(string), &req); err != nil {
+		utils.BadRequestResponse(c, err.Error())
+		return
+	}
+
+	utils.SuccessResponse(c, nil)
+}
+
+// RemoveMajorClassAssociations godoc
+// @Summary      移除课程班级的专业班级关联
+// @Description  移除课程班级与一个或多个专业班级的关联
+// @Tags         班级
+// @Accept       json
+// @Produce      json
+// @Param        clazzId path string true "班级ID"
+// @Param        request body models.MajorClassIdsRequest true "专业班级ID数组"
+// @Success      200 {object} utils.Response "移除成功"
+// @Failure      400 {object} models.ErrorResponse "请求参数错误"
+// @Failure      403 {object} models.ErrorResponse "权限不足"
+// @Security     BearerAuth
+// @Router       /clazzes/{clazzId}/major-classes [delete]
+func (s *Server) RemoveMajorClassAssociations(c *gin.Context) {
+	clazzId := c.Param("clazzId")
+	if clazzId == "" {
+		utils.BadRequestResponse(c, "班级ID不能为空")
+		return
+	}
+
+	var req models.MajorClassIdsRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.BadRequestResponse(c, err.Error())
+		return
+	}
+
+	userID, _ := c.Get("user_id")
+	if err := s.svc.ClazzService.RemoveMajorClassAssociations(c.Request.Context(), clazzId, userID.(string), &req); err != nil {
+		utils.BadRequestResponse(c, err.Error())
+		return
+	}
+
+	utils.SuccessResponse(c, nil)
 }

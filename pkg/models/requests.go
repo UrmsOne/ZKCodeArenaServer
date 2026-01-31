@@ -250,8 +250,16 @@ type AddCourseTeachersRequest struct {
 
 // ==================== 班级模块请求 ====================
 
-// CreateClazzRequest 创建班级请求
-type CreateClazzRequest struct {
+// CreateMajorClassRequest 创建专业班级请求
+type CreateMajorClassRequest struct {
+	Name        string   `json:"name" binding:"required"`
+	Description string   `json:"description,omitempty"`
+	TeacherIds  []string `json:"teacher_ids" binding:"required"`
+	MaxMembers  *int     `json:"max_members,omitempty"`
+}
+
+// CreateCourseClassRequest 创建课程班级请求
+type CreateCourseClassRequest struct {
 	Name          string   `json:"name" binding:"required"`
 	CourseId      string   `json:"course_id" binding:"required"`
 	Description   string   `json:"description,omitempty"`
@@ -259,6 +267,7 @@ type CreateClazzRequest struct {
 	Schedule      string   `json:"schedule,omitempty"`
 	RequireInvite bool     `json:"require_invite" binding:"required"`
 	MaxMembers    *int     `json:"max_members,omitempty"`
+	MajorClassIDs []string `json:"major_class_ids,omitempty"` // 关联的专业班级ID数组
 }
 
 // UpdateClazzRequest 更新班级请求
@@ -275,30 +284,36 @@ type JoinClazzRequest struct {
 	InviteCode *string `form:"invite_code,omitempty"`
 }
 
-// AddClazzMemberRequest 添加班级成员请求
+// AddClazzMemberRequest 添加课程班级成员请求
 type AddClazzMemberRequest struct {
 	MemberID string `json:"member_id" binding:"required"`
 }
 
-// RemoveClazzMembersRequest 批量移除班级成员请求 (内部使用)
+// RemoveClazzMembersRequest 批量移除课程班级成员请求 (内部使用)
 type RemoveClazzMembersRequest struct {
 	ClazzID   string   `json:"clazz_id" binding:"required"`
 	MemberIDs []string `json:"member_ids" binding:"required"`
 }
 
+// MajorClassIdsRequest 专业班级ID请求 (内部使用)
+type MajorClassIdsRequest struct {
+	MajorClassIDs []string `json:"major_class_ids" binding:"required"`
+}
+
 // GetClazzResponse 获取班级响应
 type GetClazzResponse struct {
-	ID            primitive.ObjectID `bson:"_id,omitempty" json:"id"`
-	Name          string             `bson:"name" json:"name" binding:"required"`
-	Description   string             `bson:"description,omitempty" json:"description,omitempty"`
-	CourseId      primitive.ObjectID `bson:"course_id" json:"course_id" binding:"required"`
-	Schedule      string             `bson:"schedule,omitempty" json:"schedule,omitempty"`
-	Teachers      []UserProfile      `bson:"-" json:"teachers,omitempty"` // 教师完整信息列表
-	RequireInvite bool               `bson:"require_invite" json:"require_invite"`
-	MaxMembers    int                `bson:"max_members,omitempty" json:"max_members,omitempty"`
-	AddNums       int                `bson:"add_nums" json:"add_nums"`
-	Status        ClassStatus        `bson:"status" json:"status"`
-	CTime         time.Time          `bson:"ctime" json:"ctime"`
+	ID            primitive.ObjectID   `bson:"_id,omitempty" json:"id"`
+	Name          string               `bson:"name" json:"name" binding:"required"`
+	Description   string               `bson:"description,omitempty" json:"description,omitempty"`
+	CourseId      primitive.ObjectID   `bson:"course_id" json:"course_id" binding:"required"`
+	Schedule      string               `bson:"schedule,omitempty" json:"schedule,omitempty"`
+	Teachers      []UserProfile        `bson:"-" json:"teachers,omitempty"` // 教师完整信息列表
+	RequireInvite bool                 `bson:"require_invite" json:"require_invite"`
+	MaxMembers    int                  `bson:"max_members,omitempty" json:"max_members,omitempty"`
+	AddNums       int                  `bson:"add_nums" json:"add_nums"`
+	Status        ClassStatus          `bson:"status" json:"status"`
+	CTime         time.Time            `bson:"ctime" json:"ctime"`
+	MajorClassIDs []primitive.ObjectID `bson:"major_class_ids,omitempty" json:"major_class_ids,omitempty"` // 关联的专业班级ID数组
 }
 
 // AddClazzTeachersRequest 班级添加教师请求
@@ -326,24 +341,27 @@ type CreateTaskRequest struct {
 
 // AddTaskRequest 添加任务请求
 type AddTaskRequest struct {
-	CourseId    string     `json:"course_id" binding:"required"`
-	Title       string     `json:"title" binding:"required"`
-	Description string     `json:"description,omitempty"`
-	Type        TaskType   `json:"type" binding:"required"`
-	StartTime   time.Time  `json:"start_time" binding:"required"` // 必须设置开始时间
-	EndTime     *time.Time `json:"end_time"`                      // 如果不设置则没有结束时间
-	RelationIDs []string   `bson:"relation_ids,omitempty" json:"relation_ids,omitempty"`
+	CourseId      string     `json:"course_id" binding:"required"`
+	Title         string     `json:"title" binding:"required"`
+	Description   string     `json:"description,omitempty"`
+	Type          TaskType   `json:"type" binding:"required"`
+	StartTime     time.Time  `json:"start_time" binding:"required"` // 必须设置开始时间
+	EndTime       *time.Time `json:"end_time"`                      // 如果不设置则没有结束时间
+	RelationIDs   []string   `bson:"relation_ids,omitempty" json:"relation_ids,omitempty"`
+	MajorClassIds []string   `bson:"major_class_ids,omitempty" json:"major_class_ids,omitempty"` // 专业班级ID数组
+	ClazzIds      []string   `json:"clazz_ids" binding:"required"`
 }
 
 // UpdateTaskRequest 更新任务请求
 type UpdateTaskRequest struct {
-	CourseId    string     `bson:"course_id" json:"course_id,omitempty" binding:"required"`
-	Title       *string    `json:"title,omitempty"`
-	Description *string    `json:"description,omitempty"`
-	Type        *TaskType  `json:"type,omitempty"`
-	StartTime   *time.Time `json:"start_time,omitempty"`
-	EndTime     *time.Time `json:"end_time,omitempty"`
-	RelationIDs *[]string  `bson:"relation_ids,omitempty" json:"relation_ids,omitempty"`
+	CourseId      string     `bson:"course_id" json:"course_id,omitempty" binding:"required"`
+	Title         *string    `json:"title,omitempty"`
+	Description   *string    `json:"description,omitempty"`
+	Type          *TaskType  `json:"type,omitempty"`
+	StartTime     *time.Time `json:"start_time,omitempty"`
+	EndTime       *time.Time `json:"end_time,omitempty"`
+	RelationIDs   *[]string  `bson:"relation_ids,omitempty" json:"relation_ids,omitempty"`
+	MajorClassIds *[]string  `bson:"major_class_ids,omitempty" json:"major_class_ids,omitempty"` // 专业班级ID数组
 }
 
 // FinishTaskRequest 完成任务请求
