@@ -254,7 +254,7 @@ type AddCourseTeachersRequest struct {
 type CreateMajorClassRequest struct {
 	Name        string   `json:"name" binding:"required"`
 	Description string   `json:"description,omitempty"`
-	TeacherIds  []string `json:"teacher_ids" binding:"required"`
+	StudentIds  []string `json:"student_ids" binding:"required"`
 	MaxMembers  *int     `json:"max_members,omitempty"`
 }
 
@@ -319,6 +319,12 @@ type GetClazzResponse struct {
 // AddClazzTeachersRequest 班级添加教师请求
 type AddClazzTeachersRequest struct {
 	TeacherIds []string `json:"teacher_ids" binding:"required"`
+}
+
+// BindTeacherToClazzesRequest 教师绑定多个班级请求
+type BindTeacherToClazzesRequest struct {
+	TeacherId string   `json:"teacher_id" binding:"required"`
+	ClazzIds  []string `json:"clazz_ids" binding:"required"`
 }
 
 // RemoveClazzTeachersRequest 班级移除教师请求 (已废弃，改为路径参数)

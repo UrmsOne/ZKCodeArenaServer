@@ -264,11 +264,6 @@ const docTemplate = `{
         },
         "/clazzes/major": {
             "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
                 "description": "获取系统中所有的专业班级列表",
                 "consumes": [
                     "application/json"
@@ -316,7 +311,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "创建新的专业班级",
+                "description": "创建新的专业班级，传递学号/工号列表作为学生成员",
                 "consumes": [
                     "application/json"
                 ],
@@ -329,7 +324,7 @@ const docTemplate = `{
                 "summary": "创建专业班级",
                 "parameters": [
                     {
-                        "description": "专业班级信息",
+                        "description": "专业班级信息，包含学号/工号列表",
                         "name": "request",
                         "in": "body",
                         "required": true,
@@ -404,6 +399,57 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "请求参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/clazzes/teachers/bind": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "将指定教师绑定到多个课程班级",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "班级"
+                ],
+                "summary": "将教师绑定到多个班级",
+                "parameters": [
+                    {
+                        "description": "教师绑定多个班级请求",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.BindTeacherToClazzesRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "绑定成功",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.SuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "请求参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "权限不足",
                         "schema": {
                             "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
                         }
@@ -5505,6 +5551,24 @@ const docTemplate = `{
                 }
             }
         },
+        "zk-code-arena-server_pkg_models.BindTeacherToClazzesRequest": {
+            "type": "object",
+            "required": [
+                "clazz_ids",
+                "teacher_id"
+            ],
+            "properties": {
+                "clazz_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "teacher_id": {
+                    "type": "string"
+                }
+            }
+        },
         "zk-code-arena-server_pkg_models.ClassStatus": {
             "type": "integer",
             "format": "int32",
@@ -5812,7 +5876,7 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "name",
-                "teacher_ids"
+                "student_ids"
             ],
             "properties": {
                 "description": {
@@ -5824,7 +5888,7 @@ const docTemplate = `{
                 "name": {
                     "type": "string"
                 },
-                "teacher_ids": {
+                "student_ids": {
                     "type": "array",
                     "items": {
                         "type": "string"

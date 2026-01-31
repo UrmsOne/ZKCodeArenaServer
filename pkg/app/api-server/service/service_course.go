@@ -96,6 +96,37 @@ func (s *CourseService) GetCourseByID(ctx context.Context, courseID string, user
 		creatorProfile = creator.ToProfile()
 	}
 
+	// 获取教师及其班级信息
+	var teachers []models.TeacherWithClasses
+	for _, teacherID := range course.TeacherIds {
+		// 获取教师信息
+		teacher, err := s.getUserByID(ctx, teacherID)
+		if err != nil {
+			continue // 忽略获取失败的教师
+		}
+
+		// 获取教师对应的班级
+		var classes []models.Clazz
+		clazzCursor, err := utils.GetCollection("clazzes").Find(ctx, bson.M{
+			"course_id":   courseObjID,
+			"teacher_ids": teacherID,
+		})
+		if err != nil {
+			continue // 忽略获取失败的班级
+		}
+		if err := clazzCursor.All(ctx, &classes); err != nil {
+			clazzCursor.Close(ctx)
+			continue // 忽略获取失败的班级
+		}
+		clazzCursor.Close(ctx)
+
+		// 添加教师及其班级信息
+		teachers = append(teachers, models.TeacherWithClasses{
+			UserProfile: teacher.ToProfile(),
+			Classes:     classes,
+		})
+	}
+
 	return &models.CourseResponse{
 		ID:            course.ID,
 		Name:          course.Name,
@@ -105,6 +136,7 @@ func (s *CourseService) GetCourseByID(ctx context.Context, courseID string, user
 		Status:        course.Status,
 		CTime:         course.CTime,
 		CreatedByUser: creatorProfile,
+		Teachers:      teachers, // 教师及其班级信息
 	}, nil
 }
 

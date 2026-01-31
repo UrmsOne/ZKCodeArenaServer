@@ -9,6 +9,7 @@ package server
 
 import (
 	"errors"
+	"strings"
 
 	"zk-code-arena-server/pkg/models"
 	"zk-code-arena-server/pkg/utils"
@@ -19,6 +20,10 @@ import (
 )
 
 func (s *Server) RegisterClazz(g *gin.RouterGroup) {
+
+	//不需要认证的接口
+	g.GET("/clazzes/major", s.GetMajorClazzes) // 获取所有专业班级
+
 	clazzGroup := g.Group("/clazzes").Use(middleware.JWTMiddleware())
 	{
 		// 班级
@@ -27,11 +32,11 @@ func (s *Server) RegisterClazz(g *gin.RouterGroup) {
 		clazzGroup.POST("/:clazzId/major-classes", s.AddMajorClassAssociations)
 		clazzGroup.DELETE("/:clazzId/major-classes", s.RemoveMajorClassAssociations)
 		clazzGroup.GET("", s.GetClazzesByCourseId)
-		clazzGroup.GET("/major", s.GetMajorClazzes) // 获取所有专业班级
 		clazzGroup.GET("/:clazzId", s.GetClazzById)
 		clazzGroup.PUT("/:clazzId", s.UpdateClazzInfo)
 		clazzGroup.DELETE("/:clazzId", s.DeleteClazz)
 		clazzGroup.POST("/:clazzId/join", s.JoinClass)
+		clazzGroup.POST("/teachers/bind", s.bindTeacherToClazzes) //教师绑定多个班级
 
 		// 二维码管理
 		clazzGroup.GET("/:clazzId/qrcode", s.GetQrcodeClazzById)
@@ -354,11 +359,11 @@ func (s *Server) FinishTask(c *gin.Context) {
 
 // CreateMajorClass godoc
 // @Summary      创建专业班级
-// @Description  创建新的专业班级
+// @Description  创建新的专业班级，传递学号/工号列表作为学生成员
 // @Tags         班级
 // @Accept       json
 // @Produce      json
-// @Param        request body models.CreateMajorClassRequest true "专业班级信息"
+// @Param        request body models.CreateMajorClassRequest true "专业班级信息，包含学号/工号列表"
 // @Success      200 {object} utils.Response{data=models.GetClazzResponse} "创建成功"
 // @Failure      400 {object} models.ErrorResponse "请求参数错误"
 // @Security     BearerAuth
@@ -961,11 +966,9 @@ func (s *Server) PageQueryTaskCompletion(c *gin.Context) {
 // @Produce      json
 // @Success      200 {object} utils.Response{data=[]models.Clazz} "专业班级列表"
 // @Failure      400 {object} models.ErrorResponse "请求参数错误"
-// @Security     BearerAuth
 // @Router       /clazzes/major [get]
 func (s *Server) GetMajorClazzes(c *gin.Context) {
-	userID, _ := c.Get("user_id")
-	clazzes, err := s.svc.ClazzService.GetMajorClazzes(c.Request.Context(), userID.(string))
+	clazzes, err := s.svc.ClazzService.GetMajorClazzes(c.Request.Context(), "")
 	if err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
@@ -1041,4 +1044,38 @@ func (s *Server) RemoveMajorClassAssociations(c *gin.Context) {
 	}
 
 	utils.SuccessResponse(c, nil)
+}
+
+// bindTeacherToClazzes 将教师绑定到多个班级
+// @Summary      将教师绑定到多个班级
+// @Description  将指定教师绑定到多个课程班级
+// @Tags         班级
+// @Accept       json
+// @Produce      json
+// @Param        request body models.BindTeacherToClazzesRequest true "教师绑定多个班级请求"
+// @Success      200 {object} models.SuccessResponse "绑定成功"
+// @Failure      400 {object} models.ErrorResponse "请求参数错误"
+// @Failure      403 {object} models.ErrorResponse "权限不足"
+// @Security     BearerAuth
+// @Router       /clazzes/teachers/bind [post]
+func (s *Server) bindTeacherToClazzes(c *gin.Context) {
+	var req models.BindTeacherToClazzesRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.BadRequestResponse(c, "参数验证失败: "+err.Error())
+		return
+	}
+
+	userID, _ := c.Get("user_id")
+
+	err := s.svc.ClazzService.BindTeacherToClazzes(c.Request.Context(), req.TeacherId, req.ClazzIds, userID.(string))
+	if err != nil {
+		if errors.Is(err, models.ErrPermissionDenied) || strings.Contains(err.Error(), "权限不足") {
+			utils.ForbiddenResponse(c, err.Error())
+			return
+		}
+		utils.InternalServerErrorResponse(c, "绑定失败: "+err.Error())
+		return
+	}
+
+	utils.SuccessResponse(c, "绑定成功")
 }

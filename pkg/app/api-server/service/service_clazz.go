@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"errors"
 	"log"
+	"strings"
 	"time"
 	"zk-code-arena-server/pkg/app/api-server/repository"
 	"zk-code-arena-server/pkg/models"
@@ -90,7 +91,6 @@ func (s *ClazzService) RefreshQrcodeByClazzId(userId string, clazzId string, ctx
 
 // CreateMajorClass 创建专业班级
 func (s *ClazzService) CreateMajorClass(ctx context.Context, req *models.CreateMajorClassRequest, userId string) (*models.GetClazzResponse, error) {
-
 	// 将用户ID转换为ObjectID
 	userObjId, err := s.Repo.ConvertToObjectID(userId)
 	if err != nil {
@@ -109,10 +109,34 @@ func (s *ClazzService) CreateMajorClass(ctx context.Context, req *models.CreateM
 		return nil, errors.New("权限不足，只有管理员可以创建专业班级")
 	}
 
-	// 将请求中的教师ID列表转换为ObjectID
-	teacherIds, err := s.Repo.ConvertToObjectIDs(req.TeacherIds)
+	// 根据学号/工号查找用户（支持学生和老师角色）
+	userColl = utils.GetCollection("users")
+	var users []models.User
+	// 使用StudentID字段（学号/工号）匹配，支持学生和老师角色
+	filter := bson.M{
+		"student_id": bson.M{"$in": req.StudentIds},
+		"role":       bson.M{"$in": []models.UserRole{models.RoleStudent, models.RoleTeacher}},
+	}
+	cursor, err := userColl.Find(ctx, filter)
+
 	if err != nil {
-		return nil, errors.New("无效的教师ID")
+		return nil, errors.New("查询用户信息失败: " + err.Error())
+	}
+	defer cursor.Close(ctx)
+
+	if err = cursor.All(ctx, &users); err != nil {
+		return nil, errors.New("解析用户信息失败: " + err.Error())
+	}
+
+	// 检查是否所有提供的学号/工号都找到了对应的用户
+	if len(users) != len(req.StudentIds) {
+		return nil, errors.New("部分学号/工号未找到对应的用户账号")
+	}
+
+	// 提取用户的ObjectID
+	var memberIDs []primitive.ObjectID
+	for _, user := range users {
+		memberIDs = append(memberIDs, user.ID)
 	}
 
 	// 处理班级最大成员数
@@ -132,10 +156,10 @@ func (s *ClazzService) CreateMajorClass(ctx context.Context, req *models.CreateM
 		Name:          req.Name,
 		ClassType:     models.ClassTypeMajor,
 		Description:   req.Description,
-		TeacherIds:    teacherIds,
+		MemberIDs:     memberIDs, // 将用户ID添加到班级成员中
 		RequireInvite: false,
 		MaxMembers:    maxMembers,
-		AddNums:       0,
+		AddNums:       len(memberIDs), // 设置当前成员数量
 		Status:        models.ClassStatusActive,
 		CTime:         now,
 		MTime:         now,
@@ -147,6 +171,16 @@ func (s *ClazzService) CreateMajorClass(ctx context.Context, req *models.CreateM
 		return nil, err
 	}
 
+	// 更新用户的MajorClassID字段
+	for _, user := range users {
+		update := bson.M{"$set": bson.M{"major_class_id": clazz.ID.Hex()}}
+		_, err := userColl.UpdateOne(ctx, bson.M{"_id": user.ID}, update)
+		if err != nil {
+			// 记录错误但不中断创建流程
+			log.Printf("更新用户 %s 的专业班级ID失败: %v", user.StudentID, err)
+		}
+	}
+
 	// 返回响应
 	return &models.GetClazzResponse{
 		ID:            createdClazzId,
@@ -154,7 +188,7 @@ func (s *ClazzService) CreateMajorClass(ctx context.Context, req *models.CreateM
 		Description:   req.Description,
 		RequireInvite: false,
 		MaxMembers:    maxMembers,
-		AddNums:       0,
+		AddNums:       len(memberIDs),
 		Status:        models.ClassStatusActive,
 		CTime:         now,
 	}, nil
@@ -2253,5 +2287,53 @@ func (s *ClazzService) UpdateExpiredTasksStatus(ctx context.Context) error {
 	}
 
 	log.Printf("成功更新 %d 个过期任务的状态为已结束", result.ModifiedCount)
+	return nil
+}
+
+// BindTeacherToClazzes 将教师绑定到多个班级
+func (s *ClazzService) BindTeacherToClazzes(ctx context.Context, teacherId string, clazzIds []string, userId string) error {
+	// 验证用户权限（只有课程创建者或课程教师才能添加班级教师）
+	userObjID, err := s.Repo.ConvertToObjectID(userId)
+	if err != nil {
+		return errors.New("无效的用户ID")
+	}
+
+	// 验证并转换教师ID
+	teacherObjID, err := s.Repo.ConvertToObjectID(teacherId)
+	if err != nil {
+		return errors.New("无效的教师ID")
+	}
+
+	// 验证并转换所有班级ID
+	clazzObjIDs, err := s.Repo.ConvertToObjectIDs(clazzIds)
+	if err != nil {
+		return err
+	}
+
+	// 遍历所有班级，为每个班级添加教师
+	for _, clazzObjID := range clazzObjIDs {
+		// 检查班级是否存在
+		clazz, err := s.Repo.GetClazzByID(ctx, clazzObjID)
+		if err != nil {
+			return err
+		}
+
+		// 验证操作者是否有权限添加教师
+		isAuthorized, err := s.Repo.CheckCourseAuthorization(ctx, clazz.CourseId, userObjID)
+		if err != nil {
+			return err
+		}
+
+		if !isAuthorized {
+			return errors.New("权限不足，只有课程创建者或课程教师可以添加班级教师")
+		}
+
+		// 为班级添加教师
+		_, err = s.Repo.AddClazzTeacher(ctx, clazzObjID, teacherObjID)
+		if err != nil && !strings.Contains(err.Error(), "教师已存在") {
+			return errors.New("添加班级教师失败: " + err.Error())
+		}
+	}
+
 	return nil
 }

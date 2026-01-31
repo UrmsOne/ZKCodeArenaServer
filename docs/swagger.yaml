@@ -158,6 +158,18 @@ definitions:
     - problem_id
     - test_cases
     type: object
+  zk-code-arena-server_pkg_models.BindTeacherToClazzesRequest:
+    properties:
+      clazz_ids:
+        items:
+          type: string
+        type: array
+      teacher_id:
+        type: string
+    required:
+    - clazz_ids
+    - teacher_id
+    type: object
   zk-code-arena-server_pkg_models.ClassStatus:
     enum:
     - 0
@@ -379,13 +391,13 @@ definitions:
         type: integer
       name:
         type: string
-      teacher_ids:
+      student_ids:
         items:
           type: string
         type: array
     required:
     - name
-    - teacher_ids
+    - student_ids
     type: object
   zk-code-arena-server_pkg_models.CreateProblemRequest:
     properties:
@@ -2729,17 +2741,15 @@ paths:
           description: 请求参数错误
           schema:
             $ref: '#/definitions/zk-code-arena-server_pkg_models.ErrorResponse'
-      security:
-      - BearerAuth: []
       summary: 获取所有专业班级
       tags:
       - 班级
     post:
       consumes:
       - application/json
-      description: 创建新的专业班级
+      description: 创建新的专业班级，传递学号/工号列表作为学生成员
       parameters:
-      - description: 专业班级信息
+      - description: 专业班级信息，包含学号/工号列表
         in: body
         name: request
         required: true
@@ -2792,6 +2802,38 @@ paths:
       security:
       - BearerAuth: []
       summary: 添加任务
+      tags:
+      - 班级
+  /clazzes/teachers/bind:
+    post:
+      consumes:
+      - application/json
+      description: 将指定教师绑定到多个课程班级
+      parameters:
+      - description: 教师绑定多个班级请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/zk-code-arena-server_pkg_models.BindTeacherToClazzesRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 绑定成功
+          schema:
+            $ref: '#/definitions/zk-code-arena-server_pkg_models.SuccessResponse'
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/zk-code-arena-server_pkg_models.ErrorResponse'
+        "403":
+          description: 权限不足
+          schema:
+            $ref: '#/definitions/zk-code-arena-server_pkg_models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: 将教师绑定到多个班级
       tags:
       - 班级
   /courses:

@@ -51,4 +51,11 @@ type CourseResponse struct {
 	Status        CourseStatus         `bson:"status" json:"status"`
 	CTime         time.Time            `bson:"ctime" json:"ctime"`
 	CreatedByUser *UserProfile         `json:"created_by_user,omitempty"`
+	Teachers      []TeacherWithClasses `json:"teachers,omitempty"` // 教师及其班级信息
+}
+
+// TeacherWithClasses 教师及其班级信息
+type TeacherWithClasses struct {
+	UserProfile *UserProfile `json:"user_profile"`
+	Classes     []Clazz      `json:"classes"`
 }
