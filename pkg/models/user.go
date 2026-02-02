@@ -46,7 +46,7 @@ type User struct {
 	LastLoginAt  *time.Time         `bson:"last_login_at" json:"last_login_at" example:"2024-10-26T10:00:00Z"`
 	CreatedAt    time.Time          `bson:"created_at" json:"created_at" example:"2024-10-26T10:00:00Z"`
 	UpdatedAt    time.Time          `bson:"updated_at" json:"updated_at" example:"2024-10-26T10:00:00Z"`
-	MajorClassID string             `bson:"major_class_id" json:"major_class_id" binding:"required" example:"507f1f77bcf86cd799439012"`
+	MajorClassID string             `bson:"major_class_id" json:"major_class_id" example:"507f1f77bcf86cd799439012"`
 }
 
 // UserProfile 用户资料（不包含敏感信息）

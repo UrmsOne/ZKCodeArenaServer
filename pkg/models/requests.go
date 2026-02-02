@@ -267,7 +267,7 @@ type CreateCourseClassRequest struct {
 	Schedule      string   `json:"schedule,omitempty"`
 	RequireInvite bool     `json:"require_invite" binding:"required"`
 	MaxMembers    *int     `json:"max_members,omitempty"`
-	MajorClassIDs []string `json:"major_class_ids,omitempty"` // 关联的专业班级ID数组
+	//MajorClassIDs []string `json:"major_class_ids,omitempty"` // 关联的专业班级ID数组
 }
 
 // UpdateClazzRequest 更新班级请求

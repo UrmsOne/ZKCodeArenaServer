@@ -351,11 +351,6 @@ definitions:
         type: string
       description:
         type: string
-      major_class_ids:
-        description: 关联的专业班级ID数组
-        items:
-          type: string
-        type: array
       max_members:
         type: integer
       name:
@@ -1577,7 +1572,6 @@ definitions:
         type: string
     required:
     - email
-    - major_class_id
     - password
     - username
     type: object

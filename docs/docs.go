@@ -5831,13 +5831,6 @@ const docTemplate = `{
                 "description": {
                     "type": "string"
                 },
-                "major_class_ids": {
-                    "description": "关联的专业班级ID数组",
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
                 "max_members": {
                     "type": "integer"
                 },
@@ -7478,7 +7471,6 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "email",
-                "major_class_id",
                 "password",
                 "username"
             ],

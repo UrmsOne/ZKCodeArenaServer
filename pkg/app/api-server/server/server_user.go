@@ -58,6 +58,12 @@ func (s *Server) CreateUser(c *gin.Context) {
 		return
 	}
 
+	// 自定义验证：当角色为 student 时，MajorClassID 必须填写
+	if user.Role == models.RoleStudent && user.MajorClassID == "" {
+		utils.BadRequestResponse(c, "请求参数错误: 学生角色必须填写专业班级ID")
+		return
+	}
+
 	ctx := c.Request.Context()
 	if err := s.svc.UserService.CreateUser(ctx, &user); err != nil {
 		utils.InternalServerErrorResponse(c, "注册失败: "+err.Error())

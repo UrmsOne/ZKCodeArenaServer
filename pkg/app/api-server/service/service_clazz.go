@@ -211,6 +211,7 @@ func (s *ClazzService) CreateCourseClass(ctx context.Context, req *models.Create
 	if err != nil {
 		return nil, err
 	}
+
 	if !isAuthorized {
 		return nil, errors.New("权限不足，只有课程创建者或教师可以创建班级")
 	}
@@ -253,28 +254,6 @@ func (s *ClazzService) CreateCourseClass(ctx context.Context, req *models.Create
 	createdClazzId, err := s.Repo.CreateClazz(ctx, clazz)
 	if err != nil {
 		return nil, err
-	}
-
-	// 处理课程班级与专业班级的关联
-	if len(req.MajorClassIDs) > 0 {
-		majorClassObjectIDs, err := s.Repo.ConvertToObjectIDs(req.MajorClassIDs)
-		if err != nil {
-			// 记录日志但不中断流程
-			log.Printf("无效的专业班级ID: %v", err)
-		} else {
-			// 更新课程班级的专业班级关联
-			if err := s.Repo.UpdateMajorClassAssociations(ctx, createdClazzId, majorClassObjectIDs); err != nil {
-				log.Printf("更新专业班级关联失败: %v", err)
-			} else {
-				// 批量添加专业班级学生到课程班级
-				for _, majorClassID := range majorClassObjectIDs {
-					if err := s.batchAddMajorClassStudents(ctx, majorClassID, createdClazzId, courseObjId); err != nil {
-						// 记录日志，继续处理其他专业班级
-						log.Printf("添加专业班级学生失败: %v", err)
-					}
-				}
-			}
-		}
 	}
 
 	// 如果需要邀请码，则生成并保存二维码
@@ -745,31 +724,40 @@ func (s *ClazzService) AddClazzTeacher(ctx context.Context, clazzId string, teac
 		return errors.New("该教师已经是班级的教师")
 	}
 
+	// 清除与该班级相关的所有缓存
+	cachePattern := "clazz_detail:" + clazzId + ":*"
+	keys, err := utils.RedisClient.Keys(ctx, cachePattern).Result()
+	if err != nil {
+		log.Printf("获取缓存键失败: %v", err)
+	} else if len(keys) > 0 {
+		if err := s.Repo.DeleteCache(ctx, keys...); err != nil {
+			log.Printf("清除缓存失败: %v", err)
+		}
+	}
+
 	return nil
 }
 
 // AddClazzTeachers 为班级批量添加教师
 func (s *ClazzService) AddClazzTeachers(ctx context.Context, clazzId string, teacherIds []string, userId string) error {
-	// 验证用户权限（只有课程创建者或课程教师才能添加班级教师）
+	// 转换班级ID
 	clazzObjID, err := s.Repo.ConvertToObjectID(clazzId)
 	if err != nil {
 		return errors.New("无效的班级ID")
 	}
 
+	// 转换用户ID
 	userObjID, err := s.Repo.ConvertToObjectID(userId)
 	if err != nil {
 		return errors.New("无效的用户ID")
 	}
 
-	// 验证并转换所有教师ID
-	teacherObjIDs, err := s.Repo.ConvertToObjectIDs(teacherIds)
-	if err != nil {
-		return err
-	}
-
 	// 检查班级是否存在
 	clazz, err := s.Repo.GetClazzByID(ctx, clazzObjID)
 	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return errors.New("班级不存在")
+		}
 		return err
 	}
 
@@ -783,10 +771,27 @@ func (s *ClazzService) AddClazzTeachers(ctx context.Context, clazzId string, tea
 		return errors.New("权限不足，只有课程创建者或课程教师可以添加班级教师")
 	}
 
-	// 批量添加新教师到班级
+	// 转换教师ID数组
+	teacherObjIDs, err := s.Repo.ConvertToObjectIDs(teacherIds)
+	if err != nil {
+		return errors.New("无效的教师ID")
+	}
+
+	// 批量添加教师到班级
 	_, err = s.Repo.BatchAddClazzTeachers(ctx, clazzObjID, teacherObjIDs)
 	if err != nil {
-		return errors.New("批量添加班级教师失败: " + err.Error())
+		return err
+	}
+
+	// 清除与该班级相关的所有缓存
+	cachePattern := "clazz_detail:" + clazzId + ":*"
+	keys, err := utils.RedisClient.Keys(ctx, cachePattern).Result()
+	if err != nil {
+		log.Printf("获取缓存键失败: %v", err)
+	} else if len(keys) > 0 {
+		if err := s.Repo.DeleteCache(ctx, keys...); err != nil {
+			log.Printf("清除缓存失败: %v", err)
+		}
 	}
 
 	return nil
@@ -833,7 +838,18 @@ func (s *ClazzService) RemoveClazzTeacher(ctx context.Context, clazzId string, t
 	}
 
 	if !success {
-		return errors.New("移除班级教师失败")
+		return errors.New("该教师不是班级的教师")
+	}
+
+	// 清除与该班级相关的所有缓存
+	cachePattern := "clazz_detail:" + clazzId + ":*"
+	keys, err := utils.RedisClient.Keys(ctx, cachePattern).Result()
+	if err != nil {
+		log.Printf("获取缓存键失败: %v", err)
+	} else if len(keys) > 0 {
+		if err := s.Repo.DeleteCache(ctx, keys...); err != nil {
+			log.Printf("清除缓存失败: %v", err)
+		}
 	}
 
 	return nil
@@ -2156,6 +2172,17 @@ func (s *ClazzService) AddMajorClassAssociations(ctx context.Context, clazzID st
 		}
 	}
 
+	// 清除与该班级相关的所有缓存
+	cachePattern := "clazz_detail:" + clazzID + ":*"
+	keys, err := utils.RedisClient.Keys(ctx, cachePattern).Result()
+	if err != nil {
+		log.Printf("获取缓存键失败: %v", err)
+	} else if len(keys) > 0 {
+		if err := s.Repo.DeleteCache(ctx, keys...); err != nil {
+			log.Printf("清除缓存失败: %v", err)
+		}
+	}
+
 	return nil
 }
 
@@ -2255,6 +2282,17 @@ func (s *ClazzService) RemoveMajorClassAssociations(ctx context.Context, clazzID
 			if _, err := s.Repo.BatchRemoveClazzMembers(ctx, clazzObjID, studentsToRemove); err != nil {
 				log.Printf("批量删除学生失败: %v", err)
 			}
+		}
+	}
+
+	// 清除与该班级相关的所有缓存
+	cachePattern := "clazz_detail:" + clazzID + ":*"
+	keys, err := utils.RedisClient.Keys(ctx, cachePattern).Result()
+	if err != nil {
+		log.Printf("获取缓存键失败: %v", err)
+	} else if len(keys) > 0 {
+		if err := s.Repo.DeleteCache(ctx, keys...); err != nil {
+			log.Printf("清除缓存失败: %v", err)
 		}
 	}
 

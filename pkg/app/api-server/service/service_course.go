@@ -762,6 +762,13 @@ func (s *CourseService) RemoveCourseTeachers(ctx context.Context, courseId strin
 		return errors.New("权限不足，只有课程创建者可以删除教师")
 	}
 
+	// 检查要删除的教师中是否包含课程创建者，防止创建者删除自己
+	for _, teacherObjID := range teacherObjIDs {
+		if teacherObjID == course.CreatedBy {
+			return errors.New("不能删除课程创建者作为课程教师")
+		}
+	}
+
 	// 从课程中删除教师
 	filter := bson.M{"_id": courseObjID}
 	update := bson.M{"$pullAll": bson.M{"teacher_ids": teacherObjIDs}, "$set": bson.M{"mtime": time.Now()}}
