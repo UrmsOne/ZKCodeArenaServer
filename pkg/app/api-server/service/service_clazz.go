@@ -1569,19 +1569,6 @@ func (s *ClazzService) UpdateTask(ctx context.Context, userId string, clazzId st
 		updateFields["relation_ids"] = relationObjIds
 	}
 
-	// 添加对 MajorClassIds 的更新支持
-	if req.MajorClassIds != nil {
-		majorClassObjIds := make([]primitive.ObjectID, len(*req.MajorClassIds))
-		for i, id := range *req.MajorClassIds {
-			hex, err := primitive.ObjectIDFromHex(id)
-			if err != nil {
-				return errors.New("无效的专业班级ID: " + id)
-			}
-			majorClassObjIds[i] = hex
-		}
-		updateFields["major_class_ids"] = majorClassObjIds
-	}
-
 	updateFields["c_id"] = userObjId
 	updateFields["mtime"] = time.Now()
 

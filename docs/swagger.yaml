@@ -1452,11 +1452,6 @@ definitions:
         type: string
       end_time:
         type: string
-      major_class_ids:
-        description: 专业班级ID数组
-        items:
-          type: string
-        type: array
       relation_ids:
         items:
           type: string

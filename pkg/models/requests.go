@@ -359,14 +359,13 @@ type AddTaskRequest struct {
 
 // UpdateTaskRequest 更新任务请求
 type UpdateTaskRequest struct {
-	CourseId      string     `bson:"course_id" json:"course_id,omitempty" binding:"required"`
-	Title         *string    `json:"title,omitempty"`
-	Description   *string    `json:"description,omitempty"`
-	Type          *TaskType  `json:"type,omitempty"`
-	StartTime     *time.Time `json:"start_time,omitempty"`
-	EndTime       *time.Time `json:"end_time,omitempty"`
-	RelationIDs   *[]string  `bson:"relation_ids,omitempty" json:"relation_ids,omitempty"`
-	MajorClassIds *[]string  `bson:"major_class_ids,omitempty" json:"major_class_ids,omitempty"` // 专业班级ID数组
+	CourseId    string     `bson:"course_id" json:"course_id,omitempty" binding:"required"`
+	Title       *string    `json:"title,omitempty"`
+	Description *string    `json:"description,omitempty"`
+	Type        *TaskType  `json:"type,omitempty"`
+	StartTime   *time.Time `json:"start_time,omitempty"`
+	EndTime     *time.Time `json:"end_time,omitempty"`
+	RelationIDs *[]string  `bson:"relation_ids,omitempty" json:"relation_ids,omitempty"`
 }
 
 // FinishTaskRequest 完成任务请求

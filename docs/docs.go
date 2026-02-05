@@ -7384,13 +7384,6 @@ const docTemplate = `{
                 "end_time": {
                     "type": "string"
                 },
-                "major_class_ids": {
-                    "description": "专业班级ID数组",
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
                 "relation_ids": {
                     "type": "array",
                     "items": {
