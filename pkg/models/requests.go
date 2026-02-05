@@ -347,15 +347,14 @@ type CreateTaskRequest struct {
 
 // AddTaskRequest 添加任务请求
 type AddTaskRequest struct {
-	CourseId      string     `json:"course_id" binding:"required"`
-	Title         string     `json:"title" binding:"required"`
-	Description   string     `json:"description,omitempty"`
-	Type          TaskType   `json:"type" binding:"required"`
-	StartTime     time.Time  `json:"start_time" binding:"required"` // 必须设置开始时间
-	EndTime       *time.Time `json:"end_time"`                      // 如果不设置则没有结束时间
-	RelationIDs   []string   `bson:"relation_ids,omitempty" json:"relation_ids,omitempty"`
-	MajorClassIds []string   `bson:"major_class_ids,omitempty" json:"major_class_ids,omitempty"` // 专业班级ID数组
-	ClazzIds      []string   `json:"clazz_ids" binding:"required"`
+	CourseId    string     `json:"course_id" binding:"required"`
+	Title       string     `json:"title" binding:"required"`
+	Description string     `json:"description,omitempty"`
+	Type        TaskType   `json:"type" binding:"required"`
+	StartTime   time.Time  `json:"start_time" binding:"required"` // 必须设置开始时间
+	EndTime     *time.Time `json:"end_time"`                      // 如果不设置则没有结束时间
+	RelationIDs []string   `bson:"relation_ids,omitempty" json:"relation_ids,omitempty"`
+	ClazzIds    []string   `json:"clazz_ids" binding:"required"`
 }
 
 // UpdateTaskRequest 更新任务请求

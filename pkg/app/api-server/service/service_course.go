@@ -237,38 +237,24 @@ func (s *CourseService) AddCourseTask(ctx context.Context, req *models.AddTaskRe
 		ids[i] = hex
 	}
 
-	// 处理专业班级ID数组
-	var majorClassIds []primitive.ObjectID
-	if len(req.MajorClassIds) > 0 {
-		majorClassIds = make([]primitive.ObjectID, len(req.MajorClassIds))
-		for i, id := range req.MajorClassIds {
-			hex, err := primitive.ObjectIDFromHex(id)
-			if err != nil {
-				return err
-			}
-			majorClassIds[i] = hex
-		}
-	}
-
 	now := time.Now()
 
 	// 对每个班级创建任务
 	for _, clazzObjId := range clazzObjIds {
 		task := &models.Task{
-			ID:            primitive.NewObjectID(),
-			Title:         req.Title,
-			Description:   req.Description,
-			Type:          req.Type,
-			StartTime:     startTime,
-			EndTime:       req.EndTime,
-			RelationIDs:   ids,
-			Status:        status,
-			CourseId:      courseObjId,
-			ClazzId:       clazzObjId,
-			MajorClassIds: majorClassIds,
-			CTime:         now,
-			MTime:         now,
-			CID:           userObjId,
+			ID:          primitive.NewObjectID(),
+			Title:       req.Title,
+			Description: req.Description,
+			Type:        req.Type,
+			StartTime:   startTime,
+			EndTime:     req.EndTime,
+			RelationIDs: ids,
+			Status:      status,
+			CourseId:    courseObjId,
+			ClazzId:     clazzObjId,
+			CTime:       now,
+			CID:         userObjId,
+			MTime:       now,
 		}
 
 		// 插入到独立的tasks集合中

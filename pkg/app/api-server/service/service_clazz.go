@@ -1266,22 +1266,21 @@ func (s *ClazzService) GetTaskByID(ctx context.Context, taskID string, userID st
 
 	// 构建 TaskResponse
 	taskResponse := &models.TaskResponse{
-		ID:            task.ID,
-		Title:         task.Title,
-		Description:   task.Description,
-		Type:          task.Type,
-		StartTime:     task.StartTime,
-		EndTime:       task.EndTime,
-		Status:        task.Status,
-		CourseId:      task.CourseId,
-		ClazzId:       task.ClazzId,
-		CTime:         task.CTime,
-		CID:           task.CID,
-		MTime:         task.MTime,
-		State:         state,
-		RelationIDs:   task.RelationIDs,
-		Questions:     questions,
-		MajorClassIds: task.MajorClassIds,
+		ID:          task.ID,
+		Title:       task.Title,
+		Description: task.Description,
+		Type:        task.Type,
+		StartTime:   task.StartTime,
+		EndTime:     task.EndTime,
+		Status:      task.Status,
+		CourseId:    task.CourseId,
+		ClazzId:     task.ClazzId,
+		CTime:       task.CTime,
+		CID:         task.CID,
+		MTime:       task.MTime,
+		State:       state,
+		RelationIDs: task.RelationIDs,
+		Questions:   questions,
 	}
 
 	return taskResponse, nil
