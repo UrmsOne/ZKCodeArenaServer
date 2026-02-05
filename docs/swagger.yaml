@@ -75,11 +75,6 @@ definitions:
       end_time:
         description: 如果不设置则没有结束时间
         type: string
-      major_class_ids:
-        description: 专业班级ID数组
-        items:
-          type: string
-        type: array
       relation_ids:
         items:
           type: string
@@ -1162,14 +1157,6 @@ definitions:
       id:
         example: 507f1f77bcf86cd799439011
         type: string
-      major_class_ids:
-        description: 关联的专业班级ID数组
-        example:
-        - 507f1f77bcf86cd799439017
-        - 507f1f77bcf86cd799439018
-        items:
-          type: string
-        type: array
       mtime:
         example: "2024-10-26T10:00:00Z"
         type: string
@@ -1243,11 +1230,6 @@ definitions:
       id:
         example: 507f1f77bcf86cd799439011
         type: string
-      major_class_ids:
-        description: 专业班级ID数组
-        items:
-          type: string
-        type: array
       mtime:
         example: "2024-10-26T10:00:00Z"
         type: string

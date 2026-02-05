@@ -5441,13 +5441,6 @@ const docTemplate = `{
                     "description": "如果不设置则没有结束时间",
                     "type": "string"
                 },
-                "major_class_ids": {
-                    "description": "专业班级ID数组",
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
                 "relation_ids": {
                     "type": "array",
                     "items": {
@@ -6976,17 +6969,6 @@ const docTemplate = `{
                     "type": "string",
                     "example": "507f1f77bcf86cd799439011"
                 },
-                "major_class_ids": {
-                    "description": "关联的专业班级ID数组",
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    },
-                    "example": [
-                        "507f1f77bcf86cd799439017",
-                        "507f1f77bcf86cd799439018"
-                    ]
-                },
                 "mtime": {
                     "type": "string",
                     "example": "2024-10-26T10:00:00Z"
@@ -7092,13 +7074,6 @@ const docTemplate = `{
                 "id": {
                     "type": "string",
                     "example": "507f1f77bcf86cd799439011"
-                },
-                "major_class_ids": {
-                    "description": "专业班级ID数组",
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
                 },
                 "mtime": {
                     "type": "string",
