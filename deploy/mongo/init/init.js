@@ -15,6 +15,9 @@ db.problems.createIndex({ "status": 1 });
 db.problems.createIndex({ "is_public": 1 });
 db.problems.createIndex({ "created_by": 1 });
 
+// 创建标签集合索引
+db.tags.createIndex({ "name": 1 }, { unique: true });
+
 // 创建提交集合索引
 db.submits.createIndex({ "user_id": 1 });
 db.submits.createIndex({ "problem_id": 1 });

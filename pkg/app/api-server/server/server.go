@@ -110,6 +110,8 @@ func (s *Server) RegisterRoutes() {
 		s.RegisterProblemStats(v1)
 		// WebSocket相关路由
 		s.RegisterWebSocket(v1)
+		// 标签相关路由
+		s.RegisterTag(v1)
 	}
 }
 

@@ -28,14 +28,16 @@ type ProblemService struct {
 	testCaseService *TestCaseService
 	repo            *repository.ProblemRepository
 	clazzService    *ClazzService // 添加ClazzService支持任务列表功能
+	svc             *Service
 }
 
-func NewProblemService(sandboxClient sandbox.Client, testCaseService *TestCaseService, repo *repository.ProblemRepository, clazzService *ClazzService) *ProblemService {
+func NewProblemService(sandboxClient sandbox.Client, testCaseService *TestCaseService, repo *repository.ProblemRepository, clazzService *ClazzService, svc *Service) *ProblemService {
 	return &ProblemService{
 		sandboxClient:   sandboxClient,
 		testCaseService: testCaseService,
 		repo:            repo,
 		clazzService:    clazzService, // 初始化ClazzService
+		svc:             svc,
 	}
 }
 
@@ -54,13 +56,13 @@ func (s *ProblemService) CreateProblem(ctx context.Context, problem *models.Prob
 	}
 	problem.UniqueID = uniqueID
 
-	// 2. 设置默认Status（如果未传）
+	// 3. 设置默认Status（如果未传）
 	if problem.Status == "" {
 		problem.Status = models.StatusDraft
 		utils.Logger.Infof("CreateProblem: 未指定状态，设置默认状态为草稿")
 	}
 
-	// 3. 应用Status与IsPublic关联规则
+	// 4. 应用Status与IsPublic关联规则
 	if problem.Status == models.StatusDraft {
 		// 草稿状态强制私有
 		if problem.IsPublic {
@@ -71,11 +73,11 @@ func (s *ProblemService) CreateProblem(ctx context.Context, problem *models.Prob
 	// Published/Archived状态，保持用户设置或默认私有
 	// （IsPublic由Handler层传入，这里不修改）
 
-	// 4. 设置默认计数器
+	// 5. 设置默认计数器
 	problem.ACCount = 0
 	problem.SubmitCount = 0
 
-	// 5. 设置默认限制（如果为0）
+	// 6. 设置默认限制（如果为0）
 	if problem.TimeLimit == 0 {
 		problem.TimeLimit = 1000
 		utils.Logger.Debugf("CreateProblem: 使用默认时间限制 1000ms")
@@ -85,16 +87,56 @@ func (s *ProblemService) CreateProblem(ctx context.Context, problem *models.Prob
 		utils.Logger.Debugf("CreateProblem: 使用默认内存限制 256MB")
 	}
 
-	// 6. 确保Tags不为nil
+	// 7. 确保Tags不为nil
 	if problem.Tags == nil {
 		problem.Tags = []string{}
 	}
 
-	// 7. 记录详细日志
+	// 8. 标签去重+空字符串过滤
+	tagMap := make(map[string]struct{})
+	var validTags []string
+	for _, tag := range problem.Tags {
+		// 去除首尾空格，过滤空标签
+		trimmedTag := strings.TrimSpace(tag)
+		if trimmedTag != "" {
+			tagMap[trimmedTag] = struct{}{}
+		}
+	}
+	// 转换map为切片，完成去重
+	for tag := range tagMap {
+		validTags = append(validTags, tag)
+	}
+	problem.Tags = validTags
+
+	// 9. 标签存在性校验
+	// 调用全局Service获取所有系统有效标签
+	allSystemTags, err := s.svc.GetPublicTagList(ctx)
+	if err != nil {
+		utils.Logger.Errorf("CreateProblem: 获取系统有效标签失败, error=%v", err)
+		return fmt.Errorf("校验标签失败：获取系统标签列表失败")
+	}
+
+	// 构建系统标签映射表
+	systemTagMap := make(map[string]struct{})
+	for _, sysTag := range allSystemTags {
+		// 转为小写，忽略大小写校验
+		systemTagMap[strings.ToLower(sysTag.Name)] = struct{}{}
+	}
+
+	// 遍历校验每个标签是否存在
+	for _, tag := range problem.Tags {
+		lowerTag := strings.ToLower(tag)
+		if _, exists := systemTagMap[lowerTag]; !exists {
+			utils.Logger.Warnf("CreateProblem: 无效标签，不存在于系统标签库, tag=%s", tag)
+			return fmt.Errorf("标签「%s」不存在，请选择下拉选中的有效标签", tag)
+		}
+	}
+
+	// 10. 记录详细日志
 	utils.Logger.Infof("CreateProblem: title=%s, difficulty=%s, status=%s, isPublic=%v, createdBy=%s",
 		problem.Title, problem.Difficulty, problem.Status, problem.IsPublic, problem.CreatedBy.Hex())
 
-	// 8. 持久化到数据库 - 委托给Repository层
+	// 11. 持久化到数据库 - 委托给Repository层
 	err = s.repo.CreateProblem(ctx, problem)
 	if err != nil {
 		utils.Logger.Errorf("CreateProblem: 数据库插入失败, error=%v", err)

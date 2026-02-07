@@ -93,7 +93,8 @@ func NewService() *Service {
 
 	// 5. 创建需要依赖注入的服务
 	// ProblemService 需要 sandboxClient、testCaseService 和 Repository
-	problemService := NewProblemService(sandboxClient, testCaseService, repos.ProblemRepository, clazzService)
+	svc := &Service{}
+	problemService := NewProblemService(sandboxClient, testCaseService, repos.ProblemRepository, clazzService, svc)
 
 	// ClazzService 班级服务
 	//clazzService := NewClazzService()

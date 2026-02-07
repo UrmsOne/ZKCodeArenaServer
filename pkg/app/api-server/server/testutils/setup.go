@@ -15,11 +15,12 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/gin-gonic/gin"
 	"zk-code-arena-server/pkg/app/api-server/server"
 	"zk-code-arena-server/pkg/app/api-server/service"
 	"zk-code-arena-server/pkg/utils"
 	"zk-code-arena-server/pkg/utils/middleware"
+
+	"github.com/gin-gonic/gin"
 )
 
 // SetupTestServer 创建测试服务器实例
@@ -153,7 +154,7 @@ func GenerateAuthToken(userID, username, role string) (string, error) {
 // WithAuth 创建带 Authorization 头的请求头 map
 func WithAuth(token string) map[string]string {
 	return map[string]string{
-		"Authorization": fmt.Sprintf("Bearer %s"),
+		"Authorization": fmt.Sprintf("Bearer %s", "测试内容"),
 	}
 }
 
@@ -190,4 +191,3 @@ func CreateTestUser(t *testing.T, app *gin.Engine, studentID, password, role str
 
 	return loginResp.Data.Token
 }
-
