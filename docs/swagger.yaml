@@ -265,16 +265,6 @@ definitions:
     - course_id
     - name
     type: object
-  zk-code-arena-server_pkg_models.CopyTaskToClassRequest:
-    properties:
-      source_class_id:
-        type: string
-      target_class_id:
-        type: string
-    required:
-    - source_class_id
-    - target_class_id
-    type: object
   zk-code-arena-server_pkg_models.Course:
     properties:
       avatar:
@@ -452,6 +442,17 @@ definitions:
     - description
     - difficulty
     - title
+    type: object
+  zk-code-arena-server_pkg_models.CreateTagRequest:
+    properties:
+      desc:
+        description: 标签描述
+        type: string
+      name:
+        description: 标签名称
+        type: string
+    required:
+    - name
     type: object
   zk-code-arena-server_pkg_models.CreateTestCaseRequest:
     properties:
@@ -1134,13 +1135,27 @@ definitions:
         example: 150
         type: integer
     type: object
+  zk-code-arena-server_pkg_models.Tag:
+    properties:
+      created_at:
+        type: string
+      created_by:
+        type: string
+      desc:
+        description: 标签描述
+        type: string
+      id:
+        type: string
+      name:
+        description: 标签名称
+        type: string
+      updated_at:
+        type: string
+    type: object
   zk-code-arena-server_pkg_models.Task:
     properties:
       c_id:
         example: 507f1f77bcf86cd799439017
-        type: string
-      clazz_id:
-        example: 507f1f77bcf86cd799439016
         type: string
       course_id:
         example: 507f1f77bcf86cd799439015
@@ -1212,9 +1227,11 @@ definitions:
       c_id:
         example: 507f1f77bcf86cd799439017
         type: string
-      clazz_id:
-        example: 507f1f77bcf86cd799439016
-        type: string
+      clazz_ids:
+        description: 关联的班级ID列表
+        items:
+          type: string
+        type: array
       course_id:
         example: 507f1f77bcf86cd799439015
         type: string
@@ -1442,6 +1459,15 @@ definitions:
         description: 基本信息（可选）
         maxLength: 200
         minLength: 1
+        type: string
+    type: object
+  zk-code-arena-server_pkg_models.UpdateTagRequest:
+    properties:
+      desc:
+        description: 标签描述
+        type: string
+      name:
+        description: 标签名称
         type: string
     type: object
   zk-code-arena-server_pkg_models.UpdateTaskRequest:
@@ -2438,44 +2464,6 @@ paths:
       security:
       - BearerAuth: []
       summary: 分页查询班级任务完成情况
-      tags:
-      - 班级
-  /clazzes/{clazzId}/tasks/{taskId}/copy:
-    post:
-      consumes:
-      - application/json
-      description: 将一个班级的任务复制到另一个班级
-      parameters:
-      - description: 班级ID
-        in: path
-        name: clazzId
-        required: true
-        type: string
-      - description: 任务ID
-        in: path
-        name: taskId
-        required: true
-        type: string
-      - description: 复制任务请求
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/zk-code-arena-server_pkg_models.CopyTaskToClassRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 复制成功
-          schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
-        "400":
-          description: 请求参数错误
-          schema:
-            $ref: '#/definitions/zk-code-arena-server_pkg_models.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: 复制任务到班级
       tags:
       - 班级
   /clazzes/{clazzId}/tasks/{taskId}/finish:
@@ -4240,6 +4228,236 @@ paths:
       summary: 获取提交状态（轻量级）
       tags:
       - 提交
+  /tags:
+    get:
+      consumes:
+      - application/json
+      description: 分页获取标签列表
+      parameters:
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: 每页数量
+        in: query
+        name: page_size
+        type: integer
+      - description: 标签名称关键词
+        in: query
+        name: keyword
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 标签列表及分页信息
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 获取标签列表失败
+          schema:
+            additionalProperties: true
+            type: object
+      summary: 获取标签列表
+      tags:
+      - 标签
+    post:
+      consumes:
+      - application/json
+      description: 管理员创建新标签（仅管理员权限，标签描述可选）
+      parameters:
+      - description: 标签创建信息
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/zk-code-arena-server_pkg_models.CreateTagRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 创建成功的标签信息
+          schema:
+            $ref: '#/definitions/zk-code-arena-server_pkg_models.Tag'
+        "400":
+          description: 请求参数错误
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 未授权访问（需要登录）
+          schema:
+            $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
+        "403":
+          description: 权限不足
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 创建标签失败
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 创建标签（管理员）
+      tags:
+      - 标签
+  /tags/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: 管理员删除指定标签（仅管理员权限）
+      parameters:
+      - description: 标签ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 删除成功提示
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 无效的标签ID
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: 权限不足
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: 标签不存在
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 删除标签失败
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 删除标签（管理员）
+      tags:
+      - 标签
+    get:
+      consumes:
+      - application/json
+      description: 根据标签ID获取标签完整信息
+      parameters:
+      - description: 标签ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 标签详情
+          schema:
+            $ref: '#/definitions/zk-code-arena-server_pkg_models.Tag'
+        "400":
+          description: 无效的标签ID
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: 标签不存在
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 查询标签失败
+          schema:
+            $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
+      summary: 获取标签详情
+      tags:
+      - 标签
+    put:
+      consumes:
+      - application/json
+      description: 管理员更新标签信息（仅管理员权限，标签描述可选）
+      parameters:
+      - description: 标签ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 标签更新信息
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/zk-code-arena-server_pkg_models.UpdateTagRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 更新成功的标签信息
+          schema:
+            $ref: '#/definitions/zk-code-arena-server_pkg_models.Tag'
+        "400":
+          description: 请求参数错误
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: 权限不足
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: 标签不存在
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 更新标签失败
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 更新标签（管理员）
+      tags:
+      - 标签
+  /tags/public:
+    get:
+      consumes:
+      - application/json
+      description: 公开接口，获取所有标签（无分页，按创建时间倒序排列），用于前端下拉选择等场景
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 所有公开标签列表
+          schema:
+            allOf:
+            - $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/zk-code-arena-server_pkg_models.Tag'
+                  type: array
+              type: object
+        "500":
+          description: 获取标签列表失败
+          schema:
+            $ref: '#/definitions/zk-code-arena-server_pkg_utils.Response'
+      summary: 获取所有公开标签
+      tags:
+      - 标签
   /testcase:
     post:
       consumes:
