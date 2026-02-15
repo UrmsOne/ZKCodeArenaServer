@@ -219,9 +219,18 @@ func (s *CourseService) AddCourseTask(ctx context.Context, req *models.AddTaskRe
 	// StartTime 是必需的，不使用指针
 	startTime := req.StartTime
 	status := models.TaskStatusNotStarted
-	// 如果开始时间小于等于当前时间，设置为活跃状态
-	if startTime.Before(time.Now()) || startTime.Equal(time.Now()) {
-		status = models.TaskStatusActive
+
+	// 检查当前时间与开始时间和结束时间的关系
+	now := time.Now()
+	if startTime.Before(now) || startTime.Equal(now) {
+		// 开始时间已过，检查是否已结束
+		if req.EndTime != nil && req.EndTime.Before(now) {
+			status = models.TaskStatusEnded // 已结束
+		} else {
+			status = models.TaskStatusActive // 进行中
+		}
+	} else {
+		status = models.TaskStatusNotStarted // 未开始
 	}
 
 	if req.EndTime != nil && req.EndTime.Before(startTime) {
@@ -240,8 +249,6 @@ func (s *CourseService) AddCourseTask(ctx context.Context, req *models.AddTaskRe
 			ids[i] = hex
 		}
 	}
-
-	now := time.Now()
 
 	// 创建一个任务
 	task := &models.Task{

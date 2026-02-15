@@ -2556,6 +2556,36 @@ func (s *ClazzService) UpdateExpiredTasksStatus(ctx context.Context) error {
 	return nil
 }
 
+
+// UpdatePendingTasksStatus 更新所有到时间的未开始任务状态为进行中
+func (s *ClazzService) UpdatePendingTasksStatus(ctx context.Context) error {
+	// 获取当前时间
+	now := time.Now()
+
+	// 查询所有已到开始时间但状态仍为未开始的任务
+	filter := bson.M{
+		"start_time": bson.M{"$lte": now},      // 任务已到开始时间
+		"status":     models.TaskStatusNotStarted, // 状态为未开始
+	}
+
+	// 更新这些任务的状态为进行中
+	updateFields := bson.M{
+		"status": models.TaskStatusActive,
+		"mtime":  now,
+	}
+
+	// 使用 UpdateMany 一次性更新所有符合条件的任务
+	coll := utils.GetCollection("tasks")
+	result, err := coll.UpdateMany(ctx, filter, bson.M{"$set": updateFields})
+	if err != nil {
+		log.Printf("更新未开始任务状态失败: %v", err)
+		return err
+	}
+
+	log.Printf("成功更新 %d 个未开始任务的状态为进行中", result.ModifiedCount)
+	return nil
+}
+
 // BindTeacherToClazzes 将教师绑定到多个班级
 func (s *ClazzService) BindTeacherToClazzes(ctx context.Context, teacherId string, clazzIds []string, userId string) error {
 	// 验证用户权限（只有课程创建者或课程教师才能添加班级教师）
