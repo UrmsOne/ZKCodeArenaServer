@@ -2527,62 +2527,50 @@ func (s *ClazzService) RemoveMajorClassAssociations(ctx context.Context, clazzID
 	return nil
 }
 
-// UpdateExpiredTasksStatus 更新所有过期任务的状态
-func (s *ClazzService) UpdateExpiredTasksStatus(ctx context.Context) error {
+// UpdateTasksStatus 根据当前时间更新所有任务的状态
+// 状态说明：0-未开始，1-进行中，2-已结束
+func (s *ClazzService) UpdateTasksStatus(ctx context.Context) error {
 	// 获取当前时间
 	now := time.Now()
 
-	// 查询所有已过期但状态仍为进行中的任务
-	filter := bson.M{
+	// 1. 更新已到开始时间但状态仍为未开始的任务为进行中
+	pendingFilter := bson.M{
+		"start_time": bson.M{"$lte": now},         // 任务已到开始时间
+		"status":     models.TaskStatusNotStarted, // 状态为未开始
+	}
+	pendingUpdate := bson.M{
+		"status": models.TaskStatusActive,
+		"mtime":  now,
+	}
+
+	// 2. 更新已过期但状态仍为进行中的任务为已结束
+	expiredFilter := bson.M{
 		"end_time": bson.M{"$lte": now},     // 任务已过期
 		"status":   models.TaskStatusActive, // 状态为进行中
 	}
-
-	// 更新这些任务的状态为已结束
-	updateFields := bson.M{
+	expiredUpdate := bson.M{
 		"status": models.TaskStatusEnded,
 		"mtime":  now,
 	}
 
 	// 使用 UpdateMany 一次性更新所有符合条件的任务
 	coll := utils.GetCollection("tasks")
-	result, err := coll.UpdateMany(ctx, filter, bson.M{"$set": updateFields})
-	if err != nil {
-		log.Printf("更新过期任务状态失败: %v", err)
-		return err
-	}
 
-	log.Printf("成功更新 %d 个过期任务的状态为已结束", result.ModifiedCount)
-	return nil
-}
-
-
-// UpdatePendingTasksStatus 更新所有到时间的未开始任务状态为进行中
-func (s *ClazzService) UpdatePendingTasksStatus(ctx context.Context) error {
-	// 获取当前时间
-	now := time.Now()
-
-	// 查询所有已到开始时间但状态仍为未开始的任务
-	filter := bson.M{
-		"start_time": bson.M{"$lte": now},      // 任务已到开始时间
-		"status":     models.TaskStatusNotStarted, // 状态为未开始
-	}
-
-	// 更新这些任务的状态为进行中
-	updateFields := bson.M{
-		"status": models.TaskStatusActive,
-		"mtime":  now,
-	}
-
-	// 使用 UpdateMany 一次性更新所有符合条件的任务
-	coll := utils.GetCollection("tasks")
-	result, err := coll.UpdateMany(ctx, filter, bson.M{"$set": updateFields})
+	// 更新未开始任务为进行中
+	pendingResult, err := coll.UpdateMany(ctx, pendingFilter, bson.M{"$set": pendingUpdate})
 	if err != nil {
 		log.Printf("更新未开始任务状态失败: %v", err)
 		return err
 	}
 
-	log.Printf("成功更新 %d 个未开始任务的状态为进行中", result.ModifiedCount)
+	// 更新过期任务为已结束
+	expiredResult, err := coll.UpdateMany(ctx, expiredFilter, bson.M{"$set": expiredUpdate})
+	if err != nil {
+		log.Printf("更新过期任务状态失败: %v", err)
+		return err
+	}
+
+	log.Printf("成功更新 %d 个未开始任务的状态为进行中，%d 个过期任务的状态为已结束", pendingResult.ModifiedCount, expiredResult.ModifiedCount)
 	return nil
 }
 
