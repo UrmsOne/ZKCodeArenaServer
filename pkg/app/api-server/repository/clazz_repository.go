@@ -70,7 +70,6 @@ type ClazzRepository interface {
 	GetTasksByClazzID(ctx context.Context, clazzID primitive.ObjectID) ([]models.Task, error)
 	GetTasksByFilterWithPagination(ctx context.Context, filter bson.M, pageNum, pageSize int64) ([]models.Task, int64, error)
 	UpdateTask(ctx context.Context, taskID primitive.ObjectID, updateFields bson.M) (bool, error)
-	CopyTask(ctx context.Context, sourceTask *models.Task, targetClazzID primitive.ObjectID, operatorID primitive.ObjectID) (primitive.ObjectID, error)
 	GetUserTaskStatus(ctx context.Context, taskID, userID primitive.ObjectID) (*models.UserTask, error)
 	GetUserTaskStatusesByUserID(ctx context.Context, userID primitive.ObjectID) ([]models.UserTask, error)
 	UpdateUserTaskStatus(ctx context.Context, taskID, userID primitive.ObjectID, finishedCount int, isCompleted bool) error
@@ -258,15 +257,16 @@ func (r *ClazzRepositoryImpl) AddClazzMember(ctx context.Context, clazzID, userI
 		return false, errors.New("用户已是班级成员")
 	}
 
-	// 乐观锁更新成员数
+	// 乐观锁更新成员数和member_ids
 	coll := utils.GetCollection("clazzes")
 	filter := bson.M{
 		"_id":   clazzID,
 		"$expr": bson.M{"$lt": []interface{}{"$add_nums", "$max_members"}},
 	}
 	update := bson.M{
-		"$inc": bson.M{"add_nums": 1},
-		"$set": bson.M{"mtime": time.Now()},
+		"$inc":      bson.M{"add_nums": 1},
+		"$addToSet": bson.M{"member_ids": userID},
+		"$set":      bson.M{"mtime": time.Now()},
 	}
 
 	result, err := coll.UpdateOne(ctx, filter, update)
@@ -292,11 +292,12 @@ func (r *ClazzRepositoryImpl) RemoveClazzMember(ctx context.Context, clazzID, us
 		return false, errors.New("用户不是班级成员")
 	}
 
-	// 更新成员数
+	// 更新成员数和member_ids
 	coll := utils.GetCollection("clazzes")
 	update := bson.M{
-		"$inc": bson.M{"add_nums": -1},
-		"$set": bson.M{"mtime": time.Now()},
+		"$inc":  bson.M{"add_nums": -1},
+		"$pull": bson.M{"member_ids": userID},
+		"$set":  bson.M{"mtime": time.Now()},
 	}
 	_, err = coll.UpdateOne(ctx, bson.M{"_id": clazzID}, update)
 	if err != nil {
@@ -326,11 +327,12 @@ func (r *ClazzRepositoryImpl) BatchRemoveClazzMembers(ctx context.Context, clazz
 		return 0, nil
 	}
 
-	// 批量更新成员数
+	// 批量更新成员数和member_ids
 	coll := utils.GetCollection("clazzes")
 	update := bson.M{
-		"$inc": bson.M{"add_nums": -len(validMembers)},
-		"$set": bson.M{"mtime": time.Now()},
+		"$inc":  bson.M{"add_nums": -len(validMembers)},
+		"$pull": bson.M{"member_ids": bson.M{"$in": validMembers}},
+		"$set":  bson.M{"mtime": time.Now()},
 	}
 	_, err := coll.UpdateOne(ctx, bson.M{"_id": clazzID}, update)
 	if err != nil {
@@ -678,32 +680,6 @@ func (r *ClazzRepositoryImpl) RemoveTaskRelationIds(ctx context.Context, taskID 
 		return false, err
 	}
 	return result.MatchedCount > 0, nil
-}
-
-// CopyTask 复制任务到目标班级
-func (r *ClazzRepositoryImpl) CopyTask(ctx context.Context, sourceTask *models.Task, targetClazzID primitive.ObjectID, operatorID primitive.ObjectID) (primitive.ObjectID, error) {
-	newTask := &models.Task{
-		ID:          primitive.NewObjectID(),
-		Title:       sourceTask.Title,
-		Description: sourceTask.Description,
-		Type:        sourceTask.Type,
-		StartTime:   sourceTask.StartTime,
-		EndTime:     sourceTask.EndTime,
-		RelationIDs: sourceTask.RelationIDs,
-		Status:      sourceTask.Status,
-		CourseId:    sourceTask.CourseId,
-		ClazzId:     targetClazzID,
-		CTime:       time.Now(),
-		MTime:       time.Now(),
-		CID:         operatorID,
-	}
-
-	coll := utils.GetCollection("tasks")
-	result, err := coll.InsertOne(ctx, newTask)
-	if err != nil {
-		return primitive.NilObjectID, err
-	}
-	return result.InsertedID.(primitive.ObjectID), nil
 }
 
 // GetUserTaskStatus 获取用户任务完成状态

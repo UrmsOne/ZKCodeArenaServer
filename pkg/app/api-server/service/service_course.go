@@ -188,6 +188,7 @@ func (s *CourseService) UpdateCourseAvatar(ctx context.Context, file multipart.F
 	return nil
 }
 
+// AddCourseTask 添加课程任务
 func (s *CourseService) AddCourseTask(ctx context.Context, req *models.AddTaskRequest, userId string) error {
 	courseObjId, err := primitive.ObjectIDFromHex(req.CourseId)
 	if err != nil {
@@ -218,9 +219,18 @@ func (s *CourseService) AddCourseTask(ctx context.Context, req *models.AddTaskRe
 	// StartTime 是必需的，不使用指针
 	startTime := req.StartTime
 	status := models.TaskStatusNotStarted
-	// 如果开始时间小于等于当前时间，设置为活跃状态
-	if startTime.Before(time.Now()) || startTime.Equal(time.Now()) {
-		status = models.TaskStatusActive
+
+	// 检查当前时间与开始时间和结束时间的关系
+	now := time.Now()
+	if startTime.Before(now) || startTime.Equal(now) {
+		// 开始时间已过，检查是否已结束
+		if req.EndTime != nil && req.EndTime.Before(now) {
+			status = models.TaskStatusEnded // 已结束
+		} else {
+			status = models.TaskStatusActive // 进行中
+		}
+	} else {
+		status = models.TaskStatusNotStarted // 未开始
 	}
 
 	if req.EndTime != nil && req.EndTime.Before(startTime) {
@@ -228,38 +238,53 @@ func (s *CourseService) AddCourseTask(ctx context.Context, req *models.AddTaskRe
 	}
 
 	// 转换RelationIDs为ObjectID数组
-	ids := make([]primitive.ObjectID, len(req.RelationIDs))
-	for i, id := range req.RelationIDs {
-		hex, err := primitive.ObjectIDFromHex(id)
-		if err != nil {
-			return err
+	ids := make([]primitive.ObjectID, 0)
+	if req.RelationIDs != nil {
+		ids = make([]primitive.ObjectID, len(req.RelationIDs))
+		for i, id := range req.RelationIDs {
+			hex, err := primitive.ObjectIDFromHex(id)
+			if err != nil {
+				return err
+			}
+			ids[i] = hex
 		}
-		ids[i] = hex
 	}
 
-	now := time.Now()
+	// 创建一个任务
+	task := &models.Task{
+		ID:          primitive.NewObjectID(),
+		Title:       req.Title,
+		Description: req.Description,
+		Type:        req.Type,
+		StartTime:   startTime,
+		EndTime:     req.EndTime,
+		RelationIDs: ids,
+		Status:      status,
+		CourseId:    courseObjId,
+		CTime:       now,
+		CID:         userObjId,
+		MTime:       now,
+	}
 
-	// 对每个班级创建任务
+	// 插入到独立的tasks集合中
+	coll := utils.GetCollection("tasks")
+	_, err = coll.InsertOne(ctx, task)
+	if err != nil {
+		return err
+	}
+
+	// 为每个班级创建任务和班级的关联关系
+	taskClazzColl := utils.GetCollection("task_clazz_relations")
 	for _, clazzObjId := range clazzObjIds {
-		task := &models.Task{
-			ID:          primitive.NewObjectID(),
-			Title:       req.Title,
-			Description: req.Description,
-			Type:        req.Type,
-			StartTime:   startTime,
-			EndTime:     req.EndTime,
-			RelationIDs: ids,
-			Status:      status,
-			CourseId:    courseObjId,
-			ClazzId:     clazzObjId,
-			CTime:       now,
-			CID:         userObjId,
-			MTime:       now,
+		taskClazzRelation := &models.TaskClazzRelation{
+			ID:       primitive.NewObjectID(),
+			TaskID:   task.ID,
+			ClazzID:  clazzObjId,
+			CourseID: courseObjId,
+			CTime:    now,
+			MTime:    now,
 		}
-
-		// 插入到独立的tasks集合中
-		coll := utils.GetCollection("tasks")
-		_, err = coll.InsertOne(ctx, task)
+		_, err = taskClazzColl.InsertOne(ctx, taskClazzRelation)
 		if err != nil {
 			return err
 		}
@@ -1552,24 +1577,21 @@ func (s *CourseService) DeleteTask(ctx context.Context, userID string, taskID st
 		return err
 	}
 
-	// 验证权限：只有课程创建者或班级教师可以删除任务
-	collClazz := utils.GetCollection("clazzes")
-	var clazz models.Clazz
-	if err = collClazz.FindOne(ctx, bson.M{"_id": task.ClazzId}).Decode(&clazz); err != nil {
-		if errors.Is(err, mongo.ErrNoDocuments) {
-			return errors.New("班级不存在")
-		}
-		return err
-	}
-
+	// 验证权限：只有课程创建者或教师可以删除任务
 	collCourse := utils.GetCollection("courses")
-	isAuthorized, err := authorized(ctx, collCourse, clazz.CourseId, userObjID)
+	isAuthorized, err := authorized(ctx, collCourse, task.CourseId, userObjID)
 	if err != nil {
 		return err
 	}
 
 	if !isAuthorized {
-		return errors.New("权限不足，只有课程创建者或班级教师可以删除任务")
+		return errors.New("权限不足，只有课程创建者或教师可以删除任务")
+	}
+
+	// 删除任务和班级的关联关系
+	taskClazzColl := utils.GetCollection("task_clazz_relations")
+	if _, err = taskClazzColl.DeleteMany(ctx, bson.M{"task_id": taskObjID}); err != nil {
+		return errors.New("删除任务和班级关联关系失败: " + err.Error())
 	}
 
 	// 删除任务

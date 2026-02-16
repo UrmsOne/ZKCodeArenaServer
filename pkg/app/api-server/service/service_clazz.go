@@ -280,43 +280,92 @@ func (s *ClazzService) CreateCourseClass(ctx context.Context, req *models.Create
 }
 
 // 私有方法
-// 批量添加专业班级学生到课程班级
+// batchAddMajorClassStudents 将专业班级的学生批量添加到课程班级
 func (s *ClazzService) batchAddMajorClassStudents(ctx context.Context, majorClassID, courseClassID, courseID primitive.ObjectID) error {
-	// 获取专业班级的所有学生
-	studentIDs, err := s.Repo.GetClassStudents(ctx, majorClassID)
+	// 获取专业班级信息
+	majorClass, err := s.Repo.GetClazzByID(ctx, majorClassID)
 	if err != nil {
 		return err
 	}
 
-	// 批量将学生添加到课程班级
-	for _, studentID := range studentIDs {
-		// 检查学生是否已经在课程班级中
-		isMember, err := s.Repo.IsClazzMember(ctx, courseClassID, studentID)
-		if err != nil || isMember {
-			continue
-		}
+	// 验证是否为专业班级
+	if majorClass.ClassType != models.ClassTypeMajor {
+		return errors.New("不是专业班级")
+	}
 
-		// 添加学生到班级
-		isAdded, err := s.Repo.AddClazzMember(ctx, courseClassID, studentID)
-		if err != nil || !isAdded {
-			continue
-		}
+	// 获取课程班级信息，检查成员数量限制
+	courseClass, err := s.Repo.GetClazzByID(ctx, courseClassID)
+	if err != nil {
+		return err
+	}
 
-		// 创建学生班级关联记录
-		now := time.Now()
-		studentClass := &models.StudentClass{
-			ID:        primitive.NewObjectID(),
-			StudentID: studentID,
-			ClassID:   courseClassID,
-			CourseID:  courseID,
-			JoinTime:  now,
-			Status:    models.StudentClassStatusActive,
-			CTime:     now,
-			MTime:     now,
-		}
-		if err := s.Repo.CreateStudentClassRelation(ctx, studentClass); err != nil {
-			// 回滚班级成员添加
-			_, _ = s.Repo.RemoveClazzMember(ctx, courseClassID, studentID)
+	// 批量添加学生
+	if len(majorClass.MemberIDs) > 0 {
+		// 这里可以使用批量添加的方法，避免重复添加
+		for _, studentID := range majorClass.MemberIDs {
+			// 检查学生是否已经在班级的 member_ids 中
+			isMemberInClazz := false
+			for _, mid := range courseClass.MemberIDs {
+				if mid == studentID {
+					isMemberInClazz = true
+					break
+				}
+			}
+
+			// 如果不是成员，则添加
+			if !isMemberInClazz {
+				// 检查班级是否已满
+				if courseClass.AddNums >= courseClass.MaxMembers {
+					return errors.New("班级已满，无法添加更多成员")
+				}
+
+				// 添加学生到班级
+				// 1. 更新 clazzes 表
+				clazzColl := utils.GetCollection("clazzes")
+				filter := bson.M{
+					"_id":   courseClassID,
+					"$expr": bson.M{"$lt": []interface{}{"$add_nums", "$max_members"}},
+				}
+				update := bson.M{
+					"$inc":      bson.M{"add_nums": 1},
+					"$addToSet": bson.M{"member_ids": studentID},
+					"$set":      bson.M{"mtime": time.Now()},
+				}
+				result, err := clazzColl.UpdateOne(ctx, filter, update)
+				if err != nil {
+					return err
+				}
+				if result.MatchedCount == 0 {
+					return errors.New("班级已满")
+				}
+
+				// 2. 在 student_classes 表中创建记录
+				now := time.Now()
+				studentClass := &models.StudentClass{
+					ID:        primitive.NewObjectID(),
+					StudentID: studentID,
+					ClassID:   courseClassID,
+					CourseID:  courseID,
+					JoinTime:  now,
+					Status:    models.StudentClassStatusActive,
+					CTime:     now,
+					MTime:     now,
+				}
+				studentClassColl := utils.GetCollection("student_classes")
+				_, err = studentClassColl.InsertOne(ctx, studentClass)
+				if err != nil {
+					// 回滚 clazzes 表的更新
+					clazzColl.UpdateOne(ctx, bson.M{"_id": courseClassID}, bson.M{
+						"$inc":  bson.M{"add_nums": -1},
+						"$pull": bson.M{"member_ids": studentID},
+					})
+					return err
+				}
+
+				// 更新内存中的课程班级信息
+				courseClass.AddNums++
+				courseClass.MemberIDs = append(courseClass.MemberIDs, studentID)
+			}
 		}
 	}
 
@@ -1082,19 +1131,20 @@ func (s *ClazzService) GetClassStudents(ctx context.Context, classID string) ([]
 		return nil, errors.New("无效的班级ID")
 	}
 
-	// 调用repository层获取班级学生ID列表
-	studentIDs, err := s.Repo.GetClassStudents(ctx, classObjID)
+	// 获取班级信息，包括 member_ids 字段
+	clazz, err := s.Repo.GetClazzByID(ctx, classObjID)
 	if err != nil {
-		return nil, errors.New("查询班级学生失败: " + err.Error())
+		return nil, errors.New("查询班级信息失败: " + err.Error())
 	}
 
-	// 如果没有学生，直接返回空列表
+	// 从 clazzes 表的 member_ids 字段中获取学生ID列表
+	studentIDs := clazz.MemberIDs
 	if len(studentIDs) == 0 {
 		return []*models.UserProfile{}, nil
 	}
 
 	// 调用repository层根据ID列表获取学生信息
-	students, err := s.Repo.GetTeachersByIDs(ctx, studentIDs)
+	students, err := s.Repo.GetUsersByIDs(ctx, studentIDs, "")
 	if err != nil {
 		return nil, errors.New("获取学生信息失败: " + err.Error())
 	}
@@ -1144,10 +1194,41 @@ func (s *ClazzService) GetTasksByClazzID(ctx context.Context, clazzID string, us
 		return nil, errors.New("权限不足")
 	}
 
-	// 调用repository层获取班级任务列表
-	tasks, err := s.Repo.GetTasksByClazzID(ctx, clazzObjID)
+	// 查询任务和班级的关联关系
+	taskClazzColl := utils.GetCollection("task_clazz_relations")
+	cursor, err := taskClazzColl.Find(ctx, bson.M{"clazz_id": clazzObjID})
 	if err != nil {
-		return nil, err
+		return nil, errors.New("查询任务和班级关联关系失败: " + err.Error())
+	}
+	defer cursor.Close(ctx)
+
+	var taskClazzRelations []models.TaskClazzRelation
+	if err = cursor.All(ctx, &taskClazzRelations); err != nil {
+		return nil, errors.New("解析任务和班级关联关系失败: " + err.Error())
+	}
+
+	// 提取任务ID列表
+	taskIDs := make([]primitive.ObjectID, 0, len(taskClazzRelations))
+	for _, relation := range taskClazzRelations {
+		taskIDs = append(taskIDs, relation.TaskID)
+	}
+
+	// 如果没有任务，直接返回空列表
+	if len(taskIDs) == 0 {
+		return []models.Task{}, nil
+	}
+
+	// 查询任务详情
+	taskColl := utils.GetCollection("tasks")
+	cursor, err = taskColl.Find(ctx, bson.M{"_id": bson.M{"$in": taskIDs}})
+	if err != nil {
+		return nil, errors.New("查询任务详情失败: " + err.Error())
+	}
+	defer cursor.Close(ctx)
+
+	var tasks []models.Task
+	if err = cursor.All(ctx, &tasks); err != nil {
+		return nil, errors.New("解析任务详情失败: " + err.Error())
 	}
 
 	return tasks, nil
@@ -1171,27 +1252,43 @@ func (s *ClazzService) GetTaskByID(ctx context.Context, taskID string, userID st
 		return nil, err
 	}
 
-	// 验证用户权限：必须是班级成员、课程创建者或课程教师
-	// 获取班级信息
-	clazz, err := s.Repo.GetClazzByID(ctx, task.ClazzId)
-	if err != nil {
-		return nil, err
-	}
-
-	// 检查用户是否是班级成员
-	isMember, err := s.Repo.IsClazzMember(ctx, task.ClazzId, userObjID)
-	if err != nil {
-		return nil, errors.New("检查班级成员失败: " + err.Error())
-	}
-
+	// 验证用户权限：必须是课程创建者或教师，或者是至少一个关联班级的成员
 	// 检查用户是否是课程创建者或教师
-	isAuthorized, err := s.Repo.CheckCourseAuthorization(ctx, clazz.CourseId, userObjID)
+	isAuthorized, err := s.Repo.CheckCourseAuthorization(ctx, task.CourseId, userObjID)
 	if err != nil {
 		return nil, err
 	}
 
-	if !isMember && !isAuthorized {
-		return nil, errors.New("权限不足")
+	if !isAuthorized {
+		// 检查用户是否是至少一个关联班级的成员
+		taskClazzColl := utils.GetCollection("task_clazz_relations")
+		cursor, err := taskClazzColl.Find(ctx, bson.M{"task_id": taskObjID})
+		if err != nil {
+			return nil, errors.New("查询任务和班级关联关系失败: " + err.Error())
+		}
+		defer cursor.Close(ctx)
+
+		var taskClazzRelations []models.TaskClazzRelation
+		if err = cursor.All(ctx, &taskClazzRelations); err != nil {
+			return nil, errors.New("解析任务和班级关联关系失败: " + err.Error())
+		}
+
+		// 检查用户是否是任何一个关联班级的成员
+		isMember := false
+		for _, relation := range taskClazzRelations {
+			member, err := s.Repo.IsClazzMember(ctx, relation.ClazzID, userObjID)
+			if err != nil {
+				continue
+			}
+			if member {
+				isMember = true
+				break
+			}
+		}
+
+		if !isMember {
+			return nil, errors.New("权限不足")
+		}
 	}
 
 	// 查询用户的任务完成状态
@@ -1264,6 +1361,25 @@ func (s *ClazzService) GetTaskByID(ctx context.Context, taskID string, userID st
 		}
 	}
 
+	// 查询任务关联的班级ID列表
+	taskClazzColl := utils.GetCollection("task_clazz_relations")
+	cursor, err = taskClazzColl.Find(ctx, bson.M{"task_id": taskObjID})
+	if err != nil {
+		return nil, errors.New("查询任务和班级关联关系失败: " + err.Error())
+	}
+	defer cursor.Close(ctx)
+
+	var taskClazzRelations []models.TaskClazzRelation
+	if err = cursor.All(ctx, &taskClazzRelations); err != nil {
+		return nil, errors.New("解析任务和班级关联关系失败: " + err.Error())
+	}
+
+	// 提取班级ID列表
+	clazzIDs := make([]primitive.ObjectID, 0, len(taskClazzRelations))
+	for _, relation := range taskClazzRelations {
+		clazzIDs = append(clazzIDs, relation.ClazzID)
+	}
+
 	// 构建 TaskResponse
 	taskResponse := &models.TaskResponse{
 		ID:          task.ID,
@@ -1274,13 +1390,13 @@ func (s *ClazzService) GetTaskByID(ctx context.Context, taskID string, userID st
 		EndTime:     task.EndTime,
 		Status:      task.Status,
 		CourseId:    task.CourseId,
-		ClazzId:     task.ClazzId,
 		CTime:       task.CTime,
 		CID:         task.CID,
 		MTime:       task.MTime,
 		State:       state,
 		RelationIDs: task.RelationIDs,
 		Questions:   questions,
+		ClazzIds:    clazzIDs,
 	}
 
 	return taskResponse, nil
@@ -1391,30 +1507,39 @@ func (s *ClazzService) FinishTask(ctx context.Context, clazzId string, taskId st
 		return errors.New("无效的关系ID")
 	}
 
-	clazzObjId, err := primitive.ObjectIDFromHex(clazzId)
-	if err != nil {
-		return errors.New("无效班级")
-	}
-
 	userObjId, err := primitive.ObjectIDFromHex(userID)
 	if err != nil {
 		return errors.New("无效的用户ID")
 	}
 
-	// 获取班级信息 - 使用repository方法
-	_, err = s.Repo.GetClazzByID(ctx, clazzObjId)
+	// 检查用户是否是至少一个关联班级的成员
+	taskClazzColl := utils.GetCollection("task_clazz_relations")
+	cursor, err := taskClazzColl.Find(ctx, bson.M{"task_id": taskObjId})
 	if err != nil {
-		return errors.New("班级不存在")
+		return errors.New("查询任务和班级关联关系失败: " + err.Error())
+	}
+	defer cursor.Close(ctx)
+
+	var taskClazzRelations []models.TaskClazzRelation
+	if err = cursor.All(ctx, &taskClazzRelations); err != nil {
+		return errors.New("解析任务和班级关联关系失败: " + err.Error())
 	}
 
-	// 检查用户是否是班级成员 - 使用repository方法
-	isMember, err := s.Repo.IsClazzMember(ctx, clazzObjId, userObjId)
-	if err != nil {
-		return errors.New("检查班级成员失败: " + err.Error())
+	// 检查用户是否是任何一个关联班级的成员
+	isMember := false
+	for _, relation := range taskClazzRelations {
+		member, err := s.Repo.IsClazzMember(ctx, relation.ClazzID, userObjId)
+		if err != nil {
+			continue
+		}
+		if member {
+			isMember = true
+			break
+		}
 	}
 
 	if !isMember {
-		return errors.New("您不是该班级成员，无法完成任务")
+		return errors.New("您不是该任务关联班级的成员，无法完成任务")
 	}
 
 	// 获取任务信息 - 使用repository方法
@@ -1522,10 +1647,7 @@ func (s *ClazzService) UpdateTask(ctx context.Context, userId string, clazzId st
 	if err != nil {
 		return err
 	}
-	_, err = primitive.ObjectIDFromHex(clazzId)
-	if err != nil {
-		return err
-	}
+	// 不再验证班级ID，因为任务现在是独立于班级的
 	taskObjId, err := primitive.ObjectIDFromHex(taskId)
 	if err != nil {
 		return err
@@ -1555,30 +1677,26 @@ func (s *ClazzService) UpdateTask(ctx context.Context, userId string, clazzId st
 	if req.EndTime != nil {
 		updateFields["end_time"] = *req.EndTime
 	}
-
-	// 添加对 RelationIDs 的更新支持
 	if req.RelationIDs != nil {
-		relationObjIds := make([]primitive.ObjectID, len(*req.RelationIDs))
+		// 转换RelationIDs为ObjectID数组
+		ids := make([]primitive.ObjectID, len(*req.RelationIDs))
 		for i, id := range *req.RelationIDs {
 			hex, err := primitive.ObjectIDFromHex(id)
 			if err != nil {
-				return errors.New("无效的题目ID: " + id)
+				return err
 			}
-			relationObjIds[i] = hex
+			ids[i] = hex
 		}
-		updateFields["relation_ids"] = relationObjIds
+		updateFields["relation_ids"] = ids
 	}
-
-	updateFields["c_id"] = userObjId
 	updateFields["mtime"] = time.Now()
 
-	// 使用repository层方法更新任务
-	success, err := s.Repo.UpdateTask(ctx, taskObjId, updateFields)
+	// 更新任务
+	coll := utils.GetCollection("tasks")
+	filter := bson.M{"_id": taskObjId}
+	_, err = coll.UpdateOne(ctx, filter, bson.M{"$set": updateFields})
 	if err != nil {
 		return err
-	}
-	if !success {
-		return errors.New("找不到该任务")
 	}
 
 	return nil
@@ -1667,77 +1785,6 @@ func (s *ClazzService) RemoveTaskRelationIds(ctx context.Context, userId string,
 	}
 	if !updated {
 		return errors.New("找不到该任务")
-	}
-
-	return nil
-}
-
-// CopyTaskToClass 将一个班级的任务复制到另一个班级
-func (s *ClazzService) CopyTaskToClass(ctx context.Context, userID string, taskId string, req models.CopyTaskToClassRequest) error {
-	// 验证用户ID格式
-	userObjID, err := primitive.ObjectIDFromHex(userID)
-	if err != nil {
-		return errors.New("无效的用户ID")
-	}
-
-	// 验证源班级ID格式
-	sourceClassObjID, err := primitive.ObjectIDFromHex(req.SourceClassID)
-	if err != nil {
-		return errors.New("无效的源班级ID")
-	}
-
-	// 验证目标班级ID格式
-	targetClassObjID, err := primitive.ObjectIDFromHex(req.TargetClassID)
-	if err != nil {
-		return errors.New("无效的目标班级ID")
-	}
-
-	// 验证任务ID格式
-	taskObjID, err := primitive.ObjectIDFromHex(taskId)
-	if err != nil {
-		return errors.New("无效的任务ID")
-	}
-
-	// 获取源班级信息
-	sourceClass, err := s.Repo.GetClazzByID(ctx, sourceClassObjID)
-	if err != nil {
-		return errors.New("源班级不存在或查询失败")
-	}
-
-	// 获取目标班级信息
-	targetClass, err := s.Repo.GetClazzByID(ctx, targetClassObjID)
-	if err != nil {
-		return errors.New("目标班级不存在或查询失败")
-	}
-
-	// 验证源班级和目标班级属于同一课程
-	if sourceClass.CourseId != targetClass.CourseId {
-		return errors.New("源班级和目标班级必须属于同一课程")
-	}
-
-	// 验证用户权限：只有课程创建者或课程教师可以复制任务
-	if flag, err := s.Repo.CheckCourseAuthorization(ctx, sourceClass.CourseId, userObjID); err != nil || !flag {
-		if err != nil {
-			return err
-		}
-		return errors.New("权限不足，只有课程创建者或课程教师可以复制任务")
-	}
-
-	// 获取源任务信息
-	sourceTask, err := s.Repo.GetTaskByID(ctx, taskObjID)
-	if err != nil {
-		return errors.New("源任务不存在或查询失败")
-	}
-
-	// 验证任务是否属于源班级
-	if sourceTask.ClazzId != sourceClassObjID {
-		return errors.New("源任务不属于源班级")
-	}
-
-	// 使用repository层方法复制任务
-	_, err = s.Repo.CopyTask(ctx, sourceTask, targetClassObjID, userObjID)
-	if err != nil {
-		return errors.New("复制任务失败: " + err.Error())
 	}
 
 	return nil
@@ -1920,10 +1967,38 @@ func (s *ClazzService) PageQueryUserTasks(ctx context.Context, userID string, re
 		classIDs = append(classIDs, sc.ClassID)
 	}
 
-	// 3. 构建任务查询条件
-	taskFilter := bson.M{"clazz_id": bson.M{"$in": classIDs}}
+	// 3. 查询任务和班级的关联关系，获取用户所在班级的任务ID列表
+	taskClazzColl := utils.GetCollection("task_clazz_relations")
+	cursor, err := taskClazzColl.Find(ctx, bson.M{"clazz_id": bson.M{"$in": classIDs}})
+	if err != nil {
+		return nil, errors.New("查询任务和班级关联关系失败: " + err.Error())
+	}
+	defer cursor.Close(ctx)
 
-	// 4. 应用可选的筛选条件
+	var taskClazzRelations []models.TaskClazzRelation
+	if err = cursor.All(ctx, &taskClazzRelations); err != nil {
+		return nil, errors.New("解析任务和班级关联关系失败: " + err.Error())
+	}
+
+	if len(taskClazzRelations) == 0 {
+		return &models.PageQueryUserTasksResponse{
+			Total:    0,
+			PageNum:  1,
+			PageSize: 10,
+			Tasks:    []models.TaskResponse{},
+		}, nil
+	}
+
+	// 4. 提取任务ID列表
+	taskIDs := make([]primitive.ObjectID, 0, len(taskClazzRelations))
+	for _, relation := range taskClazzRelations {
+		taskIDs = append(taskIDs, relation.TaskID)
+	}
+
+	// 5. 构建任务查询条件
+	taskFilter := bson.M{"_id": bson.M{"$in": taskIDs}}
+
+	// 6. 应用可选的筛选条件
 	if req.State != nil {
 		// 查询用户的任务状态
 		userTasks, err := s.Repo.GetUserTaskStatusesByUserID(ctx, userObjID)
@@ -1943,14 +2018,14 @@ func (s *ClazzService) PageQueryUserTasks(ctx context.Context, userID string, re
 			}
 
 			// 提取任务ID
-			taskIDs := make([]primitive.ObjectID, 0, len(userTasks))
+			completedTaskIDs := make([]primitive.ObjectID, 0, len(userTasks))
 			for _, ut := range userTasks {
 				if ut.State == 1 {
-					taskIDs = append(taskIDs, ut.TaskID)
+					completedTaskIDs = append(completedTaskIDs, ut.TaskID)
 				}
 			}
 
-			if len(taskIDs) == 0 {
+			if len(completedTaskIDs) == 0 {
 				return &models.PageQueryUserTasksResponse{
 					Total:    0,
 					PageNum:  1,
@@ -1959,7 +2034,29 @@ func (s *ClazzService) PageQueryUserTasks(ctx context.Context, userID string, re
 				}, nil
 			}
 
-			taskFilter["_id"] = bson.M{"$in": taskIDs}
+			// 交集：用户所在班级的任务 && 已完成的任务
+			completedTaskIDMap := make(map[primitive.ObjectID]bool)
+			for _, id := range completedTaskIDs {
+				completedTaskIDMap[id] = true
+			}
+
+			filteredTaskIDs := make([]primitive.ObjectID, 0)
+			for _, id := range taskIDs {
+				if completedTaskIDMap[id] {
+					filteredTaskIDs = append(filteredTaskIDs, id)
+				}
+			}
+
+			if len(filteredTaskIDs) == 0 {
+				return &models.PageQueryUserTasksResponse{
+					Total:    0,
+					PageNum:  1,
+					PageSize: 10,
+					Tasks:    []models.TaskResponse{},
+				}, nil
+			}
+
+			taskFilter["_id"] = bson.M{"$in": filteredTaskIDs}
 		} else if *req.State == 0 {
 			// 查询未完成的任务：包括用户从未做过的任务和已开始但未完成的任务
 			// 先查询所有已完成的任务ID
@@ -1972,7 +2069,29 @@ func (s *ClazzService) PageQueryUserTasks(ctx context.Context, userID string, re
 
 			// 如果有已完成的任务，则排除这些任务
 			if len(completedTaskIDs) > 0 {
-				taskFilter["_id"] = bson.M{"$nin": completedTaskIDs}
+				// 差集：用户所在班级的任务 - 已完成的任务
+				completedTaskIDMap := make(map[primitive.ObjectID]bool)
+				for _, id := range completedTaskIDs {
+					completedTaskIDMap[id] = true
+				}
+
+				filteredTaskIDs := make([]primitive.ObjectID, 0)
+				for _, id := range taskIDs {
+					if !completedTaskIDMap[id] {
+						filteredTaskIDs = append(filteredTaskIDs, id)
+					}
+				}
+
+				if len(filteredTaskIDs) == 0 {
+					return &models.PageQueryUserTasksResponse{
+						Total:    0,
+						PageNum:  1,
+						PageSize: 10,
+						Tasks:    []models.TaskResponse{},
+					}, nil
+				}
+
+				taskFilter["_id"] = bson.M{"$in": filteredTaskIDs}
 			}
 		}
 	}
@@ -1982,11 +2101,58 @@ func (s *ClazzService) PageQueryUserTasks(ctx context.Context, userID string, re
 	}
 
 	if req.ClazzID != nil {
+		// 当指定了班级ID时，重新查询该班级的任务
 		clazzObjID, err := primitive.ObjectIDFromHex(*req.ClazzID)
 		if err != nil {
 			return nil, errors.New("无效的班级ID")
 		}
-		taskFilter["clazz_id"] = clazzObjID
+
+		// 检查该班级是否在用户所在的班级列表中
+		isInClass := false
+		for _, classID := range classIDs {
+			if classID == clazzObjID {
+				isInClass = true
+				break
+			}
+		}
+
+		if !isInClass {
+			return &models.PageQueryUserTasksResponse{
+				Total:    0,
+				PageNum:  1,
+				PageSize: 10,
+				Tasks:    []models.TaskResponse{},
+			}, nil
+		}
+
+		// 查询该班级的任务
+		cursor, err := taskClazzColl.Find(ctx, bson.M{"clazz_id": clazzObjID})
+		if err != nil {
+			return nil, errors.New("查询任务和班级关联关系失败: " + err.Error())
+		}
+		defer cursor.Close(ctx)
+
+		var classTaskRelations []models.TaskClazzRelation
+		if err = cursor.All(ctx, &classTaskRelations); err != nil {
+			return nil, errors.New("解析任务和班级关联关系失败: " + err.Error())
+		}
+
+		if len(classTaskRelations) == 0 {
+			return &models.PageQueryUserTasksResponse{
+				Total:    0,
+				PageNum:  1,
+				PageSize: 10,
+				Tasks:    []models.TaskResponse{},
+			}, nil
+		}
+
+		// 提取任务ID
+		classTaskIDs := make([]primitive.ObjectID, 0, len(classTaskRelations))
+		for _, relation := range classTaskRelations {
+			classTaskIDs = append(classTaskIDs, relation.TaskID)
+		}
+
+		taskFilter["_id"] = bson.M{"$in": classTaskIDs}
 	}
 
 	// 添加对Status字段的支持
@@ -1994,7 +2160,7 @@ func (s *ClazzService) PageQueryUserTasks(ctx context.Context, userID string, re
 		taskFilter["status"] = *req.Status
 	}
 
-	// 5. 执行分页查询
+	// 7. 执行分页查询
 	// 默认分页参数
 	pageNum := int64(1)
 	pageSize := int64(10)
@@ -2011,7 +2177,7 @@ func (s *ClazzService) PageQueryUserTasks(ctx context.Context, userID string, re
 		return nil, errors.New("查询任务列表失败: " + err.Error())
 	}
 
-	// 6. 构建响应
+	// 8. 构建响应
 	taskResponses := make([]models.TaskResponse, 0, len(tasks))
 	for _, task := range tasks {
 		// 查询用户的任务完成状态
@@ -2056,6 +2222,24 @@ func (s *ClazzService) PageQueryUserTasks(ctx context.Context, userID string, re
 			}
 		}
 
+		// 查询任务关联的班级ID列表
+		cursor, err := taskClazzColl.Find(ctx, bson.M{"task_id": task.ID})
+		if err != nil {
+			return nil, errors.New("查询任务和班级关联关系失败: " + err.Error())
+		}
+		defer cursor.Close(ctx)
+
+		var taskRelations []models.TaskClazzRelation
+		if err = cursor.All(ctx, &taskRelations); err != nil {
+			return nil, errors.New("解析任务和班级关联关系失败: " + err.Error())
+		}
+
+		// 提取班级ID列表
+		clazzIDs := make([]primitive.ObjectID, 0, len(taskRelations))
+		for _, relation := range taskRelations {
+			clazzIDs = append(clazzIDs, relation.ClazzID)
+		}
+
 		// 构建任务响应
 		taskResponse := models.TaskResponse{
 			ID:          task.ID,
@@ -2066,19 +2250,18 @@ func (s *ClazzService) PageQueryUserTasks(ctx context.Context, userID string, re
 			EndTime:     task.EndTime,
 			Status:      task.Status,
 			CourseId:    task.CourseId,
-			ClazzId:     task.ClazzId,
 			CTime:       task.CTime,
 			CID:         task.CID,
 			MTime:       task.MTime,
 			State:       state,
 			RelationIDs: task.RelationIDs,
 			Questions:   questions,
+			ClazzIds:    clazzIDs,
 		}
 
 		taskResponses = append(taskResponses, taskResponse)
 	}
 
-	// 7. 返回响应
 	return &models.PageQueryUserTasksResponse{
 		Total:    total,
 		PageNum:  pageNum,
@@ -2139,13 +2322,6 @@ func (s *ClazzService) AddMajorClassAssociations(ctx context.Context, clazzID st
 		}
 	}
 
-	// 添加现有的关联ID
-	for _, id := range clazz.MajorClassIDs {
-		if !currentMap[id] {
-			newAssociations = append(newAssociations, id)
-		}
-	}
-
 	// 更新专业班级关联
 	if err := s.Repo.UpdateMajorClassAssociations(ctx, clazzObjID, newAssociations); err != nil {
 		return err
@@ -2153,8 +2329,13 @@ func (s *ClazzService) AddMajorClassAssociations(ctx context.Context, clazzID st
 
 	// 为新增的班级添加学生
 	for _, majorClassID := range addedClasses {
-		if err := s.batchAddMajorClassStudents(ctx, majorClassID, clazzObjID, clazz.CourseId); err != nil {
-			log.Printf("添加专业班级学生失败: %v", err)
+		err = s.batchAddMajorClassStudents(ctx, majorClassID, clazzObjID, clazz.CourseId)
+		if err != nil {
+			// 移除刚刚添加的关联，保持数据一致性
+			if err := s.Repo.UpdateMajorClassAssociations(ctx, clazzObjID, clazz.MajorClassIDs); err != nil {
+				log.Printf("回滚专业班级关联失败: %v", err)
+			}
+			return err
 		}
 	}
 
@@ -2230,15 +2411,21 @@ func (s *ClazzService) RemoveMajorClassAssociations(ctx context.Context, clazzID
 
 	// 移除不再关联班级的学生
 	if len(removedClasses) > 0 {
-		// 获取所有要移除班级的学生
+		// 提取所有被移除专业班级的学生ID
 		removedStudentsMap := make(map[primitive.ObjectID]bool)
 		for _, majorClassID := range removedClasses {
-			students, err := s.Repo.GetClassStudents(ctx, majorClassID)
+			// 获取专业班级信息，包括 member_ids 字段
+			majorClass, err := s.Repo.GetClazzByID(ctx, majorClassID)
 			if err != nil {
-				log.Printf("获取专业班级学生失败: %v", err)
+				log.Printf("获取专业班级信息失败: %v", err)
 				continue
 			}
-			for _, studentID := range students {
+			// 验证是否为专业班级
+			if majorClass.ClassType != models.ClassTypeMajor {
+				continue
+			}
+			// 添加专业班级的学生ID到移除列表
+			for _, studentID := range majorClass.MemberIDs {
 				removedStudentsMap[studentID] = true
 			}
 		}
@@ -2246,12 +2433,18 @@ func (s *ClazzService) RemoveMajorClassAssociations(ctx context.Context, clazzID
 		// 如果还有其他关联班级，过滤掉这些班级的学生
 		if len(newAssociations) > 0 {
 			for _, majorClassID := range newAssociations {
-				students, err := s.Repo.GetClassStudents(ctx, majorClassID)
+				// 获取专业班级信息，包括 member_ids 字段
+				majorClass, err := s.Repo.GetClazzByID(ctx, majorClassID)
 				if err != nil {
-					log.Printf("获取专业班级学生失败: %v", err)
+					log.Printf("获取专业班级信息失败: %v", err)
 					continue
 				}
-				for _, studentID := range students {
+				// 验证是否为专业班级
+				if majorClass.ClassType != models.ClassTypeMajor {
+					continue
+				}
+				// 过滤掉剩余班级的学生
+				for _, studentID := range majorClass.MemberIDs {
 					delete(removedStudentsMap, studentID)
 				}
 			}
@@ -2263,10 +2456,59 @@ func (s *ClazzService) RemoveMajorClassAssociations(ctx context.Context, clazzID
 			studentsToRemove = append(studentsToRemove, studentID)
 		}
 
-		// 批量删除学生
+		// 批量删除学生，直接操作 clazzes 表和 student_classes 表
 		if len(studentsToRemove) > 0 {
-			if _, err := s.Repo.BatchRemoveClazzMembers(ctx, clazzObjID, studentsToRemove); err != nil {
-				log.Printf("批量删除学生失败: %v", err)
+			// 获取课程班级信息
+			courseClass, err := s.Repo.GetClazzByID(ctx, clazzObjID)
+			if err != nil {
+				log.Printf("获取课程班级信息失败: %v", err)
+				return err
+			}
+
+			// 计算需要移除的学生数量
+			removeCount := 0
+			for _, studentID := range studentsToRemove {
+				// 检查学生是否在班级的 member_ids 中
+				for _, mid := range courseClass.MemberIDs {
+					if mid == studentID {
+						removeCount++
+						break
+					}
+				}
+			}
+
+			if removeCount > 0 {
+				// 1. 直接从 clazzes 表中移除学生
+				clazzColl := utils.GetCollection("clazzes")
+				update := bson.M{
+					"$inc":  bson.M{"add_nums": -removeCount},
+					"$pull": bson.M{"member_ids": bson.M{"$in": studentsToRemove}},
+					"$set":  bson.M{"mtime": time.Now()},
+				}
+				_, err := clazzColl.UpdateOne(ctx, bson.M{"_id": clazzObjID}, update)
+				if err != nil {
+					log.Printf("批量删除学生失败: %v", err)
+					return err
+				}
+
+				// 2. 更新 student_classes 表中的记录状态
+				studentClassColl := utils.GetCollection("student_classes")
+				_, err = studentClassColl.UpdateMany(ctx,
+					bson.M{
+						"student_id": bson.M{"$in": studentsToRemove},
+						"class_id":   clazzObjID,
+						"status":     models.StudentClassStatusActive,
+					},
+					bson.M{
+						"$set": bson.M{
+							"status": models.StudentClassStatusDropped,
+							"mtime":  time.Now(),
+						},
+					},
+				)
+				if err != nil {
+					log.Printf("更新 student_classes 记录失败: %v", err)
+				}
 			}
 		}
 	}
@@ -2285,32 +2527,50 @@ func (s *ClazzService) RemoveMajorClassAssociations(ctx context.Context, clazzID
 	return nil
 }
 
-// UpdateExpiredTasksStatus 更新所有过期任务的状态
-func (s *ClazzService) UpdateExpiredTasksStatus(ctx context.Context) error {
+// UpdateTasksStatus 根据当前时间更新所有任务的状态
+// 状态说明：0-未开始，1-进行中，2-已结束
+func (s *ClazzService) UpdateTasksStatus(ctx context.Context) error {
 	// 获取当前时间
 	now := time.Now()
 
-	// 查询所有已过期但状态仍为进行中的任务
-	filter := bson.M{
+	// 1. 更新已到开始时间但状态仍为未开始的任务为进行中
+	pendingFilter := bson.M{
+		"start_time": bson.M{"$lte": now},         // 任务已到开始时间
+		"status":     models.TaskStatusNotStarted, // 状态为未开始
+	}
+	pendingUpdate := bson.M{
+		"status": models.TaskStatusActive,
+		"mtime":  now,
+	}
+
+	// 2. 更新已过期但状态仍为进行中的任务为已结束
+	expiredFilter := bson.M{
 		"end_time": bson.M{"$lte": now},     // 任务已过期
 		"status":   models.TaskStatusActive, // 状态为进行中
 	}
-
-	// 更新这些任务的状态为已结束
-	updateFields := bson.M{
+	expiredUpdate := bson.M{
 		"status": models.TaskStatusEnded,
 		"mtime":  now,
 	}
 
 	// 使用 UpdateMany 一次性更新所有符合条件的任务
 	coll := utils.GetCollection("tasks")
-	result, err := coll.UpdateMany(ctx, filter, bson.M{"$set": updateFields})
+
+	// 更新未开始任务为进行中
+	pendingResult, err := coll.UpdateMany(ctx, pendingFilter, bson.M{"$set": pendingUpdate})
+	if err != nil {
+		log.Printf("更新未开始任务状态失败: %v", err)
+		return err
+	}
+
+	// 更新过期任务为已结束
+	expiredResult, err := coll.UpdateMany(ctx, expiredFilter, bson.M{"$set": expiredUpdate})
 	if err != nil {
 		log.Printf("更新过期任务状态失败: %v", err)
 		return err
 	}
 
-	log.Printf("成功更新 %d 个过期任务的状态为已结束", result.ModifiedCount)
+	log.Printf("成功更新 %d 个未开始任务的状态为进行中，%d 个过期任务的状态为已结束", pendingResult.ModifiedCount, expiredResult.ModifiedCount)
 	return nil
 }
 

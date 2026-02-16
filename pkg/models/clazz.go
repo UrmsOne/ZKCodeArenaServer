@@ -71,10 +71,19 @@ type Task struct {
 	RelationIDs []primitive.ObjectID `bson:"relation_ids,omitempty" json:"relation_ids,omitempty" swaggertype:"array,string" example:"507f1f77bcf86cd799439011,507f1f77bcf86cd799439012"`
 	Status      TaskStatus           `bson:"status" json:"status" example:"1"`
 	CourseId    primitive.ObjectID   `bson:"course_id" json:"course_id" swaggertype:"string" example:"507f1f77bcf86cd799439015"`
-	ClazzId     primitive.ObjectID   `bson:"clazz_id" json:"clazz_id" swaggertype:"string" example:"507f1f77bcf86cd799439016"`
 	CTime       time.Time            `bson:"ctime" json:"ctime" example:"2024-10-26T10:00:00Z"`
 	CID         primitive.ObjectID   `bson:"c_id" json:"c_id" swaggertype:"string" example:"507f1f77bcf86cd799439017"`
 	MTime       time.Time            `bson:"mtime" json:"mtime" example:"2024-10-26T10:00:00Z"`
+}
+
+// TaskClazzRelation 任务和班级的关联关系
+type TaskClazzRelation struct {
+	ID       primitive.ObjectID `bson:"_id,omitempty" json:"id"`
+	TaskID   primitive.ObjectID `bson:"task_id" json:"task_id"`
+	ClazzID  primitive.ObjectID `bson:"clazz_id" json:"clazz_id"`
+	CourseID primitive.ObjectID `bson:"course_id" json:"course_id"`
+	CTime    time.Time          `bson:"ctime" json:"ctime"`
+	MTime    time.Time          `bson:"mtime" json:"mtime"`
 }
 
 // TaskResponse 任务响应模型
@@ -87,13 +96,13 @@ type TaskResponse struct {
 	EndTime     *time.Time           `bson:"end_time" json:"end_time" example:"2024-11-02T23:59:59Z"`
 	Status      TaskStatus           `bson:"status" json:"status" example:"1"`
 	CourseId    primitive.ObjectID   `bson:"course_id" json:"course_id" swaggertype:"string" example:"507f1f77bcf86cd799439015"`
-	ClazzId     primitive.ObjectID   `bson:"clazz_id" json:"clazz_id" swaggertype:"string" example:"507f1f77bcf86cd799439016"`
 	CTime       time.Time            `bson:"ctime" json:"ctime" example:"2024-10-26T10:00:00Z"`
 	CID         primitive.ObjectID   `bson:"c_id" json:"c_id" swaggertype:"string" example:"507f1f77bcf86cd799439017"`
 	MTime       time.Time            `bson:"mtime" json:"mtime" example:"2024-10-26T10:00:00Z"`
 	State       int                  `json:"state" example:"0"`      // 0: 未完成, 1: 已完成
 	RelationIDs []primitive.ObjectID `json:"relation_ids,omitempty"` // 关联ID列表
 	Questions   []QuestionDetail     `json:"questions"`              // 题目详情列表
+	ClazzIds    []primitive.ObjectID `json:"clazz_ids,omitempty"`    // 关联的班级ID列表
 }
 
 // QuestionDetail 题目详情

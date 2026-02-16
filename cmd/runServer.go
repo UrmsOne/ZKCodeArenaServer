@@ -119,26 +119,26 @@ func runServe(cmd *cobra.Command, args []string) error {
 	}
 	lg.Info("判题服务启动成功")
 
-	// 启动定时任务：更新过期任务状态
-	lg.Info("启动定时任务：更新过期任务状态...")
+	// 启动定时任务：更新任务状态
+	lg.Info("启动定时任务：更新任务状态...")
 	go func() {
 		ticker := time.NewTicker(5 * time.Minute) // 每5分钟执行一次
 		defer ticker.Stop()
 
 		// 立即执行一次
-		if err := svc.ClazzService.UpdateExpiredTasksStatus(ctx); err != nil {
-			lg.Errorf("初始更新过期任务状态失败: %v", err)
+		if err := svc.ClazzService.UpdateTasksStatus(ctx); err != nil {
+			lg.Errorf("初始更新任务状态失败: %v", err)
 		}
 
 		// 定时执行
 		for {
 			select {
 			case <-ticker.C:
-				if err := svc.ClazzService.UpdateExpiredTasksStatus(ctx); err != nil {
-					lg.Errorf("定时更新过期任务状态失败: %v", err)
+				if err := svc.ClazzService.UpdateTasksStatus(ctx); err != nil {
+					lg.Errorf("定时更新任务状态失败: %v", err)
 				}
 			case <-stopCh:
-				lg.Info("定时任务：更新过期任务状态已停止")
+				lg.Info("定时任务：更新任务状态已停止")
 				return
 			}
 		}

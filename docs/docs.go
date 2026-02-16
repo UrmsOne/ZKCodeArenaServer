@@ -1431,65 +1431,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/clazzes/{clazzId}/tasks/{taskId}/copy": {
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "将一个班级的任务复制到另一个班级",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "班级"
-                ],
-                "summary": "复制任务到班级",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "班级ID",
-                        "name": "clazzId",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "任务ID",
-                        "name": "taskId",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "复制任务请求",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.CopyTaskToClassRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "复制成功",
-                        "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
-                        }
-                    },
-                    "400": {
-                        "description": "请求参数错误",
-                        "schema": {
-                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
         "/clazzes/{clazzId}/tasks/{taskId}/finish": {
             "post": {
                 "security": [
@@ -4070,6 +4011,355 @@ const docTemplate = `{
                 }
             }
         },
+        "/tags": {
+            "get": {
+                "description": "分页获取标签列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "标签"
+                ],
+                "summary": "获取标签列表",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "页码",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "每页数量",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "标签名称关键词",
+                        "name": "keyword",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "标签列表及分页信息",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "获取标签列表失败",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "管理员创建新标签（仅管理员权限，标签描述可选）",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "标签"
+                ],
+                "summary": "创建标签（管理员）",
+                "parameters": [
+                    {
+                        "description": "标签创建信息",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.CreateTagRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "创建成功的标签信息",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.Tag"
+                        }
+                    },
+                    "400": {
+                        "description": "请求参数错误",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "未授权访问（需要登录）",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "权限不足",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "创建标签失败",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/tags/public": {
+            "get": {
+                "description": "公开接口，获取所有标签（无分页，按创建时间倒序排列），用于前端下拉选择等场景",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "标签"
+                ],
+                "summary": "获取所有公开标签",
+                "responses": {
+                    "200": {
+                        "description": "所有公开标签列表",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/zk-code-arena-server_pkg_models.Tag"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "500": {
+                        "description": "获取标签列表失败",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/tags/{id}": {
+            "get": {
+                "description": "根据标签ID获取标签完整信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "标签"
+                ],
+                "summary": "获取标签详情",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "标签ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "标签详情",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.Tag"
+                        }
+                    },
+                    "400": {
+                        "description": "无效的标签ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "标签不存在",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "查询标签失败",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_utils.Response"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "管理员更新标签信息（仅管理员权限，标签描述可选）",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "标签"
+                ],
+                "summary": "更新标签（管理员）",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "标签ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "标签更新信息",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.UpdateTagRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "更新成功的标签信息",
+                        "schema": {
+                            "$ref": "#/definitions/zk-code-arena-server_pkg_models.Tag"
+                        }
+                    },
+                    "400": {
+                        "description": "请求参数错误",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "权限不足",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "标签不存在",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "更新标签失败",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "管理员删除指定标签（仅管理员权限）",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "标签"
+                ],
+                "summary": "删除标签（管理员）",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "标签ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "删除成功提示",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "无效的标签ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "权限不足",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "标签不存在",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "删除标签失败",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/testcase": {
             "post": {
                 "security": [
@@ -5702,21 +5992,6 @@ const docTemplate = `{
                 }
             }
         },
-        "zk-code-arena-server_pkg_models.CopyTaskToClassRequest": {
-            "type": "object",
-            "required": [
-                "source_class_id",
-                "target_class_id"
-            ],
-            "properties": {
-                "source_class_id": {
-                    "type": "string"
-                },
-                "target_class_id": {
-                    "type": "string"
-                }
-            }
-        },
         "zk-code-arena-server_pkg_models.Course": {
             "type": "object",
             "required": [
@@ -5970,6 +6245,22 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 200,
                     "minLength": 1
+                }
+            }
+        },
+        "zk-code-arena-server_pkg_models.CreateTagRequest": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "desc": {
+                    "description": "标签描述",
+                    "type": "string"
+                },
+                "name": {
+                    "description": "标签名称",
+                    "type": "string"
                 }
             }
         },
@@ -6933,6 +7224,31 @@ const docTemplate = `{
                 }
             }
         },
+        "zk-code-arena-server_pkg_models.Tag": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by": {
+                    "type": "string"
+                },
+                "desc": {
+                    "description": "标签描述",
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "description": "标签名称",
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
         "zk-code-arena-server_pkg_models.Task": {
             "type": "object",
             "required": [
@@ -6944,10 +7260,6 @@ const docTemplate = `{
                 "c_id": {
                     "type": "string",
                     "example": "507f1f77bcf86cd799439017"
-                },
-                "clazz_id": {
-                    "type": "string",
-                    "example": "507f1f77bcf86cd799439016"
                 },
                 "course_id": {
                     "type": "string",
@@ -7051,9 +7363,12 @@ const docTemplate = `{
                     "type": "string",
                     "example": "507f1f77bcf86cd799439017"
                 },
-                "clazz_id": {
-                    "type": "string",
-                    "example": "507f1f77bcf86cd799439016"
+                "clazz_ids": {
+                    "description": "关联的班级ID列表",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "course_id": {
                     "type": "string",
@@ -7366,6 +7681,19 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 200,
                     "minLength": 1
+                }
+            }
+        },
+        "zk-code-arena-server_pkg_models.UpdateTagRequest": {
+            "type": "object",
+            "properties": {
+                "desc": {
+                    "description": "标签描述",
+                    "type": "string"
+                },
+                "name": {
+                    "description": "标签名称",
+                    "type": "string"
                 }
             }
         },

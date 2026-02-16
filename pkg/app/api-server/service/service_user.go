@@ -74,10 +74,64 @@ func (s *UserService) CreateUser(ctx context.Context, user *models.User) error {
 		if err := s.ClazzService.JoinClazz(ctx, user.MajorClassID, req, user.ID.Hex()); err != nil {
 			// 记录错误，但不影响用户注册
 			log.Printf("Failed to add user to class: %v", err)
+		} else {
+			// 查找与该专业班级关联的所有课程班级
+			majorClassObjID, err := primitive.ObjectIDFromHex(user.MajorClassID)
+			if err == nil {
+				// 查询所有课程班级
+				clazzColl := utils.GetCollection("clazzes")
+				var courseClasses []models.Clazz
+				cursor, err := clazzColl.Find(ctx, bson.M{
+					"class_type":      models.ClassTypeCourse,
+					"major_class_ids": bson.M{"$in": []primitive.ObjectID{majorClassObjID}},
+				})
+				if err == nil {
+					defer cursor.Close(ctx)
+					if err = cursor.All(ctx, &courseClasses); err == nil {
+						// 将用户添加到每个关联的课程班级中
+						for _, courseClass := range courseClasses {
+							// 检查用户是否已经是课程班级成员
+							isMember, err := s.ClazzService.Repo.IsClazzMember(ctx, courseClass.ID, user.ID)
+							if err == nil && !isMember {
+								// 检查班级是否已满
+								if courseClass.AddNums < courseClass.MaxMembers {
+									//添加用户到课程班级
+									// 1. 添加用户到课程班级 (更新 clazzes 表)
+									_, err := s.ClazzService.Repo.AddClazzMember(ctx, courseClass.ID, user.ID)
+									if err != nil {
+										// 记录错误，但不影响用户注册
+										log.Printf("Failed to add user to course class %s: %v", courseClass.ID.Hex(), err)
+									} else {
+										// 2. 在 student_classes 表中创建记录
+										now := time.Now()
+										studentClass := &models.StudentClass{
+											ID:        primitive.NewObjectID(),
+											StudentID: user.ID,
+											ClassID:   courseClass.ID,
+											CourseID:  courseClass.CourseId,
+											JoinTime:  now,
+											Status:    models.StudentClassStatusActive,
+											CTime:     now,
+											MTime:     now,
+										}
+										studentClassColl := utils.GetCollection("student_classes")
+										_, err := studentClassColl.InsertOne(ctx, studentClass)
+										if err != nil {
+											// 记录错误，但不影响用户注册
+											log.Printf("Failed to create student_class record for course class %s: %v", courseClass.ID.Hex(), err)
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
 		}
 	}
 
 	return nil
+
 }
 
 // GetUserByID 根据ID获取用户
