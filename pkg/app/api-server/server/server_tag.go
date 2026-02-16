@@ -8,6 +8,7 @@
 package server
 
 import (
+	"context"
 	"errors"
 	"strconv"
 	"strings"
@@ -32,11 +33,54 @@ func (s *Server) RegisterTag(g *gin.RouterGroup) {
 
 		securedGroup := tagGroup.Group("/").Use(middleware.JWTMiddleware())
 		{
-			securedGroup.POST("", s.CreateTag)       // 创建标签
-			securedGroup.PUT("/:id", s.UpdateTag)    // 更新标签
-			securedGroup.DELETE("/:id", s.DeleteTag) // 删除标签
+			securedGroup.POST("", s.CreateTag)                 // 创建标签
+			securedGroup.PUT("/:id", s.UpdateTag)              // 更新标签
+			securedGroup.DELETE("/:id", s.DeleteTag)           // 删除标签
+			securedGroup.POST("/init", s.InitTagsFromProblems) // 初始化标签
 		}
 	}
+}
+
+// InitTagsFromProblems godoc
+// @Summary      初始化标签库
+// @Description  从现有题目中提取所有标签，自动创建标签记录（仅管理员）
+// @Tags         标签
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} map[string]interface{} "初始化成功提示"
+// @Failure      403 {object} map[string]interface{} "权限不足"
+// @Failure      500 {object} map[string]interface{} "初始化失败"
+// @Security     BearerAuth
+// @Router       /tags/init [post]
+func (s *Server) InitTagsFromProblems(c *gin.Context) {
+	// 获取用户ID
+	userIDStr, exists := c.Get("user_id")
+	if !exists || userIDStr.(string) == "" {
+		utils.UnauthorizedResponse(c, "未获取到当前登录用户ID")
+		return
+	}
+
+	// 权限校验
+	role, roleExists := c.Get("role")
+	if !roleExists {
+		utils.UnauthorizedResponse(c, "需要登录才能操作")
+		return
+	}
+	userRole := role.(string)
+	if userRole != string(models.RoleAdmin) {
+		utils.ForbiddenResponse(c, "权限不足，仅管理员可更新标签")
+		return
+	}
+	ctx := context.WithValue(c.Request.Context(), "user_id", userIDStr.(string))
+	err := s.svc.InitTagsFromProblems(ctx)
+	if err != nil {
+		utils.InternalServerErrorResponse(c, "初始化标签库失败: "+err.Error())
+		return
+	}
+
+	utils.SuccessResponse(c, gin.H{
+		"message": "标签库初始化成功，已从现有题目中提取并创建所有标签",
+	})
 }
 
 // GetTagList godoc
@@ -168,7 +212,11 @@ func (s *Server) CreateTag(c *gin.Context) {
 	}
 
 	// 获取当前登录用户ID
-	userIDStr, _ := c.Get("user_id")
+	userIDStr, userExists := c.Get("user_id")
+	if !userExists || userIDStr.(string) == "" {
+		utils.UnauthorizedResponse(c, "未获取到当前登录用户ID")
+		return
+	}
 	createBy, err := primitive.ObjectIDFromHex(userIDStr.(string))
 	if err != nil {
 		utils.BadRequestResponse(c, "无效的用户ID")
